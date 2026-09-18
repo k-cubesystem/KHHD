@@ -28,6 +28,7 @@ const PUBLIC_ROUTES: readonly PublicRoute[] = [
   { path: '/business', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/terms', priority: 0.3, changeFrequency: 'yearly' },
   { path: '/privacy', priority: 0.3, changeFrequency: 'yearly' },
+  { path: '/pass-policy', priority: 0.3, changeFrequency: 'yearly' },
 ]
 
 /**

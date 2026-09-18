@@ -54,7 +54,7 @@ describe('등급 — 문장 공예는 유료에만, 용어 예산은 모두에�
 describe('🔴 배선 — 무료 경로에 새지 않는다', () => {
   const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
 
-  it('복채를 받는 풀이 3종은 premium 을 넘긴다', () => {
+  it('이용권을 쓰는 풀이 3종은 premium 을 넘긴다', () => {
     for (const path of [
       'app/actions/ai/cheonjiin.ts',
       'app/actions/ai/fortune-analysis.ts',

@@ -9,13 +9,12 @@
  */
 
 export const ADMIN_AUDIT_ACTIONS = [
-  // 회원 — 재화·권한
-  'balance_adjust',
+  // 회원 — 이용권·권한
+  'pass_adjust',
   'role_change',
   'subscription_change',
   'user_delete',
   // 돈 — 구독 운영
-  'talisman_grant',
   'subscription_status_change',
   // 가격·혜택 (표시광고법 사안)
   'plan_update',
@@ -28,6 +27,9 @@ export const ADMIN_AUDIT_ACTIONS = [
   'service_toggle',
   'voice_profile_save',
   'voice_profile_reset',
+  // 🔴 폐지된 복채 조작 — 새로 쓰지 않는다. 옛 기록이 «기타 조작»으로 뭉개지지 않게 라벨만 남긴다.
+  'balance_adjust',
+  'talisman_grant',
 ] as const
 
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number]
@@ -46,8 +48,9 @@ const CHANGE = 'bg-white/[0.06] text-ink-light/80 border-white/15'
 const OUTBOUND = 'bg-info-light text-info-text border-info-border'
 
 export const ADMIN_AUDIT_LABELS: Record<AdminAuditAction, ActionLabel> = {
-  balance_adjust: { label: '복채 조정', cls: MONEY, heavy: true },
-  talisman_grant: { label: '복채 지급', cls: MONEY, heavy: true },
+  pass_adjust: { label: '이용권 조정', cls: MONEY, heavy: true },
+  balance_adjust: { label: '복채 조정(옛 기록)', cls: MONEY },
+  talisman_grant: { label: '복채 지급(옛 기록)', cls: MONEY },
   role_change: { label: '권한 변경', cls: DANGER, heavy: true },
   user_delete: { label: '회원 삭제', cls: DANGER, heavy: true },
   subscription_change: { label: '구독 변경', cls: CHANGE },

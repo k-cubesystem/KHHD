@@ -11,6 +11,7 @@ import {
   parseUnlockEffect,
   isLayer,
   isElement,
+  parseRequiredTier,
   type Element,
   type InventoryEntry,
   type Layer,
@@ -36,6 +37,9 @@ import { isGuardianType, parseGuardianSlugs } from '@/lib/domain/shrine/guardian
 import { DEFAULT_BASE, applyModifiers, ELEMENTS } from '@/lib/domain/shrine/energy'
 import { baseFromSajuData } from '@/lib/domain/shrine/energy-born'
 import { getShrineEffects } from '@/lib/services/shrine-effects'
+import { hungPackHolds, seatedDeityHolds, type WearCheck } from '@/lib/services/shrine-wear'
+import { getActiveMembership, type ActiveMembership } from '@/lib/auth/subscription'
+import { tierUnlocks } from '@/lib/domain/payment/membership-tiers'
 
 /**
  * ⚠️ v2 무대 컬럼(kind·asset_url·anchor_spec / anchor_id / stage)은 마이그레이션
@@ -57,9 +61,6 @@ interface CatalogRow {
   placement_layer: string
   size_grade: string
   behavior: unknown
-  price_bok_points: number
-  price_krw: number
-  price_bokchae: number
   unlock_effect: unknown
   matters: unknown
   origin_note: string | null
@@ -84,9 +85,6 @@ function toCatalogItem(r: CatalogRow): StageCatalogItem {
     layer: isLayer(r.placement_layer) ? r.placement_layer : 'floor',
     size: (['sm', 'md', 'lg'].includes(r.size_grade) ? r.size_grade : 'md') as SizeGrade,
     behavior: parseBehavior(r.behavior),
-    priceBok: r.price_bok_points,
-    priceKrw: r.price_krw,
-    priceBokchae: r.price_bokchae,
     unlockEffect: parseUnlockEffect(r.unlock_effect),
     matters: parseMatters(r.matters),
     originNote: r.origin_note,
@@ -321,32 +319,39 @@ async function ensureStarterKit(supabase: SupabaseServer, userId: string, shrine
   if (placeRows.length) await supabase.from('shrine_placements').insert(placeRows)
 }
 
-async function loadThemes(supabase: SupabaseServer, userId: string): Promise<StageThemePack[]> {
+/** 테마 목록 — 보유(소유 행·기본 테마)와 등급 개방을 함께 싣는다(deities.listThemePacks 와 같은 판정). */
+async function loadThemes(
+  supabase: SupabaseServer,
+  userId: string,
+  membership: ActiveMembership | null
+): Promise<StageThemePack[]> {
   const [{ data: packs }, { data: owned }] = await Promise.all([
     supabase.from('shrine_theme_packs').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('user_theme_packs').select('pack_id').eq('user_id', userId),
   ])
   const ownedSet = new Set((owned ?? []).map((o) => o.pack_id))
-  return (packs ?? []).map((p) => ({
-    id: p.id,
-    code: p.code,
-    name: p.name,
-    priceBok: p.price_bok,
-    priceKrw: p.price_krw,
-    priceBokchae: p.price_bokchae ?? 0,
-    elementAffinity: isElement(p.element_affinity) ? p.element_affinity : null,
-    assets: (typeof p.assets === 'object' && p.assets !== null ? p.assets : {}) as ThemeAssets,
-    owned: (p.price_bokchae ?? 0) === 0 ? true : ownedSet.has(p.id),
-    story: typeof p.story === 'string' && p.story ? p.story : null,
-    sajuNote: typeof p.saju_note === 'string' && p.saju_note ? p.saju_note : null,
-    deityCodes: Array.isArray(p.deity_codes)
-      ? p.deity_codes.filter((c: unknown): c is string => typeof c === 'string')
-      : [],
-    matters: parseMatters(p.matters),
-    stage: parseStageSpec(p.stage),
-    // 두루마리 구역(zones)은 StageSpec 밖이라 원본을 함께 내려보낸다 (클라에서 parseWorld 가 파싱)
-    stageRaw: p.stage ?? null,
-  }))
+  return (packs ?? []).map((p) => {
+    const requiredTier = parseRequiredTier(p.required_tier)
+    return {
+      id: p.id,
+      code: p.code,
+      name: p.name,
+      requiredTier,
+      elementAffinity: isElement(p.element_affinity) ? p.element_affinity : null,
+      assets: (typeof p.assets === 'object' && p.assets !== null ? p.assets : {}) as ThemeAssets,
+      owned: requiredTier === null || ownedSet.has(p.id),
+      unlocked: tierUnlocks(membership?.tier, requiredTier),
+      story: typeof p.story === 'string' && p.story ? p.story : null,
+      sajuNote: typeof p.saju_note === 'string' && p.saju_note ? p.saju_note : null,
+      deityCodes: Array.isArray(p.deity_codes)
+        ? p.deity_codes.filter((c: unknown): c is string => typeof c === 'string')
+        : [],
+      matters: parseMatters(p.matters),
+      stage: parseStageSpec(p.stage),
+      // 두루마리 구역(zones)은 StageSpec 밖이라 원본을 함께 내려보낸다 (클라에서 parseWorld 가 파싱)
+      stageRaw: p.stage ?? null,
+    }
+  })
 }
 
 /**
@@ -407,21 +412,27 @@ export async function getSceneData(familyMemberId?: string | null): Promise<Stag
 
   if (!fmId) await ensureStarterKit(supabase, user.id, shrine.id)
 
-  const [{ data: catRows }, { data: placeRows }, { data: invRows }, profile, themes] = await Promise.all([
+  const membershipReady = getActiveMembership(user.id)
+  const [{ data: catRows }, { data: placeRows }, { data: invRows }, profile, themes, membership] = await Promise.all([
     supabase.from('shrine_item_catalog').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('shrine_placements').select('*').eq('shrine_id', shrine.id),
     supabase.from('user_shrine_inventory').select('catalog_item_id, qty').eq('user_id', user.id),
     family ? familyProfile(supabase, user.id, family) : loadOrComputeProfile(supabase, user.id),
-    loadThemes(supabase, user.id),
+    membershipReady.then((m) => loadThemes(supabase, user.id, m)),
+    membershipReady,
   ])
 
   const catalog: StageCatalogItem[] = (catRows ?? []).map((r) => toCatalogItem(r as CatalogRow))
   const placements: StagePlacement[] = (placeRows ?? []).map(toPlacement)
   const inventory: InventoryEntry[] = (invRows ?? []).map((i) => ({ catalogItemId: i.catalog_item_id, qty: i.qty }))
 
-  const activePack = themes.find((t) => t.id === shrine.active_pack_id)
+  // 등급으로 입힌 테마는 등급이 끊기면 착용이 풀린다(기본 테마로 선다). 걸어 둔 기록은 남겨 재구독하면 돌아온다.
+  const activePack = themes.find((t) => t.id === shrine.active_pack_id && (t.owned || t.unlocked))
   const [mainDeity, effects] = await Promise.all([
-    loadMainDeity(supabase, user.id, shrine.main_deity_id, true, fmId),
+    loadMainDeity(supabase, user.id, shrine.main_deity_id, true, fmId, {
+      client: supabase,
+      tier: async () => membership?.tier,
+    }),
     getShrineEffects(user.id),
   ])
 
@@ -481,15 +492,19 @@ async function loadMainDeity(
   ownerId: string,
   mainDeityId: string | null,
   includeBond: boolean,
-  familyMemberId: string | null = null
+  familyMemberId: string | null,
+  wear: WearCheck
 ): Promise<import('@/lib/domain/shrine/types').MainDeity | null> {
   if (!mainDeityId) return null
   const { data } = await supabase
     .from('shrine_deities')
-    .select('code, name, sprite_url, portrait_url, aura')
+    .select('code, name, sprite_url, portrait_url, aura, required_tier')
     .eq('id', mainDeityId)
     .maybeSingle()
   if (!data) return null
+
+  // 등급으로 모신 主神은 등급이 끊기면 좌정이 풀린다(deities.listDeities 와 같은 판정)
+  if (!(await seatedDeityHolds(wear, ownerId, mainDeityId, data.required_tier))) return null
 
   const aura = typeof data.aura === 'object' && data.aura !== null ? (data.aura as Record<string, unknown>) : {}
   const particle = typeof aura.particle === 'string' ? aura.particle : null
@@ -543,31 +558,44 @@ export async function getPublicSceneData(userId: string): Promise<StageSceneData
     supabase
       // ⚠️ 유일하게 컬럼을 명시하는 조회 — `stage` 는 20260729 마이그레이션 적용 후에만 존재한다
       .from('shrine_theme_packs')
-      .select('id, code, name, price_bok, price_krw, price_bokchae, element_affinity, assets, stage')
+      .select('id, code, name, element_affinity, assets, stage, required_tier')
       .eq('is_active', true),
   ])
 
   const catalog: StageCatalogItem[] = (catRows ?? []).map((r) => toCatalogItem(r as CatalogRow))
   const placements: StagePlacement[] = (placeRows ?? []).map(toPlacement)
+
+  // 주인 화면과 같은 판정 — 등급으로 입힌 테마·모신 主神은 주인의 등급이 끊기면 풀린다.
+  const admin = createAdminClient()
+  let ownerTier: Promise<string | null | undefined> | null = null
+  const wear: WearCheck = {
+    client: admin,
+    tier: () => {
+      if (!ownerTier) ownerTier = getActiveMembership(userId, 'admin').then((m) => m?.tier)
+      return ownerTier
+    },
+  }
+  const hung = (packs ?? []).find((p) => p.id === shrine.active_pack_id)
+  const hungHolds = hung ? await hungPackHolds(wear, userId, hung.id, hung.required_tier) : false
+
   // active_pack_id 미지정(테마를 한 번도 고르지 않은 신당 — 대다수)은 기본 테마 banga 로 해석한다.
   // 이 폴백이 없으면 activePackCode 는 'banga' 문자열로 폴백되는데 테마 '객체'는 빠져서
   // 클라이언트가 stage(조립식 무대)·assets 를 찾지 못해 레거시 렌더로 떨어진다.
-  const activePack =
-    (packs ?? []).find((p) => p.id === shrine.active_pack_id) ?? (packs ?? []).find((p) => p.code === 'banga')
+  const activePack = (hungHolds ? hung : undefined) ?? (packs ?? []).find((p) => p.code === 'banga')
   const themes: StageThemePack[] = activePack
     ? [
         {
           id: activePack.id,
           code: activePack.code,
           name: activePack.name,
-          priceBok: activePack.price_bok,
-          priceKrw: activePack.price_krw,
-          priceBokchae: activePack.price_bokchae ?? 0,
+          // 방문자 뷰는 상점을 그리지 않는다 — 걸려 있는 테마를 보여 줄 뿐이라 등급을 묻지 않는다
+          requiredTier: null,
           elementAffinity: isElement(activePack.element_affinity) ? activePack.element_affinity : null,
           assets: (typeof activePack.assets === 'object' && activePack.assets !== null
             ? activePack.assets
             : {}) as ThemeAssets,
           owned: true,
+          unlocked: true,
           // 방문자 뷰는 상점을 그리지 않는다 — 로어는 빈 값으로 두되 조회 컬럼도 늘리지 않는다
           story: null,
           sajuNote: null,
@@ -579,7 +607,7 @@ export async function getPublicSceneData(userId: string): Promise<StageSceneData
       ]
     : []
 
-  const mainDeity = await loadMainDeity(supabase, userId, shrine.main_deity_id, false)
+  const mainDeity = await loadMainDeity(supabase, userId, shrine.main_deity_id, false, null, wear)
 
   return {
     shrineId: shrine.id,
@@ -861,11 +889,17 @@ export async function setShrineVisibility(
   return { success: true }
 }
 
-/** 테마 팩 활성화 (무료거나 보유한 팩만). familyMemberId 지정 시 그 가족 신당에 적용. */
+/**
+ * 테마 팩 활성화. familyMemberId 지정 시 그 가족 신당에 적용.
+ *
+ * 입힐 수 있는 조건은 하나다 — **소유 행이 있거나 등급이 닿는다**(누구나 테마는 등급이 필요 없다).
+ * 🔴 종전 무료 판정(price_bok·price_krw 둘 다 0)은 목록의 판정(price_bokchae 0)과 기준이 달라
+ *    두 화면이 같은 테마를 다르게 말했다. 판정은 이제 목록과 같은 required_tier 하나다.
+ */
 export async function activateThemePack(
   packCode: string,
   familyMemberId?: string | null
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: 'UNAUTHORIZED' | 'PACK_NOT_FOUND' | 'TIER_REQUIRED' | 'SAVE_FAILED' }> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -874,20 +908,23 @@ export async function activateThemePack(
 
   const { data: pack } = await supabase
     .from('shrine_theme_packs')
-    .select('id, price_bok, price_krw')
+    .select('id, required_tier')
     .eq('code', packCode)
     .maybeSingle()
   if (!pack) return { success: false, error: 'PACK_NOT_FOUND' }
 
-  const isFree = pack.price_bok === 0 && pack.price_krw === 0
-  if (!isFree) {
+  const requiredTier = parseRequiredTier(pack.required_tier)
+  if (requiredTier) {
     const { data: owned } = await supabase
       .from('user_theme_packs')
       .select('pack_id')
       .eq('user_id', user.id)
       .eq('pack_id', pack.id)
       .maybeSingle()
-    if (!owned) return { success: false, error: 'NOT_OWNED' }
+    if (!owned) {
+      const membership = await getActiveMembership(user.id)
+      if (!tierUnlocks(membership?.tier, requiredTier)) return { success: false, error: 'TIER_REQUIRED' }
+    }
   }
 
   // ⚠️ admin 으로 쓴다(감사 A3 S-P0-1). 소유권 검증(위)은 앱 경로에만 있고, 사용자 클라이언트
@@ -897,7 +934,10 @@ export async function activateThemePack(
   const { error } = await (familyMemberId
     ? updateQuery.eq('family_member_id', familyMemberId)
     : updateQuery.is('family_member_id', null))
-  if (error) return { success: false, error: error.message }
+  if (error) {
+    logger.error('[shrine/scene] theme activate failed:', error)
+    return { success: false, error: 'SAVE_FAILED' }
+  }
 
   revalidatePath('/protected/shrine')
   return { success: true }

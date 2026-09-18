@@ -8,7 +8,7 @@ import * as React from 'react'
  * ## 🔴 왜 뽑아냈나
  * 같은 `result_json` 을 두 화면이 **서로 다른 렌더러**로 그리고 있었다. 라이브
  * (`saju-result-client.tsx`)는 15섹션을 그리는데 기록(`analysis-result-view.tsx`)은 4섹션뿐이라,
- * 2만냥 내고 본 풀이를 기록에서 다시 열면 **3분의 1만** 나왔다. 라이브 확인(2026-08-17):
+ * 값을 내고 본 풀이를 기록에서 다시 열면 **3분의 1만** 나왔다. 라이브 확인(2026-08-17):
  * 저장된 SAJU 11건 전부가 `specialEnergy`·`sajuStructure`·`yearlyMonthly`·`gaewoon`·
  * `crossAnalysis`·`currentSituation`·`pastRetrograde` 를 갖고 있는데 기록에선 한 줄도 안 보였다.
  * 크래시가 아니라 **손실**이라 아무도 신고하지 않는다.
@@ -18,9 +18,9 @@ import * as React from 'react'
  *    문자열·객체 양쪽이 올 수 있는 칸은 `lib/domain/analysis/rich-field.ts` 를 거친다.
  *
  * ## 구성이 셋으로 나뉜 이유
- * 라이브는 `무료 → <PremiumBlurSection> 유료 </PremiumBlurSection>` 로 감싸고 그 사이에
- * 天/地 접이 섹션을 끼운다. 순서를 그대로 지키려면 잘린 자리마다 컴포넌트가 하나씩 필요하다.
- * 기록은 이미 결제된 풀이라 블러 없이 셋을 이어 붙인다.
+ * 라이브는 셋 사이에 天/地 접이 섹션을 끼운다. 순서를 그대로 지키려면 잘린 자리마다 컴포넌트가
+ * 하나씩 필요하다. 기록은 셋을 이어 붙인다. 🔴 두 화면 모두 블러를 걸지 않는다 — 보이는 풀이는
+ * 전부 이용권을 쓴 것이다(2026-09-18 이용권 전환 — 예전 블러는 «지금 남은 재화»로 판정해 산 풀이를 잠갔다).
  */
 
 import { WU_XING_COLORS, WU_XING_TEXT_COLORS } from '@/lib/domain/saju/saju'
@@ -28,7 +28,7 @@ import { WU_XING_COLORS, WU_XING_TEXT_COLORS } from '@/lib/domain/saju/saju'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type SajuReadingData = Record<string, any>
 
-/** 결제 전에도 보이는 자리 — 특별한 기운·과거 역추산·현재 공감. */
+/** 풀이 첫머리 — 특별한 기운·과거 역추산·현재 공감. */
 export function SajuFreeSections({ data }: { data: SajuReadingData }) {
   return (
     <>

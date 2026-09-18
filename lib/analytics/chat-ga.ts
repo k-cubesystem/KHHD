@@ -23,9 +23,9 @@ export const GAChat = {
   chipTap: (kind: 'greeting' | 'followup') => trackEvent({ action: 'chat_chip_tap', category: 'counsel', label: kind }),
   /** 한도 도달 — 전송 시도 시 잔여 0 */
   limitHit: () => trackEvent({ action: 'chat_limit_hit', category: 'counsel' }),
-  /** 질문권 충전 성공(복채 1만냥 → 20회) */
+  /** 질문권 구매 성공(이용권 1장 → 10문, 정본 chat/entitlements) */
   ticketPurchase: () => trackEvent({ action: 'chat_ticket_purchase', category: 'counsel' }),
-  /** 복채 부족 → 상점 이동 */
+  /** 이용권 부족 → 상점 이동. 액션 이름은 과거 데이터와 잇기 위해 그대로 둔다 */
   rechargeRedirect: () => trackEvent({ action: 'chat_recharge_redirect', category: 'counsel' }),
   /** 전송 실패(사용자 노출 오류) */
   sendError: () => trackEvent({ action: 'chat_send_error', category: 'counsel' }),

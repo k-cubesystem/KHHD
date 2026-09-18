@@ -4,19 +4,18 @@
  * 오행 5장(나무·불·흙·쇠·물) + 이달의 복 1장. 사용자의 용신 오행과 같은 장은 화면에서
  * 「내 오행」으로 추천된다.
  *
- * 🔴 **2026-08-24 — 이 여섯 장은 전부 무료다**(CEO 지시). 종전의 «기본 무료 1장 + 사주/완주
- * 선물 + 구매/광고 해금» 은 이 세트에서 내려갔다. 값을 받는 자리는 앞으로 나올 **프리미엄
- * 세트**가 지고, 그때 쓸 잠금·구매·광고 기계장치(`resolveWallpaperAccess` 이하)는 손대지 않고
- * 그대로 남겨 두었다 — 새 세트에 `lock: 'saju' | 'journey'` 를 주면 즉시 다시 돈다.
+ * 🔴 **2026-08-24 — 이 여섯 장은 전부 무료다**(CEO 지시). 잠금·광고 기계장치(`resolveWallpaperAccess`
+ * 이하)는 프리미엄 세트 「채운」이 그대로 쓴다 — 새 세트에 `lock: 'saju' | 'journey'` 를 주면 즉시 다시 돈다.
  *
- * **접근 모델** — 다섯 경로의 순수 OR. 우선순위는 «표기»에만 쓰고 판정에는 쓰지 않는다:
- *   ① 무료 ② 멤버십 ACTIVE ③ 구매(복채) ④ 광고 해금(하루 1장) ⑤ 여정 보너스.
+ * 🔴 **2026-09-18 — 구매 경로는 없다**(복채 폐지). 배경화면은 값을 받지 않고 이 길로만 열린다:
+ *   ① 무료 ② 멤버십(전 장) ③ 광고 해금(하루 1장) ④ 용신 선물(사주 1회 → 「내게 필요한 기운」 1장)
+ *   ⑤ 여정 보너스. 예전에 소장한 기록(source='purchase')은 그대로 연다 — 산 것은 사라지지 않는다.
+ * 판정은 순수 OR 이고, 우선순위는 «표기»에만 쓴다.
  *
  * side-effect 없음(순수) — 단위테스트 대상. 화면 표현(배지·시트)은 컴포넌트가 입힌다.
  *
  * 🔴 이미지 파일 자체는 `public/`(오행 5장)에 있어 URL 을 아는 사람은 잠금과 무관하게 받을 수
- *    있다. 복채가 걸린 지금도 이건 그대로다 — 값이 낮고(1~2만냥) 이미 라이브에 나간 자산이라
- *    수용한 위험이다. 서명 URL 로 옮기려면 여섯 장 전부 Storage 로 이사시켜야 한다.
+ *    있다. 여섯 장은 전부 무료라 잃는 것이 없다. 잠기는 원본(「채운」)은 사설 Storage 의 서명 URL 로만 나간다.
  *    이달의 복만은 크론이 Storage(공개 버킷)에 올린다.
  */
 
@@ -25,7 +24,7 @@ export type WallpaperElement = 'wood' | 'fire' | 'earth' | 'metal' | 'water'
 
 /**
  * free=항상 열림 · saju=사주 풀이 1회 필요 · journey=복주머니 완주 필요 ·
- * premium=멤버십/구매로만 (여정 보너스 없음 — 단 «내게 필요한 기운» 1장은 사주 선물, 아래 참조).
+ * premium=멤버십·광고 해금으로 (여정 보너스 없음 — 단 «내게 필요한 기운» 1장은 사주 선물, 아래 참조).
  */
 export type WallpaperLock = 'free' | 'saju' | 'journey' | 'premium'
 
@@ -59,8 +58,7 @@ export const MONTHLY_WALLPAPER_ID = 'monthly-202608'
 
 /**
  * 맛보기 한 장이었던 자리. 🔴 **2026-08-24부터 여섯 장 전부 무료**라 이 상수는 판정에 쓰이지
- * 않는다(«어느 장이 대표 무료인가»를 가리키는 표시로만 남겼다). 유료는 앞으로 나올
- * 프리미엄 세트가 진다 — 잠금·구매·광고 해금 기계장치는 그대로 살아 있다.
+ * 않는다(«어느 장이 대표 무료인가»를 가리키는 표시로만 남겼다).
  */
 export const FREE_WALLPAPER_ELEMENT: WallpaperElement = 'earth'
 
@@ -166,32 +164,12 @@ export function orderWallpapersByElement<T extends WallpaperItem>(
   return [...mine, ...rest]
 }
 
-// ── 값(복채) ────────────────────────────────────────────────────────────────
-
-/**
- * 소장 가격(만냥) — 신위·테마팩과 같은 단위다(`price_bokchae`, 화면 표기 「N만냥」).
- * 오행 한 장 1만냥 · 이달의 복 2만냥(그 달에만 나오는 한정판이라 두 배).
- * 🔴 서버 액션이 이 값을 읽어 차감한다. 클라가 보낸 금액은 쓰지 않는다.
- */
-export const WALLPAPER_PRICE_ELEMENT = 1
-export const WALLPAPER_PRICE_MONTHLY = 2
-
-/**
- * 한 장의 소장 가격(만냥). 프리미엄은 낱장 균일가(팩이 본진), 무료 세트에서는
- * 오행이 없는 장(이달의 복)이 한정판 가격을 받는다.
- * 🔴 element 로 먼저 갈리면 프리미엄 비오행 장(재물·가족·연애·성공)이 이달의 복 가격을
- *    받는다 — lock 검사부터.
- */
-export function wallpaperPrice(item: WallpaperItem): number {
-  if (item.lock === 'premium') return PREMIUM_PRICE_SINGLE
-  return item.element === null ? WALLPAPER_PRICE_MONTHLY : WALLPAPER_PRICE_ELEMENT
-}
-
 // ── 접근 모델 ───────────────────────────────────────────────────────────────
 
-/** 해금 출처 — DB `wallpaper_unlocks.source` 체크 제약과 같은 어휘. */
 /**
- * 해금 출처. 'saju' 는 «내게 필요한 기운» 선물이 **행으로 확정된** 것 —
+ * 해금 출처 — DB `wallpaper_unlocks.source` 체크 제약과 같은 어휘.
+ * 'purchase' 는 구매 경로가 사라지기 전(2026-09-18)의 소장 기록이다 — 새로 생기지 않지만 그대로 연다.
+ * 'saju' 는 «내게 필요한 기운» 선물이 **행으로 확정된** 것 —
  * 선물 판정의 근거(analysis_history·user_energy_profile)가 둘 다 사용자가 쓸 수 있는
  * 자리라, 매 호출 재계산하면 오행을 바꿔가며 5장을 전부 가져갈 수 있었다(2026-08-26).
  */
@@ -210,7 +188,7 @@ export type WallpaperAccessVia = 'free' | 'purchase' | 'ad' | 'member' | 'saju' 
 export const WALLPAPER_ACCESS_LABEL: Record<WallpaperAccessVia, string> = {
   free: '기본 제공',
   purchase: '소장 완료',
-  ad: '오늘 열림',
+  ad: '광고 보고 열림',
   member: '멤버십',
   saju: '사주 풀이 선물',
   journey: '복주머니 완주 선물',
@@ -223,7 +201,7 @@ export const WALLPAPER_ACCESS_LABEL: Record<WallpaperAccessVia, string> = {
 export interface WallpaperAccess extends WallpaperEntitlement {
   /** subscriptions.status = 'ACTIVE' 인 본인 구독이 있는가. */
   isMember: boolean
-  /** 내 해금 기록(구매·광고). */
+  /** 내 해금 기록(예전 소장·광고·용신 선물). */
   unlocks: readonly WallpaperUnlockRecord[]
   /**
    * 사용자의 용신 오행 — 프리미엄 «내게 필요한 기운» 선물 판정에만 쓴다.
@@ -240,7 +218,7 @@ export interface WallpaperAccessState {
   reason: string | null
 }
 
-/** 이 장을 이미 산(또는 광고로 연) 기록이 있는가. */
+/** 이 장을 이미 연 기록(예전 소장·광고·선물)이 있는가. */
 function findUnlock(item: WallpaperItem, access: WallpaperAccess): WallpaperUnlockRecord | undefined {
   return access.unlocks.find((u) => u.wallpaperId === item.id)
 }
@@ -248,8 +226,8 @@ function findUnlock(item: WallpaperItem, access: WallpaperAccess): WallpaperUnlo
 /**
  * 한 장의 접근 판정 — 다섯 경로의 OR.
  *
- * 표기 우선순위는 «소유가 먼저»다: 기본 무료 → 구매 → 광고 → 멤버십 → 여정 보너스.
- * 구매를 멤버십보다 앞에 두는 이유는, 멤버십이 끝나도 산 장은 남기 때문이다 —
+ * 표기 우선순위는 «소유가 먼저»다: 기본 무료 → 해금 기록(예전 소장·광고·선물) → 멤버십 → 여정 보너스.
+ * 해금 기록을 멤버십보다 앞에 두는 이유는, 멤버십이 끝나도 연 장은 남기 때문이다 —
  * 화면이 「멤버십」이라 적어두면 해지 뒤에 사라질 것처럼 읽힌다.
  */
 export function resolveWallpaperAccess(item: WallpaperItem, access: WallpaperAccess): WallpaperAccessState {
@@ -260,8 +238,8 @@ export function resolveWallpaperAccess(item: WallpaperItem, access: WallpaperAcc
   if (access.isMember) return { unlocked: true, via: 'member', reason: null }
 
   if (item.lock === 'premium') {
-    // 프리미엄의 유일한 무상 경로 — 사주를 마친 사람에게 «내게 필요한 기운»(용신 오행) 1장.
-    // 풀이가 처방하고, 선물로 맛보이고, 나머지는 멤버십이 연다(PRD v2 §4).
+    // 사주를 마친 사람에게 «내게 필요한 기운»(용신 오행) 1장.
+    // 풀이가 처방하고, 선물로 맛보이고, 나머지는 멤버십·광고 해금이 연다(PRD v2 §4).
     if (access.hasSaju && item.element !== null && item.element === (access.myElement ?? null)) {
       return { unlocked: true, via: 'saju', reason: null }
     }
@@ -516,44 +494,12 @@ export const PREMIUM_WALLPAPER_SET: readonly PremiumWallpaperItem[] = [
   },
 ]
 
-/** 프리미엄 낱장 가격(만냥). 팩이 본진이고 낱장은 기준점이다(복채 최소 단위 제약 — PRD v1 §6ⓐ). */
-export const PREMIUM_PRICE_SINGLE = 1
-
 /** Storage 사설 버킷 — 원본은 서명 URL 로만 나간다. */
 export const PREMIUM_BUCKET = 'wallpapers-premium'
 
 /** 공개 썸네일(360×640 q60) — 잠긴 장의 흐릿한 미리보기용. 마케팅 자산이라 공개가 의도다. */
 export function premiumThumbPath(id: string): string {
   return `/wallpapers/premium-thumbs/${id}.webp`
-}
-
-/** 팩 — 멤버십이 제1 유도이고, 팩은 «비회원에게 추천하는 세트 구매» 경로다(CEO 확정). */
-export interface WallpaperPack {
-  id: string
-  title: string
-  /** 가격(만냥). 부분 보유와 무관하게 고정 — 낱장을 먼저 산 사람이 손해 보지 않도록 화면이 안내한다. */
-  price: number
-  itemIds: readonly string[]
-}
-
-export const WALLPAPER_PACKS: readonly WallpaperPack[] = [
-  {
-    id: 'pack-gi',
-    title: '기운 보충 5장',
-    price: 3,
-    itemIds: PREMIUM_WALLPAPER_SET.filter((w) => w.category === 'gi').map((w) => w.id),
-  },
-  {
-    id: 'pack-bok',
-    title: '복 배경화면 12장',
-    price: 3,
-    itemIds: PREMIUM_WALLPAPER_SET.filter((w) => w.category !== 'gi').map((w) => w.id),
-  },
-  { id: 'pack-all', title: '채운 전체 17장', price: 5, itemIds: PREMIUM_WALLPAPER_SET.map((w) => w.id) },
-]
-
-export function findWallpaperPack(packId: string): WallpaperPack | null {
-  return WALLPAPER_PACKS.find((p) => p.id === packId) ?? null
 }
 
 /** 프리미엄 한 장의 화면 표시형 — 원본 서명 URL 은 열린 장에만 온다(액션이 발급). */

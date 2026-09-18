@@ -117,7 +117,7 @@ export async function CancelLossSummary() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <Stat label="손실 처리 건수" value={`${realized.length}건`} />
-        <Stat label="누적 손실" value={won(lossAmount)} hint={`복채 ${lossCredits}만냥 회수 실패`} />
+        <Stat label="누적 손실" value={won(lossAmount)} hint={`이용권 ${lossCredits}장 회수 실패`} />
         <Stat label="상한 차단" value={`${capped.length}건`} hint="막힌 요청" />
         <Stat label="상한 소진 계정" value={`${exhausted}명`} />
       </div>
@@ -146,7 +146,7 @@ export async function CancelLossSummary() {
                   </TableCell>
                   <TableCell className="text-sm text-ink-primary/85 tabular-nums">
                     {won(Math.max(0, row.loss_amount ?? 0))}
-                    <span className="block text-[11px] text-ink-primary/40">{row.loss_credits ?? 0}만냥</span>
+                    <span className="block text-[11px] text-ink-primary/40">이용권 {row.loss_credits ?? 0}장</span>
                   </TableCell>
                   <TableCell className="text-sm text-ink-primary/55 tabular-nums">
                     {won(Math.max(0, row.refund_amount ?? 0))}

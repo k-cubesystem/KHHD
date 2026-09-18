@@ -2,7 +2,6 @@ import {
   FREE_DAILY_QUESTIONS,
   MEMBER_WEEKLY_QUESTIONS,
   ONBOARDING_FREE_QUESTIONS,
-  PURCHASE_COST_BOKCHAE,
   PURCHASE_QUESTIONS,
   PURCHASE_EXPIRE_DAYS,
   memberWeekWindow,
@@ -11,6 +10,8 @@ import {
   totalRemainingOf,
   chatUsageDateKey,
 } from '../entitlements'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { SHAMAN_QUESTIONS_PER_PASS } from '@/lib/domain/entitlement/pass'
 
 const DAY = 86_400_000
 const WEEK = 7 * DAY
@@ -20,12 +21,16 @@ describe('수치 계약 (화면·안내문구가 이 값을 인용한다)', () =
     expect(FREE_DAILY_QUESTIONS).toBe(0)
   })
 
-  it('멤버십 주간 10회 · 온보딩 1회 · 구매 1만냥 10회 · 소비기한 30일', () => {
+  it('멤버십 주간 10회 · 온보딩 1회 · 이용권 1장 10회 · 소비기한 30일', () => {
     expect(MEMBER_WEEKLY_QUESTIONS).toBe(10)
     expect(ONBOARDING_FREE_QUESTIONS).toBe(1)
-    expect(PURCHASE_COST_BOKCHAE).toBe(1)
+    expect(FEATURE_COST.shamanQuestions).toEqual({ display: 1, free: false })
     expect(PURCHASE_QUESTIONS).toBe(10)
     expect(PURCHASE_EXPIRE_DAYS).toBe(30)
+  })
+
+  it('이용권 쪽 «한 장에 몇 문»은 이 파일의 값을 그대로 쓴다 (두 숫자가 갈라지지 않는다)', () => {
+    expect(SHAMAN_QUESTIONS_PER_PASS).toBe(PURCHASE_QUESTIONS)
   })
 })
 
@@ -92,7 +97,7 @@ describe('totalRemainingOf', () => {
     expect(totalRemainingOf({ onboarding: 1, memberWeekly: 10, ad: 1, purchased: 10 })).toBe(22)
   })
 
-  it('전부 0이면 0 — 이때 화면은 「소진」이 아니라 「충전 안내」를 보여야 한다', () => {
+  it('전부 0이면 0 — 이때 화면은 「소진」이 아니라 「이용권으로 열기」 안내를 보여야 한다', () => {
     expect(totalRemainingOf({ onboarding: 0, memberWeekly: 0, ad: 0, purchased: 0 })).toBe(0)
   })
 })

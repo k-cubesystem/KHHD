@@ -2,8 +2,9 @@ import { timingSafeEqual } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/utils/logger'
-import { clawbackPaymentCredits } from '@/lib/services/wallet-grant'
+import { revokePaymentPasses } from '@/lib/services/pass-revoke'
 import { computeCancelClawback, type TossCancelRecord } from '@/lib/domain/payment/cancel-clawback'
+import { formatPassUnits } from '@/lib/domain/entitlement/pass'
 import { tossWebhookSecretKeys } from '@/lib/config/toss-keys'
 
 // Supabase Admin Client (Service Role) - lazy initialization
@@ -51,7 +52,7 @@ function tokenMatches(expected: string, received: string): boolean {
  *
  * 🔴 **상점이 둘이면 웹훅도 둘이고, 각자 자기 상점 시크릿으로 서명해서 온다.**
  *    하나만 비교하면 다른 상점의 웹훅이 전량 401 로 떨어져 **취소·환불 통지가 통째로 사라진다**
- *    (그 경로가 복채 회수를 건다 — 조용히 돈이 새는 자리다).
+ *    (그 경로가 이용권 회수를 건다 — 조용히 돈이 새는 자리다).
  *    그래서 등록된 시크릿 **전부**와 대조하고, 하나라도 맞으면 통과시킨다.
  */
 function verifyTossWebhookAuth(request: NextRequest): boolean {
@@ -166,14 +167,16 @@ async function handlePaymentDone(data: TossWebhookEvent['data']) {
   } else {
     // 일반 결제. 이미 취소·회수된 결제는 되살리지 않는다 — 지난 DONE 웹훅이 재전송돼도
     // refunded 가 completed 로 뒤집히면 매출·원장이 어긋난다.
+    // 발급 실패(grant_failed)도 덮지 않는다 — 덮으면 수동 발급 대상이 목록에서 사라진다.
     await getSupabaseAdmin()
       .from('payments')
       .update({ status: 'completed' })
       .eq('order_id', orderId)
       .neq('status', 'refunded')
+      .neq('status', 'grant_failed')
 
     logger.log('[Webhook] Payment confirmed:', orderId)
-    await recordPurchaseAnalytics(orderId, 'charge')
+    await recordPurchaseAnalytics(orderId, 'pass')
   }
 }
 
@@ -183,7 +186,7 @@ async function handlePaymentDone(data: TossWebhookEvent['data']) {
  * activity_logs 는 기존 트리거(trigger_activity_to_traffic)가 'purchase' 를 시간별 표에도 반영한다.
  * 멱등: 같은 orderId 로 두 번 오면 한 번만 남긴다. 실패해도 웹훅 응답을 막지 않는다.
  */
-async function recordPurchaseAnalytics(orderId: string, kind: 'charge' | 'subscription') {
+async function recordPurchaseAnalytics(orderId: string, kind: 'pass' | 'subscription') {
   try {
     const admin = getSupabaseAdmin()
     const { data: dup } = await admin
@@ -248,7 +251,7 @@ async function handlePaymentFailed(data: TossWebhookEvent['data']) {
   }
 }
 
-// 결제 취소 처리 — 지급된 복채를 되받는다(전액·부분 공통)
+// 결제 취소 처리 — 발급한 이용권 중 쓰지 않은 것을 회수한다(전액·부분 공통)
 async function handlePaymentCanceled(data: TossWebhookEvent['data']) {
   const { orderId } = data
   if (!orderId) return
@@ -258,9 +261,9 @@ async function handlePaymentCanceled(data: TossWebhookEvent['data']) {
     return
   }
 
-  // 충전 결제 취소: 회수하지 않으면 취소된 돈으로 산 복채가 그대로 남아 쓰인다(금전 손실).
+  // 이용권 구매 취소: 회수하지 않으면 취소된 돈으로 산 이용권이 그대로 남아 쓰인다(금전 손실).
   // 회수·원장 갱신·상태(전액 취소 시 refunded)는 모두 RPC 안에서 원자적으로 처리된다.
-  const result = await clawbackPaymentCredits({
+  const result = await revokePaymentPasses({
     orderId,
     tossStatus: data.status,
     totalAmount: data.totalAmount,
@@ -268,10 +271,10 @@ async function handlePaymentCanceled(data: TossWebhookEvent['data']) {
     cancels: data.cancels,
   })
 
-  logger.log('[Webhook] Payment cancelled:', orderId, result.reason, `clawed=${result.clawed}`)
+  logger.log('[Webhook] Payment cancelled:', orderId, result.reason, `revoked=${result.revoked}`)
 
-  if (result.clawed > 0 && result.userId) {
-    await notifyClawback(result.userId, result.clawed)
+  if (result.revoked > 0 && result.userId) {
+    await notifyRevoke(result.userId, result.revoked)
   }
 }
 
@@ -317,20 +320,20 @@ async function handleSubscriptionPaymentCanceled(orderId: string, data: TossWebh
   logger.log('[Webhook] Subscription payment cancelled:', orderId, `full=${plan.fullyCancelled}`)
 }
 
-// 복채 회수 알림 1건 — 부수 기능이므로 실패해도 웹훅 처리를 막지 않는다.
-async function notifyClawback(userId: string, clawed: number) {
+// 이용권 회수 알림 1건 — 부수 기능이므로 실패해도 웹훅 처리를 막지 않는다.
+async function notifyRevoke(userId: string, revoked: number) {
   const { error } = await getSupabaseAdmin()
     .from('notifications')
     .insert({
       user_id: userId,
-      title: '결제 취소로 복채가 회수되었습니다',
-      message: `결제 취소 처리에 따라 복채 ${clawed}만냥이 지갑에서 회수되었습니다.`,
+      title: '결제 취소로 이용권이 회수되었습니다',
+      message: `결제 취소 처리에 따라 ${formatPassUnits(revoked)}이 회수되었습니다.`,
       type: 'payment_cancelled',
       is_read: false,
     })
 
   if (error) {
-    logger.warn('[Webhook] 복채 회수 알림 실패:', { userId, message: error.message })
+    logger.warn('[Webhook] 이용권 회수 알림 실패:', { userId, message: error.message })
   }
 }
 

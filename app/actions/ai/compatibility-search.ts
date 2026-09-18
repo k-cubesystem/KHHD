@@ -144,7 +144,8 @@ ${
           summary: `${person1Name}님과 ${person2Name}님의 궁합 분석 - ${score}점`,
           score,
           model_used: 'placeholder',
-          talisman_cost: 2,
+          // 초대 궁합은 이용권을 쓰지 않는다 — 기록의 사용 장 수도 0 이다.
+          talisman_cost: 0,
         })
         logger.log('[Compatibility] History saved successfully')
       }

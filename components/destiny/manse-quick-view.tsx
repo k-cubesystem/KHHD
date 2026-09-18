@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ChevronRight, Coins, Crown, Loader2, Sparkles } from 'lucide-react'
+import { ChevronRight, Crown, Loader2, Sparkles, Ticket } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { TargetSelect, toTargetOption } from '@/components/destiny/target-select'
 import { IconGunghap } from '@/components/icons/traditional-icons'
@@ -11,6 +11,7 @@ import { getSajuData, WU_XING_COLORS, type SajuData } from '@/lib/domain/saju/sa
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 import { DIZHI_INFO, TIANGAN_INFO, WUXING_KOREAN } from '@/lib/constants/saju-terms'
 import { logger } from '@/lib/utils/logger'
+import { passBadgeLabel } from '@/lib/domain/entitlement/pass'
 
 /** 기둥 표시 순서 — 연·월·일·시(읽는 순서 그대로). */
 const PILLAR_ORDER = [
@@ -26,7 +27,7 @@ const ELEMENT_ORDER = ['木', '火', '土', '金', '水'] as const
  * 「내 명식 바로보기」 — 상단 바의 태극 문양을 누르면 열리는 요약 팝업.
  *
  * CEO 2026-08-25: «태극 문양으로, 팝업으로 사주팔자와 오행 간략한 설명. 사람 선택 드롭다운.
- * 복채·멤버십 등급·캐릭터 간략히. 각 내용은 해당 페이지로 이동».
+ * 복채·멤버십 등급·캐릭터 간략히. 각 내용은 해당 페이지로 이동». (2026-09-18 복채 폐지 → 이용권)
  *
  * 🔴 명식은 **클라이언트에서 결정론 엔진으로** 계산한다(`getSajuData`) — 만세력 화면과 같은
  *    함수다. 서버에서 또 계산하면 두 벌이 되어 값이 갈린다.
@@ -144,17 +145,19 @@ export function ManseQuickView() {
   )
 }
 
-/** 복채·등급·캐릭터 한 줄씩 — 각각 해당 화면으로 간다(CEO «각 내용은 해당 내용으로 이동»). */
+/** 이용권·등급·캐릭터 한 줄씩 — 각각 해당 화면으로 간다(CEO «각 내용은 해당 내용으로 이동»). */
 function AccountRow({ summary }: { summary: ManseSummary }) {
   return (
     <div className="grid grid-cols-3 gap-2">
       <Link
-        href="/protected/store?tab=bokchae"
+        href="/protected/store?tab=pass"
         className="flex flex-col items-center gap-1 rounded-lg border border-white/10 px-2 py-2.5 transition-colors hover:border-gold-500/45"
       >
-        <Coins className="h-3.5 w-3.5 text-gold-500" />
-        <span className="text-[9px] font-light text-ink-light/50">복채</span>
-        <span className="font-serif text-[12px] font-bold text-gold-500">{summary.balance}만냥</span>
+        <Ticket className="h-3.5 w-3.5 text-gold-500" />
+        <span className="text-[9px] font-light text-ink-light/50">이용권</span>
+        <span className="truncate font-serif text-[12px] font-bold text-gold-500">
+          {passBadgeLabel(summary.passes)}
+        </span>
       </Link>
 
       <Link

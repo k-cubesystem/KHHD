@@ -4,8 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
-import { getWalletBalance } from '@/app/actions/payment/wallet'
-import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { parseMatters } from '@/lib/domain/shrine/item-matters'
 import {
@@ -16,7 +14,7 @@ import {
   type CatalogItem,
   type SizeGrade,
 } from '@/lib/domain/shrine/types'
-import { BAEKIL_ITEM_NAME } from '@/lib/domain/ritual/baekil'
+import { SHOP_CLAIM_MAX_QTY, isRewardOnlyItem } from '@/lib/domain/shrine/shop-sections'
 
 interface CatalogRow {
   id: string
@@ -31,9 +29,6 @@ interface CatalogRow {
   placement_layer: string
   size_grade: string
   behavior: unknown
-  price_bok_points: number
-  price_krw: number
-  price_bokchae: number
   unlock_effect: unknown
   matters: unknown
   origin_note: string | null
@@ -53,9 +48,6 @@ function toCatalogItem(r: CatalogRow): CatalogItem {
     layer: isLayer(r.placement_layer) ? r.placement_layer : 'floor',
     size: (['sm', 'md', 'lg'].includes(r.size_grade) ? r.size_grade : 'md') as SizeGrade,
     behavior: parseBehavior(r.behavior),
-    priceBok: r.price_bok_points,
-    priceKrw: r.price_krw,
-    priceBokchae: r.price_bokchae,
     unlockEffect: parseUnlockEffect(r.unlock_effect),
     matters: parseMatters(r.matters),
     originNote: r.origin_note,
@@ -65,21 +57,19 @@ function toCatalogItem(r: CatalogRow): CatalogItem {
 export interface ShopData {
   catalog: CatalogItem[]
   owned: Record<string, number>
-  bokBalance: number
 }
 
-/** 상점 데이터: 전체 카탈로그 + 보유 수량 + 복 잔액 */
+/** 상점 데이터: 전체 카탈로그 + 보유 수량 */
 export async function getShopData(): Promise<ShopData> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { catalog: [], owned: {}, bokBalance: 0 }
+  if (!user) return { catalog: [], owned: {} }
 
-  const [{ data: catRows }, { data: invRows }, bokchae] = await Promise.all([
+  const [{ data: catRows }, { data: invRows }] = await Promise.all([
     supabase.from('shrine_item_catalog').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('user_shrine_inventory').select('catalog_item_id, qty').eq('user_id', user.id),
-    getWalletBalance(),
   ])
 
   const owned: Record<string, number> = {}
@@ -88,50 +78,46 @@ export async function getShopData(): Promise<ShopData> {
   return {
     catalog: (catRows ?? []).map((r) => toCatalogItem(r as CatalogRow)),
     owned,
-    bokBalance: bokchae, // 단일 통화: 복채 잔액
   }
 }
 
-/** 아이템을 복 포인트로 구매 → 보관함(인벤토리)에 담기. 배치는 신당 꾸미기에서. */
+/**
+ * 신물 받기 → 보관함(인벤토리)에 담기. 배치는 신당 꾸미기에서.
+ *
+ * 2026-09-18 이용권 전환: 신물·신수·세간은 **무료**다(값을 받지 않는다). 그래서 이 함수가 지키는 것은
+ * 값이 아니라 두 가지다 — 보상 전용 품목은 내주지 않는다, 한 가지를 끝없이 쌓지 않는다.
+ * 이름은 purchaseToInventory 그대로 둔다(신수 탭 purchaseGuardian 이 이 함수를 재사용한다).
+ */
 export async function purchaseToInventory(
   catalogItemId: string
-): Promise<{ success: boolean; error?: string; newQty?: number; newBalance?: number }> {
+): Promise<{ success: boolean; error?: string; newQty?: number }> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
 
-  const { data: item } = await supabase
-    .from('shrine_item_catalog')
-    .select('name, price_bokchae, is_active')
-    .eq('id', catalogItemId)
-    .maybeSingle()
+  const [{ data: item }, { data: invRow }] = await Promise.all([
+    supabase.from('shrine_item_catalog').select('name, is_active').eq('id', catalogItemId).maybeSingle(),
+    supabase
+      .from('user_shrine_inventory')
+      .select('qty')
+      .eq('user_id', user.id)
+      .eq('catalog_item_id', catalogItemId)
+      .maybeSingle(),
+  ])
   if (!item || !item.is_active) return { success: false, error: 'ITEM_NOT_FOUND' }
 
   /**
-   * 완주 보상 전용 품목은 팔지 않는다.
+   * 완주 보상 전용 품목은 내주지 않는다.
    *
-   * 「백일 소원끈」은 설명 자체가 "백일기도를 마친 이가 처마에 매다는" 이라, 살 수 있으면
-   * 그 설명이 거짓말이 된다. 트로피(목패·놋패·금패)는 서약 행 그 자체라 애초에 살 수 없는데
-   * 걸이 아이템만 구멍이 나 있었다.
-   *
-   * ⚠️ 가격을 0 으로 두거나 is_active=false 로 숨기는 방법은 둘 다 안 된다 —
-   *    0 이면 여기서 **무료로 지급**되고, 비활성이면 카탈로그 조회가 전부 `is_active=true` 필터라
-   *    이미 배치한 사람의 **신당 렌더가 깨진다**. 그래서 활성·유가로 두고 구매만 막는다.
+   * 「백일 소원끈」은 설명 자체가 "백일기도를 마친 이가 처마에 매다는" 이라, 받을 수 있으면
+   * 그 설명이 거짓말이 된다. 무료 전환 뒤로는 값이 막이가 아니므로 이 검사가 유일한 막이다.
    */
-  if (item.name === BAEKIL_ITEM_NAME) return { success: false, error: 'REWARD_ONLY' }
+  if (isRewardOnlyItem(item.name)) return { success: false, error: 'REWARD_ONLY' }
+  if ((invRow?.qty ?? 0) >= SHOP_CLAIM_MAX_QTY) return { success: false, error: 'MAX_QTY' }
 
-  const price = item.price_bokchae
-  let newBalance: number | undefined
-  if (price > 0) {
-    // 단일 통화: 복채 원자 차감(잔액 가드).
-    const res = await spendBokchae(price, `${item.name} 구매`)
-    if (!res.success) return { success: false, error: res.error ?? 'INSUFFICIENT_BOKCHAE' }
-    newBalance = res.balance
-  }
-
-  // 아이템 지급은 service_role 전용 RPC — 인증·차감(위)을 통과한 본인 계정에만.
+  // 아이템 지급은 service_role 전용 RPC — 인증·보상 전용 검사(위)를 통과한 본인 계정에만.
   const admin = createAdminClient()
   const { data: qty, error } = await admin.rpc('grant_shrine_item', {
     p_user_id: user.id,
@@ -140,13 +126,11 @@ export async function purchaseToInventory(
   })
   if (error) {
     logger.error('[shrine/inventory] grant failed:', error)
-    // 복채는 차감됐는데 지급 실패 → 롤백(best-effort)
-    if (price > 0) await refundBokchae(user.id, price, `${item.name} 구매 취소 환불`)
     return { success: false, error: 'GRANT_FAILED' }
   }
 
-  trackEvent({ action: 'shrine_item_purchase', category: 'shrine', label: item.name, value: price })
+  trackEvent({ action: 'shrine_item_claim', category: 'shrine', label: item.name })
   revalidatePath('/protected/shrine/shop')
   revalidatePath('/protected/shrine')
-  return { success: true, newQty: typeof qty === 'number' ? qty : undefined, newBalance }
+  return { success: true, newQty: typeof qty === 'number' ? qty : undefined }
 }

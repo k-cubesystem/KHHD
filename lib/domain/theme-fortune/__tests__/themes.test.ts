@@ -8,6 +8,7 @@
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { FEATURE_COST, formatFeatureCost } from '@/lib/domain/payment/feature-costs'
+import { findBannedPassTerms } from '@/lib/domain/entitlement/pass'
 import {
   DEFAULT_THEME_TAB,
   hasThemeReading,
@@ -51,6 +52,8 @@ import {
 
 const ROOT = process.cwd()
 const THEMES_SOURCE = readFileSync(join(ROOT, 'lib/domain/theme-fortune/themes.ts'), 'utf8')
+/** 이용권을 쓰는 호출 — 옛 차감 함수 이름까지 함께 잡는다(되살아나면 그것도 사용이다). */
+const CHARGE_CALL = /chargeFeature|consumePass|deductTalisman|spendBokchae/
 
 /** 카피가 실려 나가는 모든 문자열 — 금지어 검사는 여기 전량에 건다. */
 function copyOf(theme: ThemeFortune): string[] {
@@ -183,9 +186,11 @@ describe('THEME_FORTUNES — 금지어 (마스터 §9-3)', () => {
     }
   })
 
-  it('복채 표기 문자열에도 금지어가 없다', () => {
+  it('이용권 표기 문자열에도 금지어가 없다 (이용권 문구 규율 포함)', () => {
     for (const theme of THEME_FORTUNES) {
-      for (const word of BANNED) expect(themeCostLabel(theme)).not.toContain(word)
+      const label = themeCostLabel(theme)
+      for (const word of BANNED) expect(label).not.toContain(word)
+      expect({ id: theme.id, banned: findBannedPassTerms(label) }).toEqual({ id: theme.id, banned: [] })
     }
   })
 })
@@ -243,20 +248,20 @@ describe('THEME_FORTUNES — 단가는 feature-costs 에서만 온다 (마스터
     }
   })
 
-  it('«무료»로 표기하는 화면은 실제로 복채를 받지 않는다', () => {
-    // costKey: null 은 추측이 아니라 실차감 호출부를 보고 적은 사실이다. 여기서 다시 읽는다.
+  it('«무료»로 표기하는 화면은 실제로 이용권을 쓰지 않는다', () => {
+    // costKey: null 은 추측이 아니라 실사용 호출부를 보고 적은 사실이다. 여기서 다시 읽는다.
     const trend = readFileSync(join(ROOT, 'app/actions/ai/trend.ts'), 'utf8')
 
-    expect(trend).not.toMatch(/deductTalisman/)
+    expect(trend).not.toMatch(CHARGE_CALL)
   })
 
-  it('단독 화면 둘(오늘의 운세·2026 병오년)도 실제로 복채를 받지 않는다', () => {
+  it('단독 화면 둘(오늘의 운세·2026 병오년)도 실제로 이용권을 쓰지 않는다', () => {
     // FEATURE_COST 가 free: true 라고 적어 둔 것을 생성 액션에서 다시 확인한다.
-    // 표기만 «무료»이고 실차감이 있으면 표시광고법 문제가 된다.
+    // 표기만 «무료»이고 실사용이 있으면 표시광고법 문제가 된다.
     for (const source of ['app/actions/fortune/daily.ts', 'app/actions/ai/year2026.ts']) {
-      expect({ source, deducts: readFileSync(join(ROOT, source), 'utf8').includes('deductTalisman') }).toEqual({
+      expect({ source, charges: CHARGE_CALL.test(readFileSync(join(ROOT, source), 'utf8')) }).toEqual({
         source,
-        deducts: false,
+        charges: false,
       })
     }
 
@@ -266,15 +271,16 @@ describe('THEME_FORTUNES — 단가는 feature-costs 에서만 온다 (마스터
     }
   })
 
-  it('복채를 받는 화면은 그 값을 FEATURE_COST 에서 읽는다', () => {
+  it('이용권을 쓰는 화면은 장 수를 적지 않고 costKey 로 서버가 FEATURE_COST 에서 읽게 한다', () => {
     const wealth = readFileSync(join(ROOT, 'app/actions/ai/wealth.ts'), 'utf8')
 
+    expect(wealth).toMatch(/chargeFeature\(\{[^}]*costKey: 'wealth'/)
     expect(wealth).toMatch(/FEATURE_COST\.wealth\.display/)
   })
 
   it('무료 판정은 «카드가 실제로 가는 곳»을 따른다', () => {
     // 🔴 개별 풀이가 선 테마는 destination 이 아니라 자기 풀이의 값이다. 링크는 풀이로 가는데
-    //    배지가 옛 도착 화면 값을 쓰면 「무료」라고 적힌 카드가 복채를 받는다.
+    //    배지가 옛 도착 화면 값을 쓰면 「무료」라고 적힌 카드가 이용권을 쓴다.
     for (const theme of THEME_FORTUNES) {
       const destination = themeDestination(theme)
 
@@ -298,7 +304,7 @@ describe('THEME_FORTUNES — 단가는 feature-costs 에서만 온다 (마스터
     }
   })
 
-  it('무료 미끼는 카테고리당 1종이고, 그 둘만 복채를 받지 않는다 (마스터 §7-1)', () => {
+  it('무료 미끼는 카테고리당 1종이고, 그 둘만 이용권을 쓰지 않는다 (마스터 §7-1)', () => {
     const free = THEME_FORTUNES.filter((theme) => theme.freeReading)
 
     expect(free.map((theme) => theme.id)).toEqual(['what-next', 'money-self'])
@@ -366,7 +372,7 @@ describe('진입 경로 — 가짜 화면으로 보내지 않는다', () => {
     // `/analysis/theme/{slug}` 는 이제 세 일을 한다 — 구 5개 slug 리다이렉트 · 테마 상세 · 허브 폴백.
     // 그래서 개별 풀이가 선 테마만 그리로 가고(`themeEntryHref`), 아래 둘은 여전히 아니다:
     //   ① THEME_DESTINATIONS/STANDALONE 은 «지금 돌아가는 다른 화면»의 표다
-    //   ② 허브 카드는 목록의 그 카드 자리로 간다(복채를 한 번 보여 준 다음 누르게 한다)
+    //   ② 허브 카드는 목록의 그 카드 자리로 간다(장 수를 한 번 보여 준 다음 누르게 한다)
     for (const route of openRoutes()) {
       expect(route.href.startsWith(`${THEME_LIST_PATH}/`)).toBe(false)
     }

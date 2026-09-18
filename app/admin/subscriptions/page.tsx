@@ -48,7 +48,7 @@ export default async function AdminSubscriptionsPage({
     <div className="space-y-4 md:space-y-6">
       <AdminPageHeader
         title="구독 관리"
-        description="멤버십 구독자 현황과 결제 상태. 복채 수동 지급도 여기서 한다."
+        description="멤버십 구독자 현황과 결제 상태. 이용권 수동 발급도 여기서 한다."
         icon={<Crown className="h-5 w-5 text-gold-500" aria-hidden />}
       />
 
@@ -67,7 +67,7 @@ export default async function AdminSubscriptionsPage({
           label="월 예상 수익"
           value={`${stats.monthlyRevenue.toLocaleString('ko-KR')}원`}
           tone="accent"
-          hint="활성 구독 기준"
+          hint="정기결제 중인 구독 기준 · 관리자 부여 제외"
         />
       </StatStrip>
 

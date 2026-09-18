@@ -9,6 +9,7 @@ import type { Element } from '@/lib/domain/shrine/types'
 import type { Prescription, PrescriptionTeaser } from '@/lib/domain/circle/prescription'
 import type { PrescriptionPayload } from '@/app/actions/circle/energy'
 import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
+import { FEATURE_MIN_TIER, TIER_LABEL } from '@/lib/domain/payment/membership-tiers'
 import type { GiftSummary } from '@/app/actions/circle/gift'
 import { GiftItemButton } from '@/components/family/gift-item-button'
 import { GiftCardButton } from '@/components/family/gift-card-button'
@@ -29,6 +30,8 @@ import { trackEvent } from '@/lib/analytics/ga4'
 
 const STORE_ITEMS_HREF = '/protected/store?tab=items'
 const MEMBERSHIP_HREF = '/protected/store?tab=membership'
+/** 처방전 전부(③~⑤)를 여는 등급 — 서버 getPrescription 과 같은 단일 출처(familyMap). */
+const FAMILY_MAP_TIER_LABEL = TIER_LABEL[FEATURE_MIN_TIER.familyMap]
 
 function label(el: Element): string {
   return `${EL_LABEL[el]}(${EL_KO[el]})`
@@ -103,7 +106,7 @@ function LockedRest({ teaser }: { teaser: PrescriptionTeaser }) {
     <section className="space-y-3 rounded-xl border border-gold-500/40 bg-gradient-to-b from-gold-500/[0.1] to-transparent p-4">
       <p className="flex items-center gap-1.5 font-serif text-[13px] font-bold text-ink-light">
         <Lock className="h-3.5 w-3.5 text-gold-400" />
-        나머지 세 블록은 멤버십이 엽니다
+        나머지 세 블록은 {FAMILY_MAP_TIER_LABEL} 멤버십부터 열려요
       </p>
       <ul className="space-y-1 text-[12px] text-ink-light/70">
         <li>③ {label(teaser.lacking)} 기운을 채워 주는 기운과 그 이유 — 직접·낳아 주는 기운·사람</li>
@@ -120,7 +123,7 @@ function LockedRest({ teaser }: { teaser: PrescriptionTeaser }) {
         }
         className="flex items-center justify-center gap-1.5 rounded-lg border border-gold-500/50 bg-gold-500/[0.14] py-2.5 font-serif text-[13px] font-bold text-gold-200 hover:bg-gold-500/25 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold-500/60"
       >
-        멤버십으로 처방전 전부 열기 <ArrowRight className="h-3.5 w-3.5" />
+        {FAMILY_MAP_TIER_LABEL} 멤버십으로 처방전 전부 열기 <ArrowRight className="h-3.5 w-3.5" />
       </Link>
       <ul className="space-y-0.5 text-[10.5px] text-ink-light/40">
         {GENERIC_MEMBERSHIP_BENEFIT_LINES.map((line) => (
@@ -225,7 +228,6 @@ function BlockFour({
                     itemId={s.id}
                     itemName={s.name}
                     element={s.element}
-                    priceBokchae={s.priceBokchae}
                   />
                 )}
               </li>

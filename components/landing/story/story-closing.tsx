@@ -2,12 +2,13 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, Check } from 'lucide-react'
 import { BLUR_DATA_URL } from '@/lib/utils/image'
+import { ONBOARDING_PASSES } from '@/lib/domain/entitlement/pass'
 import { StoryReveal } from './story-reveal'
 
 const STARTERS = [
   '가입 즉시 오늘의 운세와 2026 신년운세를 무료로',
-  '정밀 분석은 필요할 때 복채로 하나씩',
-  '본 분석은 계정에 저장되어 다시 열람 가능',
+  `정밀 분석은 가입하면 ${ONBOARDING_PASSES}회 무료, 이후엔 필요할 때 이용권으로 하나씩`,
+  '본 분석은 계정에 저장되어 다시 열람 가능(보관 개수는 등급별)',
 ] as const
 
 /** 07 — 마무리 CTA. 주 CTA는 무료 가입, 보조는 로그인. */

@@ -182,9 +182,9 @@ export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null, praye
         </button>
       </div>
 
-      <p className="text-[10px] text-ink-light/20 font-sans text-center">
-        소원 기원 시 복 포인트 {isOwner ? '+10' : '+5'}이 적립됩니다
-      </p>
+      {isOwner && (
+        <p className="text-[10px] text-ink-light/20 font-sans text-center">기원하면 신당 정성이 하루 쌓여요</p>
+      )}
     </div>
   )
 }

@@ -94,7 +94,7 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
                 onClose()
               }}
             >
-              <Link href="/protected/membership">
+              <Link href="/protected/store?tab=membership">
                 <Sparkles className="w-4 h-4 mr-2" />
                 {t('unlock')}
               </Link>
@@ -102,9 +102,9 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
 
             <div className="text-center">
               <Link
-                href="/protected/membership#bokchae"
+                href="/protected/store?tab=pass"
                 onClick={() => {
-                  GA.paywallClick('bokchae')
+                  GA.paywallClick('pass')
                   onClose()
                 }}
                 className="text-gold-500/50 hover:text-gold-300 text-xs transition-colors underline underline-offset-2"

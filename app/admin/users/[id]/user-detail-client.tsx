@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserRole } from '@/types/auth'
-import { updateUserRole, deleteUser, adjustUserBalance, updateUserSubscription } from '../actions'
+import { updateUserRole, deleteUser, adjustUserPasses, updateUserSubscription } from '../actions'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,8 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AdminCard } from '@/components/admin/ui/admin-card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Trash2, Users, FileText, Coins, Crown, Edit, Save, X, Flame, ArrowUpDown } from 'lucide-react'
+import { ArrowLeft, Trash2, Users, FileText, Ticket, Crown, Edit, Save, X, Flame, ArrowUpDown } from 'lucide-react'
 import { describePaymentSettlement } from '../../payments/payment-display'
+import { PASS_VALID_DAYS, heldPassCount, passSummaryLines, type PassSummary } from '@/lib/domain/entitlement/pass'
+import { deductKeyLabel } from '@/lib/domain/payment/feature-costs'
+import type { PassLedgerEntry } from '@/lib/services/entitlement'
 
 interface AdminUserProfile {
   id: string
@@ -54,24 +57,28 @@ interface AdminPaymentRecord {
   created_at: string
 }
 
-interface AdminWallet {
-  balance: number
-}
-
 interface AdminSubscription {
-  end_date: string
+  /** 정기결제 구독은 current_period_end 만, 관리자 부여는 둘 다 채운다 — 판정 기준(lib/auth/subscription)과 같은 순서로 읽는다. */
+  current_period_end: string | null
+  end_date: string | null
   membership_plans?: {
     tier: string
   }
 }
 
-interface AdminTransaction {
-  id: string
-  amount: number
-  type: string
-  description: string | null
-  created_at: string
+const LEDGER_KIND_LABEL: Record<PassLedgerEntry['kind'], string> = {
+  grant: '발급',
+  consume: '사용',
+  refund: '되돌림',
+  revoke: '회수',
 }
+
+const LEDGER_POCKET_LABEL: Record<PassLedgerEntry['pocket'], string> = {
+  membership: '멤버십 이번 달 몫',
+  pass: '보유 이용권',
+}
+
+const isLedgerPlus = (kind: PassLedgerEntry['kind']) => kind === 'grant' || kind === 'refund'
 
 interface AdminShrine {
   id: string
@@ -90,9 +97,9 @@ interface UserDetailClientProps {
   sajuRecords: AdminSajuRecord[]
   familyMembers: AdminFamilyMember[]
   payments: AdminPaymentRecord[]
-  wallet?: AdminWallet | null
   subscription?: AdminSubscription | null
-  transactions: AdminTransaction[]
+  passSummary: PassSummary
+  passLedger: PassLedgerEntry[]
   shrines: AdminShrine[]
   authCreatedAt?: string | null
 }
@@ -102,20 +109,26 @@ export function UserDetailClient({
   sajuRecords,
   familyMembers,
   payments,
-  wallet,
   subscription,
-  transactions,
+  passSummary,
+  passLedger,
   shrines,
   authCreatedAt,
 }: UserDetailClientProps) {
   const router = useRouter()
   const [role, setRole] = useState<UserRole>(user.role as UserRole)
-  const [balance, setBalance] = useState(wallet?.balance || 0)
-  const [isEditingBalance, setIsEditingBalance] = useState(false)
+  const [isAdjusting, setIsAdjusting] = useState(false)
   const [delta, setDelta] = useState('')
+  const [validDays, setValidDays] = useState(String(PASS_VALID_DAYS))
   const [reason, setReason] = useState('')
-  const [balanceSaving, setBalanceSaving] = useState(false)
+  const [adjustSaving, setAdjustSaving] = useState(false)
+  const [adjustKey, setAdjustKey] = useState('')
 
+  const held = heldPassCount(passSummary)
+  const passLines = passSummaryLines(passSummary)
+  const deltaNum = Number(delta)
+
+  const subscriptionEnd = subscription?.current_period_end ?? subscription?.end_date ?? null
   const [currentTier, setCurrentTier] = useState(subscription?.membership_plans?.tier || 'FREE')
   const [isEditingTier, setIsEditingTier] = useState(false)
 
@@ -128,27 +141,39 @@ export function UserDetailClient({
     })
   }
 
-  const handleBalanceAdjust = async () => {
-    const amount = Number(delta)
-    if (!Number.isFinite(amount) || amount === 0) {
-      toast.error('증감액은 0이 아닌 정수여야 합니다.')
+  const openAdjust = () => {
+    setAdjustKey(crypto.randomUUID())
+    setIsAdjusting(true)
+  }
+
+  const resetAdjust = () => {
+    setIsAdjusting(false)
+    setDelta('')
+    setValidDays(String(PASS_VALID_DAYS))
+    setReason('')
+    setAdjustKey('')
+  }
+
+  const handlePassAdjust = async () => {
+    if (!Number.isInteger(deltaNum) || deltaNum === 0) {
+      toast.error('조정 장수는 0이 아닌 정수여야 해요.')
       return
     }
     if (!reason.trim()) {
       toast.error('조정 사유를 입력하세요.')
       return
     }
-    setBalanceSaving(true)
-    const result = await adjustUserBalance(user.id, amount, reason)
-    setBalanceSaving(false)
+    setAdjustSaving(true)
+    const result = await adjustUserPasses(user.id, deltaNum, reason, deltaNum > 0 ? Number(validDays) : null, adjustKey)
+    setAdjustSaving(false)
     if (result.success) {
-      setBalance(result.newBalance ?? balance + amount)
-      setIsEditingBalance(false)
-      setDelta('')
-      setReason('')
-      toast.success(`복채를 ${amount > 0 ? '+' : ''}${amount.toLocaleString()}만냥 조정했습니다.`)
+      resetAdjust()
+      toast.success(
+        deltaNum > 0 ? `이용권 ${result.granted}장을 발급했어요.` : `이용권 ${result.revoked}장을 회수했어요.`
+      )
+      router.refresh()
     } else {
-      toast.error('잔액 조정 실패: ' + result.error)
+      toast.error('이용권 조정 실패: ' + result.error)
     }
   }
 
@@ -165,8 +190,7 @@ export function UserDetailClient({
   }
 
   const handleDelete = async () => {
-    if (!confirm('⚠️ 경고: 정말로 이 사용자를 영구 삭제하시겠습니까?\n모든 데이터가 사라지며 복구할 수 없습니다.'))
-      return
+    if (!confirm('⚠️ 경고: 정말로 이 사용자를 삭제하시겠습니까?\n모든 데이터가 사라지며 복구할 수 없습니다.')) return
 
     const toastId = toast.loading('사용자 삭제 처리 중...')
     const result = await deleteUser(user.id)
@@ -227,10 +251,10 @@ export function UserDetailClient({
             기본 정보
           </TabsTrigger>
           <TabsTrigger
-            value="wallet"
+            value="passes"
             className="text-xs text-ink-primary/40 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gold-500 data-[state=active]:to-gold-600 data-[state=active]:text-ink-950 data-[state=active]:shadow-lg px-3 py-1.5 whitespace-nowrap"
           >
-            지갑 & 멤버십
+            이용권 & 멤버십
           </TabsTrigger>
           <TabsTrigger
             value="saju"
@@ -251,10 +275,10 @@ export function UserDetailClient({
             결제 ({payments.length})
           </TabsTrigger>
           <TabsTrigger
-            value="transactions"
+            value="pass-ledger"
             className="text-xs text-ink-primary/40 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gold-500 data-[state=active]:to-gold-600 data-[state=active]:text-ink-950 data-[state=active]:shadow-lg px-3 py-1.5 whitespace-nowrap"
           >
-            복채 내역 ({transactions.length})
+            이용권 내역 ({passLedger.length})
           </TabsTrigger>
           <TabsTrigger
             value="shrines"
@@ -334,68 +358,92 @@ export function UserDetailClient({
           </AdminCard>
         </TabsContent>
 
-        {/* 2. Wallet & Membership Tab */}
-        <TabsContent value="wallet" className="mt-3">
+        {/* 2. 이용권 & 멤버십 — 🔴 멤버십 몫과 보유 이용권을 한 숫자로 합치지 않는다 */}
+        <TabsContent value="passes" className="mt-3">
           <AdminCard>
             <div className="space-y-6">
-              {/* Talisman Wallet */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-serif font-bold text-ink-primary flex items-center gap-2">
-                    <Coins className="w-4 h-4 text-gold-400" />
-                    복채 지갑
+                    <Ticket className="w-4 h-4 text-gold-400" />
+                    이용권
                   </h3>
                 </div>
 
                 <div className="p-4 bg-surface/30 rounded-lg border border-white/[0.08] space-y-3">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center flex-shrink-0">
-                      <Coins className="w-6 h-6 text-gold-400" />
+                      <Ticket className="w-6 h-6 text-gold-400" />
                     </div>
                     <div className="flex-1">
-                      <Label className="text-[10px] text-ink-primary/40 font-medium">보유 복채</Label>
-                      <p className="text-2xl font-serif font-bold text-ink-primary/85">
-                        {balance.toLocaleString()}만냥
+                      <Label className="text-[10px] text-ink-primary/40 font-medium">보유 이용권</Label>
+                      <p className="text-2xl font-serif font-bold text-ink-primary/85 tabular-nums">
+                        {passSummary.unlimited ? '역할로 통과' : `${held}장`}
                       </p>
                     </div>
                   </div>
 
-                  {isEditingBalance ? (
+                  {passLines.length === 0 ? (
+                    <p className="text-[11px] text-ink-primary/40">보유 이용권도 멤버십 몫도 없습니다.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {passLines.map((line) => (
+                        <li key={line} className="text-[11px] text-ink-primary/60">
+                          {line}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {isAdjusting ? (
                     <div className="space-y-2 pt-2 border-t border-white/[0.08]">
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-ink-primary/40">증감액 (양수=지급, 음수=차감)</Label>
+                        <Label className="text-[10px] text-ink-primary/40">조정 장수 (양수=발급, 음수=회수)</Label>
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => setDelta((d) => String((Number(d) || 0) - 10))}
+                            onClick={() => setDelta((d) => String((Number(d) || 0) - 1))}
                             className="h-8 px-2 rounded bg-surface border border-white/[0.10] text-ink-primary/70 text-xs"
                           >
-                            −10
+                            −1
                           </button>
                           <Input
                             type="number"
                             value={delta}
                             onChange={(e) => setDelta(e.target.value)}
-                            placeholder="예: 100 또는 -50"
+                            placeholder="예: 3 또는 -1"
                             className="h-8 text-sm bg-surface border-white/[0.10] text-white flex-1"
                           />
                           <button
                             type="button"
-                            onClick={() => setDelta((d) => String((Number(d) || 0) + 10))}
+                            onClick={() => setDelta((d) => String((Number(d) || 0) + 1))}
                             className="h-8 px-2 rounded bg-surface border border-white/[0.10] text-ink-primary/70 text-xs"
                           >
-                            +10
+                            +1
                           </button>
                         </div>
-                        {Number(delta) !== 0 && delta !== '' && (
+                        {delta !== '' && deltaNum !== 0 && !passSummary.unlimited && (
                           <p className="text-[10px] text-ink-primary/40">
-                            변경 후:{' '}
-                            <span className="text-gold-400 font-bold">
-                              {(balance + Number(delta)).toLocaleString()}만냥
+                            보유 이용권:{' '}
+                            <span className="text-gold-400 font-bold tabular-nums">
+                              {held}장 → {Math.max(0, held + deltaNum)}장
                             </span>
                           </p>
                         )}
                       </div>
+                      {deltaNum > 0 && (
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-ink-primary/40">유효기간 (발급일로부터, 일)</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={365}
+                            value={validDays}
+                            onChange={(e) => setValidDays(e.target.value)}
+                            className="h-8 text-sm bg-surface border-white/[0.10] text-white"
+                          />
+                        </div>
+                      )}
                       <div className="space-y-1">
                         <Label className="text-[10px] text-ink-primary/40">조정 사유 (필수)</Label>
                         <Input
@@ -409,9 +457,9 @@ export function UserDetailClient({
                       <div className="flex items-center gap-2">
                         <Button
                           size="sm"
-                          disabled={balanceSaving}
+                          disabled={adjustSaving}
                           className="h-8 bg-success hover:bg-success/80 text-xs gap-1.5"
-                          onClick={handleBalanceAdjust}
+                          onClick={handlePassAdjust}
                         >
                           <Save className="w-3.5 h-3.5" /> 적용
                         </Button>
@@ -419,11 +467,7 @@ export function UserDetailClient({
                           size="sm"
                           variant="ghost"
                           className="h-8 text-ink-primary/55 hover:text-error-text text-xs"
-                          onClick={() => {
-                            setIsEditingBalance(false)
-                            setDelta('')
-                            setReason('')
-                          }}
+                          onClick={resetAdjust}
                         >
                           <X className="w-3.5 h-3.5 mr-1" /> 취소
                         </Button>
@@ -434,9 +478,9 @@ export function UserDetailClient({
                       variant="outline"
                       size="sm"
                       className="h-7 text-xs border-white/[0.12] text-ink-primary/70 hover:text-gold-400 hover:border-gold-500/30"
-                      onClick={() => setIsEditingBalance(true)}
+                      onClick={openAdjust}
                     >
-                      <Edit className="w-3.5 h-3.5 mr-1.5" /> 복채 조정
+                      <Edit className="w-3.5 h-3.5 mr-1.5" /> 이용권 조정
                     </Button>
                   )}
                 </div>
@@ -503,7 +547,9 @@ export function UserDetailClient({
                           <p className="text-lg font-serif font-bold text-ink-primary/85">{currentTier || 'FREE'}</p>
                           <p className="text-[10px] text-ink-primary/40">
                             {subscription
-                              ? `만료일: ${new Date(subscription.end_date).toLocaleDateString()}`
+                              ? subscriptionEnd
+                                ? `이번 기간 끝: ${new Date(subscriptionEnd).toLocaleDateString('ko-KR')}`
+                                : '기간 정보 없음'
                               : '구독 중이 아닙니다'}
                           </p>
                         </div>
@@ -660,31 +706,33 @@ export function UserDetailClient({
           </AdminCard>
         </TabsContent>
 
-        {/* 6. 복채 트랜잭션 이력 — 잔액이 왜 이렇게 됐는지 추적 (CS 대응) */}
-        <TabsContent value="transactions" className="mt-3">
+        {/* 6. 이용권 내역 — 발급·사용·되돌림·회수가 왜 이렇게 됐는지 추적 (CS 대응) */}
+        <TabsContent value="pass-ledger" className="mt-3">
           <AdminCard
             title={
               <>
-                <ArrowUpDown className="h-4 w-4 text-gold-400" aria-hidden /> 복채 증감 내역
+                <ArrowUpDown className="h-4 w-4 text-gold-400" aria-hidden /> 이용권 내역
               </>
             }
           >
             <div className="space-y-3">
-              <p className="text-[10px] text-ink-primary/40 mb-3">
-                최근 50건 · 현재 잔액 {balance.toLocaleString()}만냥
-              </p>
-              {transactions.length === 0 ? (
-                <div className="text-center py-8 text-ink-primary/40 text-sm">복채 내역이 없습니다.</div>
+              <p className="text-[10px] text-ink-primary/40 mb-3">최근 50건 · 멤버십 몫과 보유 이용권은 따로 셉니다</p>
+              {passLedger.length === 0 ? (
+                <div className="text-center py-8 text-ink-primary/40 text-sm">이용권 내역이 없습니다.</div>
               ) : (
                 <div className="divide-y divide-white/[0.06]">
-                  {transactions.map((tx) => {
-                    const plus = tx.amount > 0
+                  {passLedger.map((entry) => {
+                    const plus = isLedgerPlus(entry.kind)
+                    const title = entry.featureKey ? deductKeyLabel(entry.featureKey) : entry.note
                     return (
-                      <div key={tx.id} className="flex items-start justify-between gap-3 py-2.5">
+                      <div key={entry.id} className="flex items-start justify-between gap-3 py-2.5">
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs text-ink-primary/70 truncate">{tx.description || tx.type}</p>
+                          <p className="text-xs text-ink-primary/70 truncate">
+                            {LEDGER_KIND_LABEL[entry.kind]}
+                            {title ? ` · ${title}` : ''}
+                          </p>
                           <p className="text-[10px] text-ink-primary/30 mt-0.5">
-                            {tx.type} · {new Date(tx.created_at).toLocaleString('ko-KR')}
+                            {LEDGER_POCKET_LABEL[entry.pocket]} · {new Date(entry.createdAt).toLocaleString('ko-KR')}
                           </p>
                         </div>
                         <span
@@ -692,8 +740,8 @@ export function UserDetailClient({
                             plus ? 'text-success-text' : 'text-error-text'
                           }`}
                         >
-                          {plus ? '+' : ''}
-                          {tx.amount.toLocaleString()}
+                          {plus ? '+' : '−'}
+                          {entry.units}장
                         </span>
                       </div>
                     )

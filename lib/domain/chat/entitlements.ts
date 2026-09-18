@@ -4,6 +4,7 @@
  * 왜 파일을 새로 가르나: 종전에는 `DAILY_FREE_QUESTIONS` 상수 하나가 «전 등급 동일»한
  * 하루 무료분을 뜻했고, 멤버십·1일권은 «입장»만 열었다. 2026-08-25 CEO 결정으로
  * 무료 일일분이 폐지되고 주머니가 넷(온보딩·멤버십 주간·광고·구매)으로 갈렸다.
+ * 2026-09-18 이용권 전환 뒤 «구매» 주머니는 이용권 1장으로 연다(값은 FEATURE_COST.shamanQuestions).
  * 규칙이 화면마다 갈라지지 않도록 수치·창 계산을 전부 여기로 모은다.
  *
  * 🔴 광고 지급량·상한의 정본은 여기가 아니라 DB `system_settings`
@@ -16,19 +17,22 @@
 /** 무료 일일 질문 — 2026-08-25 폐지. 일반 사용자·신규 가입자는 0이다. */
 export const FREE_DAILY_QUESTIONS = 0
 
+/**
+ * 마스터(admin)의 질문 칸 표식 — 상한이 없다는 뜻을 숫자 칸에 싣는 값이다.
+ * 화면에 «무제한»이라 적지 않는다(마스터 전용 화면이라도 문구 규율은 같다).
+ */
+export const MASTER_QUESTION_ALLOWANCE = 99_999_999
+
 /** 멤버십 회원에게 «구독 주기 기준 7일»마다 주어지는 질문 수. */
 export const MEMBER_WEEKLY_QUESTIONS = 10
 
 /** 명식(생년월일시) 입력을 마친 계정에 평생 한 번 주어지는 맛보기 질문 수. */
 export const ONBOARDING_FREE_QUESTIONS = 1
 
-/** 질문권 구매가 — 복채 만냥 단위(wallets.balance 1 = 1만냥). */
-export const PURCHASE_COST_BOKCHAE = 1
-
-/** 질문권 1회 구매로 주어지는 질문 수. */
+/** 이용권 1장으로 여는 질문 수. 쓰는 장 수의 정본은 FEATURE_COST.shamanQuestions 다. */
 export const PURCHASE_QUESTIONS = 10
 
-/** 구매 질문권 소비기한(일). 구매 시점부터 이 기간이 지나면 소멸한다. */
+/** 이용권으로 연 질문의 소비기한(일). 여는 시점부터 이 기간이 지나면 소멸한다. */
 export const PURCHASE_EXPIRE_DAYS = 30
 
 const DAY_MS = 86_400_000

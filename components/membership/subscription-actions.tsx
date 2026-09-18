@@ -153,8 +153,9 @@ export function SubscriptionActions({ subscriptionId: _subscriptionId, status, p
                   <p className="font-medium text-ink-light">해지 시 잃게 되는 혜택:</p>
                   {/* 등급마다 액수가 달라 숫자는 적지 않는다 — 잃는 «것»만 정확히 적는다. */}
                   <ul className="list-disc list-inside text-sm space-y-1">
-                    <li>결제 주기마다 지급되던 복채</li>
+                    <li>한 달마다 새로 열리는 멤버십 이용권 (따로 구매한 이용권은 그대로 남아요)</li>
                     <li>신당 · 가족관리 · 속풀이 입장</li>
+                    <li>등급으로 열린 신위 · 테마와 기능</li>
                     <li>웹툰 멤버십 전용 회차</li>
                     <li>기록 보관 기간 제한 해제 (무료는 최근 {FREE_RETENTION_DAYS}일까지 열람)</li>
                   </ul>

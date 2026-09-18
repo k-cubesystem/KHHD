@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Flame, Lock, Check, Gift, X, Loader2, Sparkles } from 'lucide-react'
 import { claimDevotionReward, type DevotionStatus, type DevotionRewardStatus } from '@/app/actions/shrine/devotion'
 import { DEVOTION_THRESHOLDS, DEVOTION_MAX_LEVEL } from '@/lib/domain/shrine/devotion'
+import { TIER_LABEL } from '@/lib/domain/payment/membership-tiers'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 const CLAIM_ERROR_MSG: Record<string, string> = {
@@ -14,6 +15,15 @@ const CLAIM_ERROR_MSG: Record<string, string> = {
   LEVEL_NOT_REACHED: '아직 기원이 닿지 않았습니다',
   REWARD_NOT_FOUND: '보상을 찾을 수 없습니다',
   UNAUTHORIZED: '로그인이 필요합니다',
+}
+
+/**
+ * 보상이 무엇인지 한 줄 — 테마는 «어느 멤버십 등급에서 열리는 것»을, 신물은 그대로 신물이라고 적는다.
+ * (값을 대비시키지 않는다 — 신당 살림에는 이제 가격이 없다.)
+ */
+function rewardKindLine(r: DevotionRewardStatus): string {
+  if (r.kind === 'theme') return r.requiredTier ? `${TIER_LABEL[r.requiredTier]} 등급 테마` : '기본 테마'
+  return '신물'
 }
 
 /** 현재 단 구간 내 진행 비율(0~1). 최고 단이면 1. */
@@ -152,7 +162,7 @@ export function DevotionStrip({ devotion }: { devotion: DevotionStatus }) {
             </div>
 
             <p className="mb-4 rounded-lg bg-gold-500/[0.06] border border-gold-500/15 px-3 py-2 font-sans text-[11px] leading-relaxed text-ink-primary/70">
-              매일 기도 한 번이면 충분합니다 — 기원은 끊겨도 사라지지 않습니다.
+              하루 한 번 기도면 충분합니다 — 기원은 끊겨도 사라지지 않습니다.
             </p>
 
             <ol className="space-y-2">
@@ -197,11 +207,7 @@ export function DevotionStrip({ devotion }: { devotion: DevotionStatus }) {
                         </span>
                       </div>
                       <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-ink-primary/45">
-                        {r.priceBokchae > 0 ? (
-                          <span className="tabular-nums">복채 {r.priceBokchae}만냥</span>
-                        ) : (
-                          <span>무료 신물</span>
-                        )}
+                        <span>{rewardKindLine(r)}</span>
                         <span className="text-gold-500/50">· 기원 {r.level}단 무료</span>
                       </div>
                     </div>
@@ -233,7 +239,7 @@ export function DevotionStrip({ devotion }: { devotion: DevotionStatus }) {
 
             <p className="mt-4 flex items-center justify-center gap-1 text-center font-sans text-[10px] text-ink-primary/35">
               <Sparkles className="h-3 w-3 text-gold-500/40" />
-              돈으로 바로 사고 싶다면 상점에서 언제든 봉헌할 수 있어요
+              테마는 멤버십 등급으로도 열리고, 신물은 상점에서 무료로 받을 수 있어요
             </p>
           </div>
         </div>

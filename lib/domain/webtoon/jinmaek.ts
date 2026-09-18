@@ -35,7 +35,7 @@ export const JINMAEK_SLOTS: Readonly<Record<number, JinmaekSlot>> = {
   0: {
     after: 3,
     element: null,
-    hook: '…지나가는 손님. 팔자등이나 한번 켜 보고 가시오 — 복채는 안 받겠소.',
+    hook: '…지나가는 손님. 팔자등이나 한번 켜 보고 가시오 — 값은 안 받겠소.',
     speaker: '해화지기',
   },
   1: { after: 4, element: null, hook: '…당신 팔자등도, 한번 볼까요.', speaker: '해수' },

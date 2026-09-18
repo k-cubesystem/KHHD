@@ -2,14 +2,12 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
-import { deductTalisman } from '../payment/wallet'
-import { refundBokchae } from '@/lib/services/bokchae'
-import { UNLIMITED_BALANCE } from '@/lib/auth/privileges'
+import { chargeFeature } from '@/lib/services/feature-charge'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import type { PassErrorType } from '@/lib/domain/entitlement/pass'
 import { saveAnalysisHistoryObserved } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { logger } from '@/lib/utils/logger'
-import { addBokPoints } from '@/lib/services/bok-grant'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'
@@ -44,6 +42,9 @@ interface WealthAnalysisResult {
   success: boolean
   analysis?: WealthAnalysisData
   error?: string
+  errorType?: PassErrorType
+  /** 이용권이 모자랄 때 필요한 장 수 — 화면의 안내가 이 값을 쓴다. */
+  requiredUnits?: number
 }
 
 /**
@@ -51,10 +52,7 @@ interface WealthAnalysisResult {
  * 사주 기반으로 재물운의 흐름, 시기, 방향을 AI가 분석
  */
 export async function analyzeWealth(params: WealthAnalysisParams): Promise<WealthAnalysisResult> {
-  if (isEdgeEnabled('ai-analysis')) {
-    return invokeEdgeSafe('ai-analysis', { action: 'analyzeWealth', ...params })
-  }
-  const WEALTH_ANALYSIS_COST = FEATURE_COST.wealth.display // 단일 소스 — 표시 = 실차감(5만냥)
+  const WEALTH_ANALYSIS_COST = FEATURE_COST.wealth.display
   let refundOnFailure: (() => Promise<void>) | null = null
   try {
     const supabase = await createClient()
@@ -68,7 +66,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
 
     // 1. 대상 조회 — destiny target 은 다형 id(본인=profiles.id / 가족=family_members.id)이므로
     //    단일 출처인 v_destiny_targets(getDestinyTarget)로만 해석한다.
-    //    차감보다 먼저 본다 — 대상이 없으면 복채를 건드리지 않는다.
+    //    이용권보다 먼저 본다 — 대상이 없으면 이용권을 건드리지 않는다.
     const member = await getDestinyTarget(params.memberId)
 
     if (!member) {
@@ -81,19 +79,21 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
     }
     const memberName = member.name?.trim() || '본인'
 
-    // 2. 복채 차감 (재물운 분석 비용)
-    const deductResult = await deductTalisman('wealth_analysis', WEALTH_ANALYSIS_COST)
+    // 2. 이용권 사용 — AI 호출 앞. 관리자·검수 통과면 되돌릴 것이 없어 refundOnFailure 가 null 이다.
+    const charge = await chargeFeature({
+      userId: user.id,
+      featureKey: 'WEALTH',
+      costKey: 'wealth',
+      label: '재물운 심층',
+    })
+    if (!charge.ok) return charge.failure
+    refundOnFailure = charge.refundOnFailure
 
-    if (!deductResult.success) {
-      return {
-        success: false,
-        error: '부적이 부족합니다. 멤버십 페이지에서 충전해주세요.',
-      }
-    }
-
-    // AI 실패 시 환불 준비 — 마스터(무제한)는 실차감이 없으므로 제외
-    if (deductResult.remainingBalance !== UNLIMITED_BALANCE) {
-      refundOnFailure = () => refundBokchae(user.id, WEALTH_ANALYSIS_COST, '재물운 분석 실패 환불')
+    // 🔴 엣지 분기는 과금 «뒤»다 — 엣지 사본에는 이용권 코드가 없다(cheonjiin.ts 와 같은 규율).
+    if (isEdgeEnabled('ai-analysis')) {
+      const edge: WealthAnalysisResult = await invokeEdgeSafe('ai-analysis', { action: 'analyzeWealth', ...params })
+      if (!edge?.success) await refundOnFailure?.()
+      return edge
     }
 
     // 5. 해화지기 마스터 엔진으로 프롬프트 조립 (재물 심층 - 구조화 JSON)
@@ -169,7 +169,6 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
       logger.error('[WealthAnalysis] Failed to save history:', e)
     }
 
-    await addBokPoints(20, 'ANALYSIS', undefined, '재물운 분석').catch(() => {})
     return {
       success: true,
       analysis,
@@ -177,8 +176,8 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
   } catch (error) {
     logger.error('[WealthAnalysis] Error:', error)
     if (refundOnFailure) {
-      await refundOnFailure().catch((e) => logger.error('[WealthAnalysis] 환불 실패:', e))
-      return { success: false, error: '복채는 돌려드렸습니다. 잠시 후 다시 시도해주세요.' }
+      await refundOnFailure().catch((e) => logger.error('[WealthAnalysis] 이용권 되돌림 실패:', e))
+      return { success: false, error: '쓴 이용권은 돌려드렸어요. 잠시 후 다시 시도해 주세요.' }
     }
     const message = error instanceof Error ? error.message : '재물운 분석 중 오류가 발생했습니다.'
     return {

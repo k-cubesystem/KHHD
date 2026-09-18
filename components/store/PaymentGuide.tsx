@@ -2,20 +2,23 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Coins, Crown, HelpCircle, Check } from 'lucide-react'
+import { ArrowRight, Crown, HelpCircle, Check, Ticket } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { GA } from '@/lib/analytics/ga4'
 import { logger } from '@/lib/utils/logger'
-import { intervalWords, type PaymentGuideModel } from '@/components/store/payment-guide-model'
+import { MEMBER_WEEKLY_QUESTIONS } from '@/lib/domain/chat/entitlements'
+import { formatPassUnits } from '@/lib/domain/entitlement/pass'
+import { shrineLine, tierFeatureSummaryLine } from '@/lib/domain/payment/membership-benefits'
+import { intervalWords, type GuidePack, type PaymentGuideModel } from '@/components/store/payment-guide-model'
 
 /**
- * 결제 도우미 — 상점의 «복채 vs 멤버십» 안내.
+ * 결제 도우미 — 상점의 «이용권 vs 멤버십» 안내.
  *
  * 표시 규칙(방금 걷어낸 자동 팝업의 짜증을 되풀이하지 않는다):
  *  - 첫 1회만 자동으로 열린다(localStorage). 이후엔 «결제 안내» 버튼으로 언제든 다시 연다.
  *  - 자동 열림은 상점 «정문»(탭 파라미터 없는 진입)에서만 — 특정 탭으로 바로 들어온 사람은
  *    이미 살 것을 정하고 온 사람이라 가로막지 않는다.
- *  - 회원에겐 가입 권유 대신 «복채 추가 구매» 안내를 보여준다.
+ *  - 회원에겐 가입 권유 대신 «이용권 추가 구매» 안내를 보여준다.
  *
  * 문구의 숫자는 전부 model(단일 출처)에서 온다 — payment-guide-model.ts 주석 참조.
  */
@@ -103,8 +106,8 @@ export function PaymentGuide({ model, autoOpenEligible }: PaymentGuideProps) {
             <DialogTitle className="text-center font-serif text-xl text-gold-300">결제 도우미</DialogTitle>
             <DialogDescription className="text-center font-sans text-[13px] leading-relaxed text-ink-light/60">
               {isMember
-                ? `${model.membership?.label} 이용 중입니다. 기능은 이미 열려 있어요 — 복채만 챙기시면 됩니다.`
-                : '해화당은 «복채»와 «멤버십» 두 가지로 씁니다. 둘은 경쟁하는 상품이 아니라 층이 다릅니다.'}
+                ? `${model.membership?.label} 이용 중입니다. 등급에 맞는 기능은 이미 열려 있어요 — 이번 달 몫을 다 쓰시면 이용권만 더 사시면 됩니다.`
+                : '해화당은 «이용권»과 «멤버십» 두 가지로 씁니다. 둘은 경쟁하는 상품이 아니라 층이 다릅니다.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -115,7 +118,7 @@ export function PaymentGuide({ model, autoOpenEligible }: PaymentGuideProps) {
   )
 }
 
-/** 기능별 복채 요금표 — 복채가 «무엇에 쓰이는지»를 한눈에. */
+/** 기능별 이용권 장 수 — 이용권이 «무엇에 쓰이는지»를 한눈에. */
 function FeeTable({ model }: { model: PaymentGuideModel }) {
   return (
     <div className="space-y-1.5">
@@ -125,20 +128,32 @@ function FeeTable({ model }: { model: PaymentGuideModel }) {
             key={f.key}
             className="rounded-full border border-gold-500/20 bg-gold-500/[0.06] px-2.5 py-1 font-sans text-[11px] text-ink-light/75"
           >
-            {f.label} <span className="font-semibold tabular-nums text-gold-300">{f.cost}만냥</span>
+            {f.label} <span className="font-semibold tabular-nums text-gold-300">{f.cost}장</span>
+            {f.minTierLabel && <span className="text-ink-light/45"> · {f.minTierLabel} 멤버십부터</span>}
           </li>
         ))}
       </ul>
       {model.freeFeatures.length > 0 && (
         <p className="font-sans text-[11px] text-ink-light/45">
-          {model.freeFeatures.map((f) => f.label).join(' · ')}는 복채 없이 무료입니다.
+          {model.freeFeatures.map((f) => f.label).join(' · ')}는 이용권 없이 무료입니다.
         </p>
       )}
     </div>
   )
 }
 
-function SectionHead({ icon: Icon, title, eyebrow }: { icon: typeof Coins; title: string; eyebrow: string }) {
+/** 가장 싼 이용권 팩 한 줄 — «팩 이름» N원부터 · 결제일로부터 N일. 숫자는 전부 모델(DB)에서 온다. */
+function EntryPackLine({ pack }: { pack: GuidePack }) {
+  return (
+    <p className="font-sans text-[12px] text-ink-light/55">
+      «{pack.name}»{pack.name === formatPassUnits(pack.passes) ? '' : ` ${formatPassUnits(pack.passes)}`} ·{' '}
+      <span className="font-semibold tabular-nums text-gold-300">{won(pack.price)}</span>부터 · 결제일로부터{' '}
+      {pack.validDays}일 동안 쓸 수 있어요.
+    </p>
+  )
+}
+
+function SectionHead({ icon: Icon, title, eyebrow }: { icon: typeof Ticket; title: string; eyebrow: string }) {
   return (
     <header className="flex items-center gap-2.5">
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gold-500/25 bg-gold-500/[0.12]">
@@ -158,44 +173,43 @@ const CTA_SECONDARY =
   'flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-surface/50 py-2.5 font-serif text-[13px] text-ink-light/75 transition-colors hover:border-white/20'
 
 function GuestBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target: string) => void }) {
-  const { entryPack, entryPlan, chatPass, retentionDays } = model
+  const { entryPack, entryPlan, retentionDays } = model
   const words = intervalWords(entryPlan?.interval ?? 'MONTH')
 
+  // 🔴 이용권 몫은 결제 주기가 아니라 구독 시작일 앵커 «한 달»마다 열린다 — 주기 단어(words.every)로 적지 않는다.
   const membershipBenefits = [
-    '신당 — 신위 모시기·꾸미기 전용 이용',
-    entryPlan ? `가족관리 — 인연 ${entryPlan.relationshipLimit}명 등록·궁합` : '가족관리 — 인연 등록·궁합',
-    '속풀이 — 신령님과 문답 (멤버십 전용 입장)',
+    entryPlan
+      ? `이용권 — 매달 ${entryPlan.monthlyPasses}장 (다음 달로 넘어가지 않아요)`
+      : '이용권 — 매달 등급별 장 수 (다음 달로 넘어가지 않아요)',
+    shrineLine(),
+    // 🔴 «각»을 빼면 합산 한도로 읽힌다(membership-benefits relationshipLine 과 같은 문구).
+    entryPlan ? `가족관리 — 가족·지인 각 ${entryPlan.relationshipLimit}명 등록·궁합` : '가족관리 — 가족·지인 등록·궁합',
+    `속풀이 — 신령님께 주 ${MEMBER_WEEKLY_QUESTIONS}문`,
     '웹툰 — 멤버십 전용 회차 열람',
-    `기록 보관 — 무료는 최근 ${retentionDays}일까지, 멤버십은 제한 없이`,
-    entryPlan ? `복채 — ${words.every}마다 ${entryPlan.bokchaePerPeriod}만냥 지급` : '복채 — 결제 주기마다 지급',
+    `기록 보관 — 무료는 최근 ${retentionDays}일까지, 멤버십은 기간 제한 없이`,
+    tierFeatureSummaryLine(),
   ]
 
   return (
     <div className="space-y-3">
-      {/* ① 복채 */}
+      {/* ① 이용권 */}
       <section className="space-y-2.5 rounded-2xl border border-gold-500/25 bg-surface/40 p-4">
-        <SectionHead icon={Coins} title="복채 — 쓴 만큼" eyebrow="사주만 보실 분" />
+        <SectionHead icon={Ticket} title="이용권 — 필요할 때 한 장씩" eyebrow="가끔 보실 분" />
         <p className="font-sans text-[13px] leading-relaxed text-ink-light/70">
-          풀이를 볼 때마다 복채가 차감됩니다. 멤버십이 없어도 사주·궁합·관상·손금·풍수는 복채만으로 모두 보실 수 있어요.
+          풀이를 볼 때마다 이용권을 씁니다. 멤버십이 없어도 사주·궁합·관상·손금·풍수는 이용권으로 보실 수 있어요.
         </p>
         <FeeTable model={model} />
-        {entryPack && (
-          <p className="font-sans text-[12px] text-ink-light/55">
-            충전은 «{entryPack.name}» 복채 {entryPack.credits}만냥
-            {entryPack.bonusCredits > 0 && ` + 보너스 ${entryPack.bonusCredits}만냥`} ·{' '}
-            <span className="font-semibold tabular-nums text-gold-300">{won(entryPack.price)}</span>부터.
-          </p>
-        )}
-        <Link href="/protected/store?tab=bokchae" onClick={() => onCta('bokchae')} className={CTA_PRIMARY}>
-          복채 충전하기 <ArrowRight className="h-3.5 w-3.5" />
+        {entryPack && <EntryPackLine pack={entryPack} />}
+        <Link href="/protected/store?tab=pass" onClick={() => onCta('pass')} className={CTA_PRIMARY}>
+          이용권 구매하기 <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </section>
 
       {/* ② 멤버십 */}
       <section className="space-y-2.5 rounded-2xl border border-gold-500/25 bg-surface/40 p-4">
-        <SectionHead icon={Crown} title="멤버십 — 기능이 열립니다" eyebrow="전부 쓰실 분" />
+        <SectionHead icon={Crown} title="멤버십 — 매달 이용권과 기능" eyebrow="자주 보실 분" />
         <p className="font-sans text-[13px] leading-relaxed text-ink-light/70">
-          복채로는 열리지 않는 방이 있습니다. 신당·가족관리·속풀이·웹툰 멤버십 회차는 멤버십 회원만 들어갑니다.
+          매달 정해진 장 수의 이용권을 쓰실 수 있고, 신당·가족관리·속풀이·웹툰 멤버십 회차가 열립니다.
         </p>
         <ul className="space-y-1.5">
           {membershipBenefits.map((b) => (
@@ -218,15 +232,15 @@ function GuestBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target:
 
       {/* ③ 두 상품을 잇는 문장 — 이게 핵심이다 */}
       <section className="space-y-2 rounded-2xl border border-gold-500/40 bg-gold-500/[0.07] p-4">
-        <p className="font-serif text-[14px] font-bold text-gold-300">멤버십을 써도 복채는 따로 삽니다</p>
+        <p className="font-serif text-[14px] font-bold text-gold-300">이번 달 몫을 다 쓰면 이용권만 더 사면 됩니다</p>
         <p className="font-sans text-[13px] leading-relaxed text-ink-light/75">
           {entryPlan
-            ? `멤버십에 딸려 오는 복채(«${entryPlan.name}» ${entryPlan.bokchaePerPeriod}만냥)는 ${words.every}마다 채워집니다. 그 전에 다 쓰셨다면 복채만 더 충전하시면 돼요 — 멤버십은 그대로 유지됩니다.`
-            : '멤버십에 딸려 오는 복채는 결제 주기마다 채워집니다. 그 전에 다 쓰셨다면 복채만 더 충전하시면 돼요 — 멤버십은 그대로 유지됩니다.'}
+            ? `멤버십 이용권(«${entryPlan.name}» 매달 ${entryPlan.monthlyPasses}장)은 다음 달로 넘어가지 않아요. 그 전에 다 쓰셨다면 이용권만 따로 구매하시면 됩니다 — 멤버십은 그대로 유지됩니다.`
+            : '멤버십 이용권은 다음 달로 넘어가지 않아요. 그 전에 다 쓰셨다면 이용권만 따로 구매하시면 됩니다 — 멤버십은 그대로 유지됩니다.'}
         </p>
         <p className="font-sans text-[12px] text-ink-light/55">
-          멤버십은 <span className="text-gold-300">문을 열고</span>, 복채는{' '}
-          <span className="text-gold-300">풀이를 삽니다</span>. 그래서 회원도 풀이마다 복채를 씁니다.
+          멤버십은 <span className="text-gold-300">기능의 문과 이번 달 몫</span>이고, 따로 산 이용권은{' '}
+          <span className="text-gold-300">더 보고 싶을 때 쓰는 몫</span>입니다. 둘은 따로 보관돼요.
         </p>
       </section>
 
@@ -235,20 +249,10 @@ function GuestBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target:
         <p className="font-serif text-[14px] font-bold text-ink-light">나는 어느 쪽?</p>
         <ul className="space-y-1.5 font-sans text-[12.5px] leading-relaxed text-ink-light/70">
           <li>
-            사주·궁합·관상만 가끔 본다 → <span className="font-semibold text-gold-300">복채 충전</span>
+            사주·궁합·관상만 가끔 본다 → <span className="font-semibold text-gold-300">이용권 구매</span>
           </li>
           <li>
             신당을 꾸미고 가족 사주까지 관리한다 → <span className="font-semibold text-gold-300">멤버십</span>
-          </li>
-          <li>
-            속풀이만 하루 써 본다 →{' '}
-            <Link
-              href="/protected/store?tab=voucher"
-              onClick={() => onCta('voucher')}
-              className="font-semibold text-gold-300 underline underline-offset-2"
-            >
-              {chatPass.label} 복채 {chatPass.priceBokchae}만냥
-            </Link>
           </li>
         </ul>
       </section>
@@ -258,34 +262,27 @@ function GuestBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target:
 
 function MemberBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target: string) => void }) {
   const plan = model.membership?.plan ?? null
-  const words = intervalWords(plan?.interval ?? 'MONTH')
   const { entryPack } = model
 
   return (
     <div className="space-y-3">
       <section className="space-y-2.5 rounded-2xl border border-gold-500/30 bg-gold-500/[0.06] p-4">
-        <SectionHead icon={Coins} title="복채가 떨어졌다면" eyebrow="멤버십은 그대로 유지됩니다" />
+        <SectionHead icon={Ticket} title="이번 달 이용권을 다 쓰셨다면" eyebrow="멤버십은 그대로 유지됩니다" />
         <p className="font-sans text-[13px] leading-relaxed text-ink-light/75">
           {plan
-            ? `멤버십에 포함된 복채 ${plan.bokchaePerPeriod}만냥은 ${words.every}마다 채워집니다. 주기 안에 다 쓰셨다면 복채만 따로 충전하시면 됩니다.`
-            : '멤버십에 포함된 복채는 결제 주기마다 채워집니다. 주기 안에 다 쓰셨다면 복채만 따로 충전하시면 됩니다.'}
+            ? `멤버십 이용권 ${plan.monthlyPasses}장은 구독 시작일을 기준으로 한 달마다 새로 열리고, 남은 장은 다음 달로 넘어가지 않아요. 그 전에 다 쓰셨다면 이용권만 따로 구매하시면 됩니다.`
+            : '멤버십 이용권은 구독 시작일을 기준으로 한 달마다 새로 열리고, 남은 장은 다음 달로 넘어가지 않아요. 그 전에 다 쓰셨다면 이용권만 따로 구매하시면 됩니다.'}
         </p>
         <p className="font-sans text-[12px] text-ink-light/55">
-          신당·가족관리·속풀이·웹툰 멤버십 회차는 이미 열려 있습니다. 복채는 풀이를 볼 때 쓰입니다.
+          신당·가족관리·속풀이·웹툰 멤버십 회차는 이미 열려 있습니다. 이용권은 풀이를 볼 때 쓰입니다.
         </p>
         <FeeTable model={model} />
-        {entryPack && (
-          <p className="font-sans text-[12px] text-ink-light/55">
-            충전은 «{entryPack.name}» 복채 {entryPack.credits}만냥
-            {entryPack.bonusCredits > 0 && ` + 보너스 ${entryPack.bonusCredits}만냥`} ·{' '}
-            <span className="font-semibold tabular-nums text-gold-300">{won(entryPack.price)}</span>부터.
-          </p>
-        )}
+        {entryPack && <EntryPackLine pack={entryPack} />}
       </section>
 
       <div className="space-y-2">
-        <Link href="/protected/store?tab=bokchae" onClick={() => onCta('bokchae')} className={CTA_PRIMARY}>
-          복채 충전하기 <ArrowRight className="h-3.5 w-3.5" />
+        <Link href="/protected/store?tab=pass" onClick={() => onCta('pass')} className={CTA_PRIMARY}>
+          이용권 구매하기 <ArrowRight className="h-3.5 w-3.5" />
         </Link>
         <Link href="/protected/membership/manage" onClick={() => onCta('manage')} className={CTA_SECONDARY}>
           멤버십 관리

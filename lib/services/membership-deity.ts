@@ -2,6 +2,7 @@ import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
+import { TIER_OPEN_DEITY_SOURCE } from '@/lib/domain/shrine/types'
 
 /**
  * 멤버십 무료신 패키지 (로드맵 P1-6) — 등급당 1위 증정.
@@ -38,14 +39,26 @@ export async function grantMembershipDeity(userId: string, tier: string | null |
       return { granted: false }
     }
 
-    // 이미 보유하면 조용히 종료 (갱신마다 중복 지급 방지)
+    // 이미 보유하면 조용히 종료 (갱신마다 중복 지급 방지).
+    // 단 등급으로 모셔 둔 행(구독 중 이용)이면 증정으로 올린다 — 증정은 해지해도 남는 영구 보유다.
     const { data: owned } = await admin
       .from('user_shrine_deities')
-      .select('deity_id')
+      .select('deity_id, source')
       .eq('user_id', userId)
       .eq('deity_id', deity.id)
       .maybeSingle()
-    if (owned) return { granted: false, deityCode: gift.code, deityName: deity.name }
+    if (owned) {
+      if (owned.source === TIER_OPEN_DEITY_SOURCE) {
+        const { error: upgradeError } = await admin
+          .from('user_shrine_deities')
+          .update({ source: 'membership' })
+          .eq('user_id', userId)
+          .eq('deity_id', deity.id)
+          .eq('source', TIER_OPEN_DEITY_SOURCE)
+        if (upgradeError) logger.error(new Error(`[membership-deity] 증정 전환 실패: ${upgradeError.message}`))
+      }
+      return { granted: false, deityCode: gift.code, deityName: deity.name }
+    }
 
     const { error: grantError } = await admin
       .from('user_shrine_deities')

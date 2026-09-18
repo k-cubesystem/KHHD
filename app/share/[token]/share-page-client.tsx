@@ -6,6 +6,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import type { AnalysisHistory } from '@/app/actions/user/history'
 import { CategoryResultBody } from '@/components/analysis/CategoryResultBody'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
+import { ONBOARDING_PASSES } from '@/lib/domain/entitlement/pass'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -506,7 +507,7 @@ export function SharePageClient({ token }: SharePageClientProps) {
               <br />
               정밀하게 분석해드립니다.
               <br />
-              <span className="text-primary/80 font-medium">신규 가입 시 50만냥 무료 지급!</span>
+              <span className="text-primary/80 font-medium">가입하면 풀이 {ONBOARDING_PASSES}회 무료!</span>
             </p>
           </div>
 

@@ -5,13 +5,11 @@ import { ImageDown, Loader2, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Element } from '@/lib/domain/shrine/types'
 import { EL_LABEL } from '@/lib/domain/shrine/energy'
-import { claimShareReward } from '@/app/actions/payment/bok-points'
 import { logger } from '@/lib/utils/logger'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
  * 「선물 카드」 — 실물 선물과 함께 건네는 공유 이미지(og/gift). 링크 공유 → 없으면 복사.
- * 공유 보상은 기존 경로(claimShareReward — 자격·금액은 서버가 정한다). 실패해도 공유 UX 는 그대로.
  * URL 에는 오행과 받는 이 이름(선택)만 싣는다 — 생년월일·명식은 싣지 않는다.
  */
 export function GiftCardButton({ element, recipientName }: { element: Element; recipientName: string | null }) {
@@ -33,7 +31,6 @@ export function GiftCardButton({ element, recipientName }: { element: Element; r
         toast.success('카드 링크를 복사했습니다.')
         trackEvent({ action: 'gift_card_copy', category: 'engagement', label: element })
       }
-      claimShareReward().catch(() => {})
     } catch (err) {
       // 공유 창을 닫은 것도 여기로 온다 — 조용히.
       logger.log('[gift-card] share cancelled or failed:', err)

@@ -4,13 +4,23 @@ import { useCallback, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
-import { autoSeatGuardian, seatDeity, purchaseDeity, type Deity, type DeityCatalog } from '@/app/actions/shrine/deities'
+import { autoSeatGuardian, seatDeity, enshrineDeity, type Deity, type DeityCatalog } from '@/app/actions/shrine/deities'
 import { BOND_LEVEL_NAMES, BOND_THRESHOLDS, type BondProgress } from '@/lib/domain/shrine/deities'
+import { TIER_LABEL } from '@/lib/domain/payment/membership-tiers'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 import { DeityMedallion } from './DeityMedallion'
 import { GangshinOverlay } from './GangshinOverlay'
 
 const TIERS = [1, 2, 3, 4] as const
+
+/** 등급이 모자란 신위의 문 — 상점 멤버십 탭(구매 경로는 없다). */
+const MEMBERSHIP_HREF = '/protected/store?tab=membership'
+
+/** 신위 계급 줄의 꼬리표 — 수호신은 무료 좌정, 그 위는 멤버십 등급으로 열린다. */
+function tierSectionNote(list: Deity[]): string {
+  const required = list.find((d) => d.requiredTier !== null)?.requiredTier ?? null
+  return required ? `${TIER_LABEL[required]} 멤버십부터` : '무료 좌정'
+}
 
 function BondBar({ progress }: { progress: BondProgress }) {
   const lower = BOND_THRESHOLDS[progress.level - 1] ?? 0
@@ -43,7 +53,7 @@ interface Props {
   hideBackLink?: boolean
 }
 
-/** 연출 모드 — 강신(降神)=실제 좌정 시점, 봉안(奉安)=구매 완료(좌정 CTA 제공) */
+/** 연출 모드 — 강신(降神)=실제 좌정 시점, 봉안(奉安)=모시기 완료(좌정 CTA 제공) */
 type RevealState = { deity: Deity; mode: 'gangshin' | 'bongan' } | null
 
 export function DeityPantheon({ catalog, bonds, familyMemberId, hideBackLink = false }: Props) {
@@ -57,7 +67,6 @@ export function DeityPantheon({ catalog, bonds, familyMemberId, hideBackLink = f
   const shrineHref = fmId ? `/protected/shrine?member=${fmId}` : '/protected/shrine'
   const bondMap = new Map(bonds.map((b) => [b.deityId, b.progress]))
   const seated = catalog.deities.find((d) => d.id === catalog.seatedDeityId) ?? null
-  const ownedCodes = new Set(catalog.ownedCodes)
 
   // 강신 의식 사운드 — 방울(bell) 점화 후 신위 강림 타이밍에 바라(bara)
   const playGangshinSound = useCallback(() => {
@@ -91,21 +100,21 @@ export function DeityPantheon({ catalog, bonds, familyMemberId, hideBackLink = f
         playGangshinSound()
         router.refresh()
       } else {
-        setErr('좌정 변경에 실패했습니다.')
+        setErr(r.errorType === 'TIER_REQUIRED' && r.error ? r.error : '좌정 변경에 실패했습니다.')
       }
     })
   }
 
-  function onPurchase(deity: Deity) {
+  function onEnshrine(deity: Deity) {
     setErr(null)
     start(async () => {
-      const r = await purchaseDeity(deity.code)
+      const r = await enshrineDeity(deity.code)
       if (r.success) {
         setReveal({ deity, mode: 'bongan' })
         play('chime')
         router.refresh()
       } else {
-        setErr(r.error === 'INSUFFICIENT_BOKCHAE' ? '복채가 부족합니다.' : '봉안에 실패했습니다.')
+        setErr(r.errorType === 'TIER_REQUIRED' && r.error ? r.error : '모시지 못했습니다. 잠시 후 다시 시도해주세요.')
       }
     })
   }
@@ -182,15 +191,13 @@ export function DeityPantheon({ catalog, bonds, familyMemberId, hideBackLink = f
           <section key={tier} className="mb-6">
             <h3 className="text-caption font-semibold font-serif text-gold-500/70 tracking-wider mb-2.5 uppercase">
               {tierName}
-              {tier > 1 ? (
-                <span className="text-ink-light/30 ml-2 normal-case">유료</span>
-              ) : (
-                <span className="text-success/70 ml-2 normal-case">무료 좌정</span>
-              )}
+              <span className={`ml-2 normal-case ${tier > 1 ? 'text-ink-light/30' : 'text-success/70'}`}>
+                {tierSectionNote(list)}
+              </span>
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {list.map((d) => {
-                const owned = ownedCodes.has(d.code)
+                const owned = d.owned
                 const isSeated = d.id === catalog.seatedDeityId
                 const locked = !owned && d.tier > 1
                 return (
@@ -203,7 +210,7 @@ export function DeityPantheon({ catalog, bonds, familyMemberId, hideBackLink = f
                     {/* 잠금 신위: 색은 살려 「설빛온기」 매력을 보이되(그레이스케일 제거), 잠금 배지 오버레이 */}
                     <div className={`relative ${owned ? '' : locked ? 'opacity-80' : 'opacity-40 grayscale'}`}>
                       <DeityMedallion deity={d} size={56} />
-                      {locked && (
+                      {locked && !d.unlocked && (
                         <span
                           className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full grid place-items-center text-[9px] bg-ink-primary/80 border border-gold-500/40 text-gold-300"
                           aria-hidden
@@ -232,14 +239,21 @@ export function DeityPantheon({ catalog, bonds, familyMemberId, hideBackLink = f
                       </button>
                     ) : d.tier === 1 ? (
                       <span className="mt-1.5 text-[10px] text-ink-light/35">배정 대기</span>
-                    ) : (
+                    ) : d.unlocked ? (
                       <button
-                        onClick={() => onPurchase(d)}
+                        onClick={() => onEnshrine(d)}
                         disabled={pending}
                         className="mt-1.5 text-[11px] px-2.5 py-1 rounded-full bg-seal/15 text-seal disabled:opacity-50"
                       >
-                        봉안 · 복채 {d.priceBokchae}만냥
+                        모시기
                       </button>
+                    ) : (
+                      <Link
+                        href={MEMBERSHIP_HREF}
+                        className="mt-1.5 text-[10.5px] px-2.5 py-1 rounded-full border border-gold-500/30 text-gold-300/80"
+                      >
+                        {d.requiredTier ? `${TIER_LABEL[d.requiredTier]} 멤버십부터` : '멤버십으로 열기'}
+                      </Link>
                     )}
                   </div>
                 )
@@ -249,7 +263,7 @@ export function DeityPantheon({ catalog, bonds, familyMemberId, hideBackLink = f
         )
       })}
 
-      {/* 연출 오버레이 — 강신(降神, 좌정) / 봉안(奉安, 구매) */}
+      {/* 연출 오버레이 — 강신(降神, 좌정) / 봉안(奉安, 모시기) */}
       {reveal ? (
         <GangshinOverlay
           deity={reveal.deity}

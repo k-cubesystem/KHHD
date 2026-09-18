@@ -1,7 +1,7 @@
 /**
  * 결제 실패 화면 회귀선 (2026-08-18).
  *
- * 복채 충전과 멤버십이 **같은 컴포넌트**를 쓴다. 예전엔 각자 그려서 같은 상황(사용자 취소)을
+ * 이용권 구매와 멤버십이 **같은 컴포넌트**를 쓴다. 예전엔 각자 그려서 같은 상황(사용자 취소)을
  * 한쪽은 붉은 느낌표 + 「결제 실패」로, 다른 쪽은 X 아이콘 + 다른 문구로 보여줬다.
  * 화면이 보이지 않는 자리(로그인 뒤)라 눈으로 못 잡는다 — 그래서 테스트가 본다.
  */
@@ -15,8 +15,8 @@ function renderView(code: string | null, message: string | null = null) {
     <PaymentFailureView
       code={code}
       message={message}
-      retryHref="/protected/store"
-      retryLabel="다시 충전하기"
+      retryHref="/protected/store?tab=pass"
+      retryLabel="다시 구매하기"
       exitHref="/protected/analysis"
       exitLabel="분석으로 돌아가기"
     />
@@ -41,7 +41,7 @@ describe('🔴 사용자 취소 화면', () => {
   it('돌아갈 길 둘을 준다', () => {
     renderView('PAY_PROCESS_CANCELED')
 
-    expect(screen.getByRole('link', { name: '다시 충전하기' }).getAttribute('href')).toBe('/protected/store')
+    expect(screen.getByRole('link', { name: '다시 구매하기' }).getAttribute('href')).toBe('/protected/store?tab=pass')
     expect(screen.getByRole('link', { name: '분석으로 돌아가기' }).getAttribute('href')).toBe('/protected/analysis')
   })
 })
@@ -74,7 +74,7 @@ describe('진짜 실패는 다르게 말한다', () => {
   it('설정 오류에는 재시도 버튼을 주지 않는다 (눌러도 소용없다)', () => {
     renderView('NOT_SUPPORTED_METHOD')
 
-    expect(screen.queryByRole('link', { name: '다시 충전하기' })).toBeNull()
+    expect(screen.queryByRole('link', { name: '다시 구매하기' })).toBeNull()
     expect(screen.getByRole('link', { name: '분석으로 돌아가기' })).not.toBeNull()
   })
 

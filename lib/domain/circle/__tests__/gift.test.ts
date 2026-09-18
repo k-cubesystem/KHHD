@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { BAEKIL_ITEM_NAME } from '@/lib/domain/ritual/baekil'
 import { bannedWordsIn } from '@/lib/domain/circle/element-lore'
 import {
@@ -10,7 +12,7 @@ import {
   normalizeGiftMessage,
 } from '@/lib/domain/circle/gift'
 
-const ITEM = { id: 'i1', name: '인등', element: 'fire' as const, isActive: true, priceBokchae: 1500 }
+const ITEM = { id: 'i1', name: '인등', element: 'fire' as const, isActive: true }
 
 describe('기운 선물 규칙', () => {
   it('보상 전용·오행 없음·비활성은 선물할 수 없다', () => {
@@ -51,5 +53,16 @@ describe('기운 선물 규칙', () => {
     expect(bannedWordsIn(text.title)).toEqual([])
     expect(bannedWordsIn(text.body)).toEqual([])
     expect(text.title).toContain('민수님이')
+  })
+
+  it('🔴 선물은 값을 받지 않는다 — 액션이 재화를 만지지 않고 기록 값은 0 이다', () => {
+    const src = readFileSync(path.join(process.cwd(), 'app/actions/circle/gift.ts'), 'utf8')
+    for (const banned of ['spendBokchae', 'refundBokchae', 'chargeFeature', 'consumePass', 'wallets']) {
+      expect([banned, src.includes(banned)]).toEqual([banned, false])
+    }
+    expect(src).toContain('price_bokchae: 0')
+    // 하루 상한과 분 단위 멱등은 그대로다 — 무료가 된 만큼 이 둘이 유일한 막이다
+    expect(src).toContain('GIFT_DAILY_LIMIT')
+    expect(src).toContain('giftIdempotencyKey(')
   })
 })

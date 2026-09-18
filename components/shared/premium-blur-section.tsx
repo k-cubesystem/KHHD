@@ -29,11 +29,11 @@ export function PremiumBlurSection({ children, isPaid, ctaLabel }: PremiumBlurSe
           </div>
           <p className="text-sm text-ink-light/70">{t('premiumPreview')}</p>
           <Button asChild className="bg-gold-500 hover:bg-gold-400 text-ink-900 font-bold">
-            <Link href="/protected/membership">{ctaLabel ?? t('fullUnlock')}</Link>
+            <Link href="/protected/store?tab=membership">{ctaLabel ?? t('fullUnlock')}</Link>
           </Button>
           <p className="text-[11px] text-ink-light/60">
             <Link
-              href="/protected/membership#bokchae"
+              href="/protected/store?tab=pass"
               className="hover:text-ink-light/50 transition-colors underline underline-offset-2"
             >
               {t('otherMethods')}

@@ -15,12 +15,13 @@ import { computeCancelClawback, type TossCancelRecord } from '@/lib/domain/payme
  * 🔴 호출자는 서명 검증을 마친 토스 웹훅, 또는 본인 확인을 마친 셀프 취소 액션뿐이어야 한다.
  */
 
+/** 토스 웹훅 페이로드는 필드가 빠져 올 수 있다 — 빠진 값은 computeCancelClawback 이 규약대로 메운다. */
 export interface PaymentRevokeInput {
   orderId: string
-  tossStatus: string
-  totalAmount: number
-  balanceAmount: number
-  cancels: TossCancelRecord[] | null | undefined
+  tossStatus?: string | null
+  totalAmount?: number | null
+  balanceAmount?: number | null
+  cancels?: readonly TossCancelRecord[] | null
 }
 
 export interface PaymentRevokeResult {

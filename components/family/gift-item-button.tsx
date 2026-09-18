@@ -9,20 +9,18 @@ import { GIFT_MESSAGE_MAX } from '@/lib/domain/circle/gift'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
- * 「선물하기」 — 처방전 ④ 신당 살림 한 점을 그 사람에게. 한마디를 붙일 수 있다.
- * 차감·전달·기록은 전부 서버(giftItem)다. 여기서는 결과를 말로 옮긴다.
+ * 「선물하기」 — 처방전 ④ 신당 살림 한 점을 그 사람에게. 한마디를 붙일 수 있다. 값은 받지 않는다.
+ * 전달·기록·하루 상한은 전부 서버(giftItem)다. 여기서는 결과를 말로 옮긴다.
  */
 
 function errorMessage(error: GiftError): string {
   switch (error) {
-    case 'INSUFFICIENT_BOKCHAE':
-      return '복채가 모자랍니다. 상점에서 채운 뒤 다시 보내 주세요.'
     case 'DAILY_LIMIT':
       return '오늘 보낼 수 있는 선물을 다 보냈습니다. 내일 다시 보내 주세요.'
     case 'ITEM_NOT_GIFTABLE':
       return '이 살림은 선물할 수 없는 품목입니다.'
     case 'SELF':
-      return '나에게 보내는 살림은 상점에서 바로 담습니다.'
+      return '나에게 두는 살림은 상점에서 바로 받습니다.'
     case 'NOT_FOUND':
       return '사람이나 살림을 찾지 못했습니다. 화면을 새로 고쳐 주세요.'
     default:
@@ -36,14 +34,12 @@ export function GiftItemButton({
   itemId,
   itemName,
   element,
-  priceBokchae,
 }: {
   recipientMemberId: string
   recipientName: string
   itemId: string
   itemName: string
   element: string
-  priceBokchae: number
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -61,7 +57,6 @@ export function GiftItemButton({
         action: 'gift_send',
         category: 'conversion',
         label: `${element}:${result.delivery}`,
-        value: priceBokchae,
       })
       toast.success(
         result.delivery === 'inventory_recipient'
@@ -81,7 +76,7 @@ export function GiftItemButton({
         onClick={() => setOpen(true)}
         className="mt-1.5 inline-flex w-full items-center justify-center gap-1 rounded-md border border-gold-500/30 bg-gold-500/[0.06] py-1 font-serif text-[10.5px] text-gold-300 hover:bg-gold-500/[0.12]"
       >
-        <Gift className="h-3 w-3" /> 선물 {priceBokchae > 0 ? `${priceBokchae.toLocaleString('ko-KR')}냥` : '무료'}
+        <Gift className="h-3 w-3" /> 선물하기
       </button>
     )
   }

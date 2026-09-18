@@ -2,11 +2,12 @@
  * 결제 취소 셀프서비스 판정 (순수 함수 · 테스트 가능).
  *
  * 두 축을 다룬다.
- *  1) 복채 충전 취소 — 「지급분 중 지금 회수 가능한 양」으로 세 갈래 판정
- *  2) 멤버십 중도 해지 — 잔여기간 일할 환불액 계산(복채는 회수하지 않는다)
+ *  1) 이용권 구매 취소 — 「발급분 중 지금 회수 가능한 장 수」로 세 갈래 판정
+ *  2) 멤버십 중도 해지 — 잔여기간 일할 환불액 계산(멤버십은 지급한 것이 없으니 회수도 없다)
  *
- * 회수 가능량 판정은 어제 만든 원장(payments.credits_purchased ↔ credits_remaining)을 그대로 쓴다.
- * `clawback_payment_credits` RPC 가 실제로 하는 계산(min(미회수 지급분, 지갑 잔액))을 화면에서
+ * 회수 가능량 판정은 결제 원장(payments.credits_purchased ↔ credits_remaining)과 그 결제로 발급된
+ * 이용권의 미사용 장 수(entitlement_grants: quantity − consumed − revoked)를 쓴다.
+ * `ent_revoke_for_payment` RPC 가 실제로 하는 계산(min(미회수 발급분, 미사용 장 수))을 화면에서
  * 미리 돌려보는 것이므로, 화면 안내와 실제 결과가 어긋나지 않는다.
  *
  * 법적 근거(요약 — 상세는 docs/REPORTS/RESEARCH-20260811-bok-prepaid-law.md §4)
@@ -103,7 +104,7 @@ export function validateCancelReason(input: CancelReasonInput): CancelReasonVali
 }
 
 // ────────────────────────────────────────────────────────────
-// 복채 충전 취소 판정
+// 이용권 구매 취소 판정
 // ────────────────────────────────────────────────────────────
 
 /** 약관 제7조 제2항 — 청약철회 기간(일). */
@@ -113,7 +114,7 @@ export const WITHDRAWAL_PERIOD_DAYS = 7
 export const LATE_CANCEL_FEE_RATE = 0.1
 
 /**
- * 복채 환불 조건 안내 문구 — **화면에 적는 숫자의 단일 출처.**
+ * 이용권 환불 조건 안내 문구 — **화면에 적는 숫자의 단일 출처.**
  *
  * 실제 사고(2026-09-01 발견): 심사 제출 문서는 상점 화면이 「미사용분 7일 이내 전액,
  * 이후 90%」를 명시한다고 적었는데, 화면은 「7일 이내 가능」까지만 있었다. 심사관이
@@ -122,19 +123,20 @@ export const LATE_CANCEL_FEE_RATE = 0.1
  */
 export function chargeRefundPolicyLine(): string {
   const keepRate = Math.round((1 - LATE_CANCEL_FEE_RATE) * 100)
-  return `미사용분은 결제일로부터 ${WITHDRAWAL_PERIOD_DAYS}일 이내 전액, 이후 ${keepRate}% 환불합니다.`
+  return `미사용 이용권은 결제일로부터 ${WITHDRAWAL_PERIOD_DAYS}일 이내 전액, 이후 ${keepRate}% 환불합니다.`
 }
 
 const DAY_MS = 86_400_000
 
 export type ChargeCancelVerdict =
-  /** (a) 지급 복채가 전액 남아 있다 → 즉시 취소 가능 */
+  /** (a) 발급 이용권이 한 장도 쓰이지 않았다 → 즉시 취소 가능 */
   | 'FULL_REFUNDABLE'
   /** (b) 일부·전부 소진 → 기본 안내는 「취소 불가」, 2차 경로에서 손실 처리로 진행 */
   | 'PARTIALLY_SPENT'
-  /** (c) 애초에 취소 대상이 아니다(이미 취소됨·충전 결제 아님 등) */
+  /** (c) 애초에 취소 대상이 아니다(이미 취소됨·이용권 구매 결제 아님 등) */
   | 'NOT_CANCELLABLE'
 
+/** NOT_A_CHARGE = 이용권 구매 결제가 아니다(옛 복채 충전·구독 등). 코드 이름은 역사적 이유로 유지. */
 export type ChargeCancelBlockedReason = 'ALREADY_CANCELLED' | 'NOT_A_CHARGE' | 'NOT_COMPLETED' | 'NOTHING_GRANTED'
 
 export interface ChargeCancelInput {
@@ -142,15 +144,15 @@ export interface ChargeCancelInput {
   paidAmount: number
   /** payments.cancelled_amount — 이미 취소된 누적 금액(원) */
   cancelledAmount?: number | null
-  /** payments.credits_purchased — 지급된 복채 총량 */
+  /** payments.credits_purchased — 발급된 이용권 장 수 */
   grantedCredits: number
-  /** payments.credits_remaining — 지급분 중 아직 회수되지 않은 복채(원장) */
+  /** payments.credits_remaining — 발급분 중 아직 회수되지 않은 장 수(원장) */
   ledgerRemaining: number
-  /** wallets.balance — 현재 지갑 잔액 */
-  walletBalance: number
+  /** 그 결제로 발급된 이용권 중 아직 쓰지 않은 장 수(entitlement_grants: quantity − consumed − revoked) */
+  unusedPasses: number
   /** payments.status */
   status: string
-  /** payments.bokchae_type */
+  /** payments.bokchae_type — 'pass' 만 셀프 취소 대상 */
   bokchaeType?: string | null
   /** payments.created_at */
   paidAt: string | Date
@@ -161,11 +163,11 @@ export interface ChargeCancelInput {
 export interface ChargeCancelPlan {
   verdict: ChargeCancelVerdict
   blockedReason?: ChargeCancelBlockedReason
-  /** 지급된 복채 총량 */
+  /** 발급된 이용권 장 수 */
   grantedCredits: number
-  /** 지금 회수 가능한 복채 = min(미회수 지급분, 지갑 잔액) */
+  /** 지금 회수 가능한 장 수 = min(미회수 발급분, 미사용 장 수) */
   recoverableCredits: number
-  /** 회수할 수 없는 복채 = 이미 사용한 분. 손실 처리 대상 */
+  /** 회수할 수 없는 장 수 = 이미 쓴 이용권. 손실 처리 대상 */
   spentCredits: number
   /** 결제 후 경과 일수(초일불산입) */
   elapsedDays: number
@@ -179,9 +181,9 @@ export interface ChargeCancelPlan {
   feeAmount: number
   /** 실제 환불 금액(원). 토스 취소 API 의 cancelAmount 로 그대로 쓴다 */
   refundAmount: number
-  /** 손실 처리되는 복채(= spentCredits). 사용자에게 청구하지 않는다 */
+  /** 손실 처리되는 장 수(= spentCredits). 사용자에게 청구하지 않는다 */
   lossCredits: number
-  /** 손실 처리 상당 금액(원) — 회수 못 한 복채의 결제액 환산 */
+  /** 손실 처리 상당 금액(원) — 회수 못 한 이용권의 결제액 환산 */
   lossAmount: number
 }
 
@@ -210,7 +212,7 @@ export function classifyChargeCancel(input: ChargeCancelInput): ChargeCancelPlan
   const cancelledAmount = Math.min(toInt(input.cancelledAmount), paidAmount)
   const grantedCredits = toInt(input.grantedCredits)
   const ledgerRemaining = Math.min(toInt(input.ledgerRemaining), grantedCredits)
-  const walletBalance = toInt(input.walletBalance)
+  const unusedPasses = toInt(input.unusedPasses)
 
   const elapsedDays = elapsedDaysSince(input.paidAt, now)
   const withinWithdrawalPeriod = elapsedDays <= WITHDRAWAL_PERIOD_DAYS
@@ -221,8 +223,8 @@ export function classifyChargeCancel(input: ChargeCancelInput): ChargeCancelPlan
   const feeAmount = Math.floor(grossAmount * feeRate)
   const refundAmount = Math.max(0, grossAmount - feeAmount)
 
-  // 실제 RPC 와 같은 계산: 지갑에 남은 만큼만 회수된다.
-  const recoverableCredits = Math.min(ledgerRemaining, walletBalance)
+  // 실제 RPC 와 같은 계산: 쓰지 않은 이용권만 회수된다.
+  const recoverableCredits = Math.min(ledgerRemaining, unusedPasses)
   const spentCredits = Math.max(0, ledgerRemaining - recoverableCredits)
   const lossAmount = grantedCredits > 0 ? Math.floor((grossAmount * spentCredits) / grantedCredits) : 0
 
@@ -251,7 +253,8 @@ export function classifyChargeCancel(input: ChargeCancelInput): ChargeCancelPlan
     lossAmount: 0,
   })
 
-  if (input.bokchaeType && input.bokchaeType !== 'charge') return blocked('NOT_A_CHARGE')
+  // 옛 복채 충전(charge)은 발급 이용권이 결제에 묶여 있지 않아 회수할 수 없다 — 셀프 취소 대상이 아니다.
+  if (input.bokchaeType !== 'pass') return blocked('NOT_A_CHARGE')
   if (input.status === 'refunded') return blocked('ALREADY_CANCELLED')
   if (input.status !== 'completed') return blocked('NOT_COMPLETED')
   if (grossAmount <= 0) return blocked('ALREADY_CANCELLED')
@@ -284,10 +287,10 @@ export interface MembershipRefundInput {
   periodStart: string | Date | null
   /** subscriptions.current_period_end */
   periodEnd: string | Date | null
-  /** membership_plans.talismans_per_period — 이번 주기에 지급된 복채 */
-  grantedCredits: number
-  /** wallets.balance — 현재 지갑 잔액 */
-  walletBalance: number
+  /** membership_plans.monthly_passes — 한 달에 쓸 수 있는 이용권 장 수 */
+  monthlyPasses: number
+  /** subscription_usage.used — 이번 달 창에서 이미 쓴 장 수 */
+  usedPasses: number
   /** 이미 환불된 금액(원) — 재요청 방어 */
   alreadyRefunded?: number | null
   now?: Date
@@ -302,33 +305,31 @@ export interface MembershipRefundPlan {
   remainingDays: number
   /** 기간 기준 이용 비율 */
   dayUsageRatio: number
-  /** 복채 소진 기준 이용 비율 */
+  /** 이번 달 이용권 사용 기준 이용 비율(사용 장 수 ÷ 월 장 수) */
   creditUsageRatio: number
-  /** 최종 이용 비율 = max(기간, 복채). 두 값을 더하지 않는다(이중 공제 방지) */
+  /** 최종 이용 비율 = max(기간, 이용권). 두 값을 더하지 않는다(이중 공제 방지) */
   usageRatio: number
   /** 환불 금액(원) */
   refundAmount: number
-  /** 회수하지 않고 그대로 두는 복채 — CEO 결정 */
-  keptCredits: number
-  /** 지급 복채 중 이미 소진한 양(환불 계산 근거) */
-  consumedCredits: number
+  /** 이번 달 창에서 쓴 장 수(환불 계산 근거) */
+  usedPasses: number
 }
 
 /**
  * 잔여기간 일할 환불액.
  *
- * 이용 비율 = **max(기간 비율, 복채 소진 비율)**.
- *  - 기간만 보면 가입 다음 날 해지하면서 한 달치 복채를 다 쓰고 97% 를 돌려받는 구멍이 열린다.
+ * 이용 비율 = **max(기간 비율, 이번 달 이용권 사용 비율)**.
+ *  - 기간만 보면 가입 다음 날 해지하면서 한 달치 이용권을 다 쓰고 97% 를 돌려받는 구멍이 열린다.
  *  - 두 비율을 더하면 같은 이용을 두 번 공제해 사용자에게 불리해진다.
- *  → 더 큰 쪽 하나만 공제한다. 복채를 쓰지 않았다면 순수 일할 환불이 그대로 나온다.
+ *  → 더 큰 쪽 하나만 공제한다. 이용권을 쓰지 않았다면 순수 일할 환불이 그대로 나온다.
  *
  * 위약금은 0 이다(약관 제7조 제3항이 위약금을 두지 않음 — 지침 제19조의 10% 한도보다 사용자 유리).
  */
 export function computeMembershipRefund(input: MembershipRefundInput): MembershipRefundPlan {
   const now = input.now ?? new Date()
   const price = toInt(input.price)
-  const grantedCredits = toInt(input.grantedCredits)
-  const walletBalance = toInt(input.walletBalance)
+  const monthlyPasses = toInt(input.monthlyPasses)
+  const usedPasses = Math.min(toInt(input.usedPasses), monthlyPasses)
   const alreadyRefunded = Math.min(toInt(input.alreadyRefunded), price)
 
   const start = input.periodStart ? toDate(input.periodStart) : null
@@ -346,8 +347,7 @@ export function computeMembershipRefund(input: MembershipRefundInput): Membershi
   // 기간을 모르면 일할 계산 근거가 없다 → 환불 0(수동 처리 대상). 해지 자체는 진행된다.
   const dayUsageRatio = hasPeriod ? usedDays / totalDays : 1
 
-  const consumedCredits = Math.max(0, grantedCredits - Math.min(grantedCredits, walletBalance))
-  const creditUsageRatio = grantedCredits > 0 ? consumedCredits / grantedCredits : 0
+  const creditUsageRatio = monthlyPasses > 0 ? usedPasses / monthlyPasses : 0
 
   const usageRatio = Math.min(1, Math.max(dayUsageRatio, creditUsageRatio))
   // 🔴 반올림. 내림을 쓰면 부동소수 오차(9900 × (1−0.8) = 1979.99…)가 그대로 1원 손해로 굳는다.
@@ -363,8 +363,7 @@ export function computeMembershipRefund(input: MembershipRefundInput): Membershi
     creditUsageRatio,
     usageRatio,
     refundAmount,
-    keptCredits: Math.min(grantedCredits, walletBalance),
-    consumedCredits,
+    usedPasses,
   }
 }
 
@@ -384,7 +383,6 @@ export interface ChargeCancelItem {
 }
 
 export interface ChargeCancelOverview {
-  walletBalance: number
   items: ChargeCancelItem[]
   /** 「손실 처리」 취소 경로가 지금 열려 있는지(loss-cap.ts). 잔여 횟수·금액은 담지 않는다. */
   lossCap: LossCapStatus
@@ -395,7 +393,8 @@ export interface MembershipCancelOverview {
   planName: string
   tier: string
   price: number
-  grantedCredits: number
+  /** 한 달에 쓸 수 있는 이용권 장 수 */
+  monthlyPasses: number
   periodStart: string | null
   periodEnd: string | null
   nextBillingDate: string | null
@@ -424,10 +423,10 @@ export interface CancelActionResult {
   error?: string
   /** 실제 환불 금액(원) */
   refundAmount?: number
-  /** 손실 처리된 복채 */
+  /** 손실 처리된 장 수(이미 써서 회수하지 못한 이용권) */
   lossCredits?: number
-  /** 지갑에서 실제 회수된 복채 */
-  clawedCredits?: number
+  /** 실제로 회수된 이용권 장 수 */
+  revokedPasses?: number
   /** true 면 「그래도 취소 요청」 2차 확인이 필요하다 */
   requiresLossAcknowledgement?: boolean
   /** true 면 손실 처리 상한에 걸려 막혔다 — error 에 안내 문구가 들어 있다 */

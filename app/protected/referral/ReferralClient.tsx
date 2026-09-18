@@ -1,21 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Share2, Check, Gift, Users, Coins } from 'lucide-react'
+import { Copy, Share2, Check, Gift, Users, CalendarClock } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { REFERRAL_PASSES, REFERRAL_VALID_DAYS, formatPassUnits } from '@/lib/domain/entitlement/pass'
 
 interface RecentReferral {
   date: string
-  bonus: number
 }
 
 interface ReferralClientProps {
   referralCode: string
   referralLink: string
   totalReferrals: number
-  totalEarned: number
   recentReferrals: RecentReferral[]
 }
 
@@ -23,7 +22,6 @@ export default function ReferralClient({
   referralCode,
   referralLink,
   totalReferrals,
-  totalEarned,
   recentReferrals,
 }: ReferralClientProps) {
   const [copied, setCopied] = useState(false)
@@ -60,7 +58,7 @@ export default function ReferralClient({
   const handleShare = async () => {
     const shareData = {
       title: '해화당 친구 초대',
-      text: `해화당에서 사주·운세를 함께 봐요! 제 추천 코드로 가입하면 5만냥을 드려요 🎁`,
+      text: `해화당에서 사주·운세를 함께 봐요! 제 추천 코드로 가입하면 ${formatPassUnits(REFERRAL_PASSES)}을 드려요 🎁`,
       url: referralLink,
     }
 
@@ -69,7 +67,7 @@ export default function ReferralClient({
         await navigator.share(shareData)
       } catch (e) {
         // 사용자가 취소한 경우
-        if ((e as Error).name !== 'AbortError') {
+        if (!(e instanceof Error && e.name === 'AbortError')) {
           await handleCopyLink()
         }
       }
@@ -94,15 +92,15 @@ export default function ReferralClient({
         </Card>
 
         <Card className="bg-surface/30 border-primary/20 p-4 text-center">
-          <Coins className="w-5 h-5 text-primary mx-auto mb-1" />
-          <p className="text-2xl font-bold text-primary">{totalEarned}</p>
-          <p className="text-xs text-ink-light/50 mt-0.5">획득 만냥</p>
+          <Gift className="w-5 h-5 text-primary mx-auto mb-1" />
+          <p className="text-2xl font-bold text-primary">{REFERRAL_PASSES}장</p>
+          <p className="text-xs text-ink-light/50 mt-0.5">한 명당 이용권</p>
         </Card>
 
         <Card className="bg-surface/30 border-primary/20 p-4 text-center">
-          <Gift className="w-5 h-5 text-primary mx-auto mb-1" />
-          <p className="text-2xl font-bold text-primary">5</p>
-          <p className="text-xs text-ink-light/50 mt-0.5">건당 만냥</p>
+          <CalendarClock className="w-5 h-5 text-primary mx-auto mb-1" />
+          <p className="text-2xl font-bold text-primary">{REFERRAL_VALID_DAYS}일</p>
+          <p className="text-xs text-ink-light/50 mt-0.5">선물 유효기간</p>
         </Card>
       </section>
 
@@ -163,15 +161,21 @@ export default function ReferralClient({
           </li>
           <li className="flex items-start gap-2">
             <span className="text-primary font-bold shrink-0">2.</span>
-            친구가 링크로 가입하면 <span className="text-primary font-bold">5만냥</span> 즉시 지급
+            <span>
+              친구가 링크로 가입을 마치면 친구에게{' '}
+              <span className="text-primary font-bold">{formatPassUnits(REFERRAL_PASSES)}</span>
+            </span>
           </li>
           <li className="flex items-start gap-2">
             <span className="text-primary font-bold shrink-0">3.</span>
-            나도 <span className="text-primary font-bold">5만냥</span> 보상 지급 (친구 가입 완료 시)
+            <span>
+              나에게도 <span className="text-primary font-bold">{formatPassUnits(REFERRAL_PASSES)}</span> (친구 한 명당
+              한 번)
+            </span>
           </li>
           <li className="flex items-start gap-2">
             <span className="text-primary font-bold shrink-0">4.</span>
-            초대 인원 제한 없음 — 무제한 누적 가능
+            선물 이용권은 받은 날부터 {REFERRAL_VALID_DAYS}일 안에 쓸 수 있어요
           </li>
         </ol>
       </Card>
@@ -195,7 +199,7 @@ export default function ReferralClient({
                     <p className="text-xs text-ink-light/40">{formatDate(r.date)}</p>
                   </div>
                 </div>
-                <span className="text-sm font-bold text-primary">+{r.bonus}만냥</span>
+                <Check className="w-4 h-4 text-primary" aria-label="가입 완료" />
               </div>
             ))}
           </div>

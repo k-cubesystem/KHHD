@@ -18,7 +18,7 @@ function energy(partial: Partial<Record<Element, number>>): Record<Element, numb
 }
 
 function item(id: string, element: Element, energyPower: number, name = `신물-${id}`): PrescriptionCatalogItem {
-  return { id, name, element, energyPower, priceBokchae: 1000, emoji: '🕯️', spriteUrl: null }
+  return { id, name, element, energyPower, emoji: '🕯️', spriteUrl: null }
 }
 
 const CATALOG: PrescriptionCatalogItem[] = [

@@ -102,6 +102,10 @@ export function PurchaseConsent({
               <Link href="/privacy" className="text-gold-300 underline underline-offset-2">
                 개인정보처리방침
               </Link>
+              {' · '}
+              <Link href="/pass-policy" className="text-gold-300 underline underline-offset-2">
+                이용권 안내·환불 정책
+              </Link>
               에서 확인하실 수 있습니다.
             </p>
           </dl>

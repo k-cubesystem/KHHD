@@ -78,10 +78,10 @@ test.describe('오방기 점괘 — 튕김 감시 회귀', () => {
     await page.getByLabel('아뢰실 말씀').fill('벌이가 어찌 되겠는지')
     await expect(page).toHaveURL(OBANGKI_URL)
 
-    // 3) 기 세우기 (무료 회차 전제 — 유료 문구가 보이면 여기서 멈춘다: 과금 경로 진입 금지)
-    const paidCta = page.getByRole('button', { name: /복채 .*만냥을 올리고 청하기/ })
+    // 3) 기 세우기 (무료 회차 전제 — 이용권 문구가 보이면 여기서 멈춘다: 이용권 사용 경로 진입 금지)
+    const paidCta = page.getByRole('button', { name: /이용권 \d+장을 올리고 청하기/ })
     if (await paidCta.isVisible().catch(() => false)) {
-      console.log('[SKIP] 오늘 무료 소진 — 과금 경로 진입 금지 규율로 중단')
+      console.log('[SKIP] 오늘 무료 소진 — 이용권 사용 경로 진입 금지 규율로 중단')
       test.skip(true, '무료 소진')
     }
     await page.getByRole('button', { name: /상 앞에 나아가 청하기/ }).click()
@@ -130,9 +130,9 @@ test.describe('오방기 점괘 — 튕김 감시 회귀', () => {
 
     // byDrag 는 이제 "뽑는 방법"이 아니라 **튕김 재현용 잡제스처**다(뽑기 제스처 자체가 폐지됨)
     const drawOnce = async (label: string, byDrag: boolean) => {
-      const paidCta = page.getByRole('button', { name: /복채 .*만냥을 올리고 청하기/ })
+      const paidCta = page.getByRole('button', { name: /이용권 \d+장을 올리고 청하기/ })
       if (await paidCta.isVisible().catch(() => false)) {
-        console.log(`[SKIP] ${label}: 무료 소진 — 과금 경로 진입 금지`)
+        console.log(`[SKIP] ${label}: 무료 소진 — 이용권 사용 경로 진입 금지`)
         return false
       }
       await page.getByRole('button', { name: /상 앞에 나아가 청하기/ }).click()
@@ -161,7 +161,7 @@ test.describe('오방기 점괘 — 튕김 감시 회귀', () => {
     const first = await drawOnce('잡제스처 중 자동 선출', true)
     if (!first) return
 
-    // 2) 공유(깃발 카드) — claimShareReward 경로 관찰. 클립보드 권한 없음 → 실패해도 UX 유지가 정상
+    // 2) 공유(깃발 카드) — 공유 보상은 없다(링크만). 클립보드 권한 없음 → 실패해도 UX 유지가 정상
     await page.getByRole('button', { name: /깃발 카드/ }).click()
     await page.waitForTimeout(1_500)
     await expect(page, '공유 후 URL').toHaveURL(OBANGKI_URL)
@@ -183,7 +183,7 @@ test.describe('오방기 점괘 — 튕김 감시 회귀', () => {
   })
 })
 
-test.describe('오방기 — reduced-motion 변형(뽑기 전 중단, 과금 0)', () => {
+test.describe('오방기 — reduced-motion 변형(뽑기 전 중단, 이용권 사용 0)', () => {
   test.skip(!process.env.E2E_PROD_SMOKE, 'E2E_PROD_SMOKE 미설정')
   test.use({ storageState: { cookies: [], origins: [] }, contextOptions: { reducedMotion: 'reduce' } })
 
@@ -198,7 +198,7 @@ test.describe('오방기 — reduced-motion 변형(뽑기 전 중단, 과금 0)'
     await page.getByRole('button', { name: /재수/ }).click()
     await page.getByLabel('아뢰실 말씀').fill('벌이가 어찌 되겠는지')
 
-    // CTA(무료/유료 라벨 공통) — 서버 호출 없는 클라 국면 전환만 일으킨다. 뽑기(과금)는 하지 않는다.
+    // CTA(무료/이용권 라벨 공통) — 서버 호출 없는 클라 국면 전환만 일으킨다. 뽑기(이용권 사용)는 하지 않는다.
     await page.getByRole('button', { name: /기 세우/ }).click()
     const pickPrompt = page.getByText('마음 가는 기 하나를 위로 쓸어 올리세요')
     const autoPrompt = page.getByText(/무대를 눌러|기가 돌아갑니다/)

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { maskUsername, EVENT_TOPICS, type EventTopic } from '@/lib/domain/event/reading'
-import { SIGNUP_BONUS_TALISMANS, SIGNUP_BONUS_SAJU_COUNT } from '@/lib/domain/payment/feature-costs'
+import { ONBOARDING_PASSES, ONBOARDING_VALID_DAYS } from '@/lib/domain/entitlement/pass'
 import { getSiteUrl } from '@/lib/utils/site-url'
 
 /**
@@ -103,14 +103,14 @@ export default async function EventResultPage({ params }: PageProps) {
       <section className="mt-10 rounded-xl border border-gold-500/25 bg-gold-500/[0.06] p-5 text-center">
         <p className="font-serif text-[15px] text-ink-primary">이건 간이 풀이예요</p>
         <p className="mt-1.5 break-keep font-sans text-[13px] leading-relaxed text-ink-light/75">
-          정식 사주 풀이는 십성·대운·용신까지 읽어 드립니다. 가입하시면 복채 {SIGNUP_BONUS_TALISMANS}만냥(사주 풀이
-          {SIGNUP_BONUS_SAJU_COUNT}회분)을 드리고, 오늘의 운세와 신년운세는 원래 무료예요.
+          정식 사주 풀이는 십성·대운·용신까지 읽어 드립니다. 가입하시면 풀이 {ONBOARDING_PASSES}회를 무료로 볼 수 있는
+          이용권을 드리고(유효기간 {ONBOARDING_VALID_DAYS}일), 오늘의 운세와 신년운세는 원래 무료예요.
         </p>
         <Link
           href={`/auth/sign-up?utm_source=threads&utm_medium=result&utm_campaign=${encodeURIComponent(w.round.slug)}`}
           className="mt-4 inline-block rounded-[3px] bg-seal-700 px-5 py-2.5 font-sans text-[14px] font-semibold text-white shadow-[2px_2px_0_rgba(0,0,0,0.35)]"
         >
-          복채 {SIGNUP_BONUS_TALISMANS}만냥 받고 정식 풀이 보기
+          풀이 {ONBOARDING_PASSES}회 무료로 정식 풀이 보기
         </Link>
       </section>
 

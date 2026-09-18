@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test'
 
-// R1/F2 신설 스펙 — 비용 표시(관상 2만냥, 표시=실차감)·허브 구성·운세 구조 요소(F-7).
+// R1/F2 신설 스펙 — 비용 표시(관상 이용권 1장, 표시=실사용)·허브 구성·운세 구조 요소(F-7).
 // E2E_PROD_SMOKE=1 E2E_BASE_URL=https://k-haehwadang.com E2E_USER_EMAIL/PASSWORD, --workers=1
 test.describe('디테일 신뢰·재미 (R1/F2)', () => {
   test.skip(!process.env.E2E_PROD_SMOKE, 'E2E_PROD_SMOKE 미설정')
 
-  test('비운 허브 + 옮긴 진입 경로 + 관상 2만냥 표기 + 운세 구조 요소', async ({ page }) => {
+  test('비운 허브 + 옮긴 진입 경로 + 관상 이용권 1장 표기 + 운세 구조 요소', async ({ page }) => {
     test.setTimeout(120_000)
 
     // 허브 비우기 + 앱 홈 개편(CEO 2026-08-13): 「오늘의 정성」은 없어졌고, ② 「무엇으로
@@ -45,10 +45,13 @@ test.describe('디테일 신뢰·재미 (R1/F2)', () => {
     await expect(page.getByRole('link', { name: /2026 병오년/ })).toBeVisible()
     console.log('[PASS] 오늘의 운세·2026 병오년 진입 경로 생존')
 
-    // R1: 관상 스튜디오 비용 = 2만냥 (표시=실차감 단일 소스, 목록 5만냥 불일치 제거)
+    // R1: 관상 스튜디오 비용 = 이용권 1장 (표시=실사용 단일 소스 FEATURE_COST.face — 앱 코드를
+    //    import 하지 않는 규율이라 손으로 맞춘다. 장 수를 바꾸면 여기도 바꾼다).
+    // 🔴 2026-09-18 복채 폐지 — 옛 화폐 표기가 한 글자라도 남으면 토스 심사 문구 규율 위반이다.
     await page.goto('/protected/studio/face', { waitUntil: 'domcontentloaded' })
-    await expect(page.getByText('2만냥').first()).toBeVisible({ timeout: 25_000 })
-    console.log('[PASS] 관상 2만냥 표기 (R1)')
+    await expect(page.getByText('이용권 1장').first()).toBeVisible({ timeout: 25_000 })
+    await expect(page.getByText(/만냥|복채|충전/)).toHaveCount(0)
+    console.log('[PASS] 관상 이용권 1장 표기 (R1)')
 
     // F-7: 오늘의 운세 구조 요소(총운 별점) — 생성/캐시 대기 후 best-effort 로깅
     await page.goto('/protected/analysis/today', { waitUntil: 'domcontentloaded' })

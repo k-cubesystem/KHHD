@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { applyToEvent } from '@/app/actions/event/apply'
-import { SIGNUP_BONUS_TALISMANS, SIGNUP_BONUS_SAJU_COUNT } from '@/lib/domain/payment/feature-costs'
+import { ONBOARDING_PASSES, ONBOARDING_VALID_DAYS } from '@/lib/domain/entitlement/pass'
 
 interface Props {
   roundSlug: string
@@ -72,17 +72,17 @@ export function EventApplyForm({ roundSlug, utm }: Props) {
         </p>
         <div className="mt-5 rounded-lg border border-gold-500/25 bg-gold-500/[0.06] p-4">
           <p className="font-serif text-[15px] text-ink-primary">
-            기다리는 동안 — 가입하면 복채 {SIGNUP_BONUS_TALISMANS}만냥을 드려요
+            기다리는 동안 — 가입하면 풀이 {ONBOARDING_PASSES}회를 무료로 드려요
           </p>
           <p className="mt-1.5 break-keep font-sans text-[12.5px] leading-relaxed text-ink-light/75">
-            사주 풀이 {SIGNUP_BONUS_SAJU_COUNT}회를 볼 수 있는 양이고, 오늘의 운세와 신년운세는 원래 무료예요. 선정되지
-            않아도 내 사주는 바로 볼 수 있습니다.
+            가입 선물 이용권 {ONBOARDING_PASSES}장(유효기간 {ONBOARDING_VALID_DAYS}일)으로 사주 풀이를 볼 수 있고,
+            오늘의 운세와 신년운세는 원래 무료예요. 선정되지 않아도 내 사주는 바로 볼 수 있습니다.
           </p>
           <Button asChild className="mt-3.5 w-full">
             <Link
               href={`/auth/sign-up?utm_source=threads&utm_medium=event_thanks&utm_campaign=${encodeURIComponent(roundSlug)}`}
             >
-              복채 {SIGNUP_BONUS_TALISMANS}만냥 받고 시작하기
+              풀이 {ONBOARDING_PASSES}회 무료로 시작하기
             </Link>
           </Button>
         </div>

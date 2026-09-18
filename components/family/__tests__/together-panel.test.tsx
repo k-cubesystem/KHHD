@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { toast } from 'sonner'
 import { TogetherPanel, type TogetherPerson } from '@/components/family/together-panel'
-import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { formatFeatureCost } from '@/lib/domain/payment/feature-costs'
+import { tierUpsellLine } from '@/lib/domain/payment/membership-tiers'
 import { allElementNeeds } from '@/lib/domain/circle/element-lore'
 import type { Element } from '@/lib/domain/shrine/types'
 
@@ -11,6 +12,11 @@ jest.mock('@/app/actions/circle/narrative', () => ({
   generateNarrative: (...args: unknown[]) => generateNarrative(...args),
 }))
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn(), message: jest.fn() } }))
+const refreshPasses = jest.fn()
+jest.mock('@/hooks/use-passes', () => ({
+  usePassSummary: () => ({ data: undefined }),
+  useRefreshPasses: () => refreshPasses,
+}))
 
 function energy(partial: Partial<Record<Element, number>>): Record<Element, number> {
   return { wood: 20, fire: 20, earth: 20, metal: 20, water: 20, ...partial }
@@ -74,10 +80,11 @@ const LEGACY = [
 describe('TogetherPanel — AI 풀이(둘·셋·넷 함께 보기)', () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it('처음엔 두 명이 골라져 있고, 단추에 표시 복채가 feature-costs 값으로 선다', () => {
+  it('처음엔 두 명이 골라져 있고, 단추에 이용권 장 수가 feature-costs 값으로 선다', () => {
     render(<TogetherPanel people={PEOPLE} kind="work" needs={NEEDS} />)
     expect(screen.getByRole('button', { name: /나·지영 함께 보기/ })).toBeEnabled()
-    expect(screen.getByText(`· ${FEATURE_COST.togetherNarrative.display}만냥`)).toBeInTheDocument()
+    expect(screen.getByText(`· ${formatFeatureCost('togetherNarrative')}`)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '이용권 구매' }).getAttribute('href')).toBe('/protected/store?tab=pass')
   })
 
   it('🔴 네 명을 넘기면 고르지 못하고 안내만 뜬다', () => {
@@ -221,7 +228,7 @@ describe('TogetherPanel — AI 풀이(둘·셋·넷 함께 보기)', () => {
       },
     ]
     render(<TogetherPanel people={PEOPLE.slice(0, 3)} kind="family" recent={recent} needs={NEEDS} />)
-    expect(screen.getByText('최근 본 조합 — 다시 여는 데 복채가 들지 않습니다')).toBeInTheDocument()
+    expect(screen.getByText('최근 본 조합 — 다시 여는 데 이용권이 들지 않습니다')).toBeInTheDocument()
     expect(screen.queryByText(/모르는 이/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /지영·나/ }))
     expect(screen.getByRole('heading', { name: '잘 맞는 점' })).toBeInTheDocument()
@@ -230,16 +237,78 @@ describe('TogetherPanel — AI 풀이(둘·셋·넷 함께 보기)', () => {
     expect(screen.getByRole('button', { name: /나·지영 함께 보기/ })).toBeInTheDocument()
   })
 
-  it('복채가 모자라면 오류 토스트만 띄운다', async () => {
+  it('새로 받은 풀이는 이용권 요약을 다시 읽고, 저장본은 다시 읽지 않는다', async () => {
     generateNarrative.mockResolvedValue({
-      success: false,
-      error: '복채가 부족합니다.',
-      errorType: 'INSUFFICIENT_BALANCE',
+      success: true,
+      text: SIX,
+      cached: false,
+      createdAt: '2026-09-14T00:00:00.000Z',
+    })
+    const { unmount } = render(<TogetherPanel people={PEOPLE} kind="family" needs={NEEDS} />)
+    fireEvent.click(screen.getByRole('button', { name: /나·지영 함께 보기/ }))
+    await screen.findByRole('heading', { name: '잘 맞는 점' })
+    expect(refreshPasses).toHaveBeenCalledTimes(1)
+    unmount()
+
+    refreshPasses.mockClear()
+    generateNarrative.mockResolvedValue({
+      success: true,
+      text: SIX,
+      cached: true,
+      createdAt: '2026-09-14T00:00:00.000Z',
     })
     render(<TogetherPanel people={PEOPLE} kind="family" needs={NEEDS} />)
     fireEvent.click(screen.getByRole('button', { name: /나·지영 함께 보기/ }))
+    await screen.findByRole('heading', { name: '잘 맞는 점' })
+    expect(refreshPasses).not.toHaveBeenCalled()
+  })
+
+  it('🔴 이용권이 모자라면(NO_PASS) 이용권 안내를 열고 오류 토스트는 띄우지 않는다', async () => {
+    generateNarrative.mockResolvedValue({
+      success: false,
+      error: '이용권이 부족해요.',
+      errorType: 'NO_PASS',
+      requiredUnits: 2,
+    })
+    render(<TogetherPanel people={PEOPLE} kind="family" needs={NEEDS} />)
+    fireEvent.click(screen.getByRole('button', { name: /나·지영 함께 보기/ }))
+    expect(await screen.findByText('이용권이 부족해요')).toBeInTheDocument()
+    expect(screen.getByText('함께 보기에는 이용권 2장이 필요해요')).toBeInTheDocument()
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(screen.queryByRole('heading', { name: '잘 맞는 점' })).toBeNull()
+  })
+
+  it('🔴 서버가 등급으로 막으면(TIER_REQUIRED) 서버 문구 그대로 멤버십 안내로 바뀐다', async () => {
+    generateNarrative.mockResolvedValue({
+      success: false,
+      error: tierUpsellLine('togetherView'),
+      errorType: 'TIER_REQUIRED',
+    })
+    render(<TogetherPanel people={PEOPLE} kind="family" needs={NEEDS} />)
+    fireEvent.click(screen.getByRole('button', { name: /나·지영 함께 보기/ }))
+    expect(await screen.findByText(tierUpsellLine('togetherView'))).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /멤버십 보기/ }).getAttribute('href')).toBe(
+      '/protected/store?tab=membership'
+    )
+    expect(screen.queryByRole('button', { name: /나·지영 함께 보기/ })).toBeNull()
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('비회원(tier=null)이면 누르기 전부터 안내가 서고, 최근 본 조합은 그대로 다시 열 수 있다', () => {
+    const recent = [{ ids: ['b', 'self'], names: ['지영', '나'], text: SIX, createdAt: '2026-09-10T00:00:00.000Z' }]
+    render(<TogetherPanel people={PEOPLE} kind="family" needs={NEEDS} recent={recent} tier={null} />)
+    expect(screen.getByText(tierUpsellLine('togetherView'))).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /지영·나/ }))
+    expect(screen.getByRole('heading', { name: '잘 맞는 점' })).toBeInTheDocument()
+    expect(generateNarrative).not.toHaveBeenCalled()
+  })
+
+  it('그 밖의 실패는 오류 토스트만 띄운다', async () => {
+    generateNarrative.mockResolvedValue({ success: false, error: '풀이 중 문제가 생겼습니다.', errorType: 'AI_FAILED' })
+    render(<TogetherPanel people={PEOPLE} kind="family" needs={NEEDS} />)
+    fireEvent.click(screen.getByRole('button', { name: /나·지영 함께 보기/ }))
     await screen.findByRole('button', { name: /나·지영 함께 보기/ })
-    expect(toast.error).toHaveBeenCalledWith('복채가 부족합니다.')
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('풀이 중 문제가 생겼습니다.'))
     expect(screen.queryByRole('heading', { name: '잘 맞는 점' })).toBeNull()
   })
 })

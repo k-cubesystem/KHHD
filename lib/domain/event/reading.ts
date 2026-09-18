@@ -7,7 +7,7 @@ import { guardAiInput } from '@/lib/ai/input-guard'
 /**
  * 이벤트 간이 풀이 — 비로그인 응모자용. 명식(순수 계산)은 정식과 동일하고, 해석만 «간이»다.
  *
- * analyzeCheonjiinAction 을 재사용하지 않는 이유: targetId(family_members)·로그인·복채 차감에
+ * analyzeCheonjiinAction 을 재사용하지 않는 이유: targetId(family_members)·로그인·이용권 사용에
  * 묶여 있다. 여기는 생년월일시만 받아 명식을 세우고 flash 로 3~4문단을 만든다.
  *
  * 🔴 결과는 «초안»이다. 사람이 승인해야 발송된다(PLAN §2.5). 그래서 가드레일을 프롬프트에

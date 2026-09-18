@@ -27,9 +27,7 @@ const input: PrescriptionInput = {
   energy: energy({ wood: 72, fire: 24 }),
   energyLive: null,
   mansik: { yongsin: 'earth', huisin: 'metal', gisin: 'water' },
-  catalog: [
-    { id: 'a', name: '인등', element: 'fire', energyPower: 12, priceBokchae: 1500, emoji: '🪔', spriteUrl: null },
-  ],
+  catalog: [{ id: 'a', name: '인등', element: 'fire', energyPower: 12, emoji: '🪔', spriteUrl: null }],
   mates: [{ targetId: 'self', name: '민수', strongest: 'fire', energy: energy({ fire: 78 }) }],
 }
 

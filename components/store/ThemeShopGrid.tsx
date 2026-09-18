@@ -7,8 +7,8 @@ import { useTranslations } from 'next-intl'
 import { Check, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { ThemePack } from '@/lib/domain/shrine/types'
-import { purchaseThemePack } from '@/app/actions/shrine/deities'
 import { activateThemePack } from '@/app/actions/shrine/scene'
+import { TIER_LABEL } from '@/lib/domain/payment/membership-tiers'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { EL_KO, EL_COLOR, EL_LABEL } from '@/lib/domain/shrine/energy'
 import { mattersLabel } from '@/lib/domain/shrine/item-matters'
@@ -19,12 +19,15 @@ function deityNames(codes: readonly string[]): string {
   return codes.map((c) => findFamilyAvatar(c)?.label ?? c).join(' · ')
 }
 
+/** 등급이 모자란 테마의 문 — 상점 멤버십 탭(구매 경로는 없다). */
+const MEMBERSHIP_HREF = '/protected/store?tab=membership'
+
 /**
- * 적용 범위 — 이 값이 있으면 **보유 테마를 그 자리에서 신당에 입힌다**.
+ * 적용 범위 — 이 값이 있으면 **쓸 수 있는 테마를 그 자리에서 신당에 입힌다**.
  *
- * 상점(통합 상점 테마 탭)은 이 값을 주지 않는다 — 파는 곳과 입히는 곳을 나눠 두던 종전 그대로다.
+ * 상점(통합 상점 테마 탭)은 이 값을 주지 않는다 — 보여 주는 곳과 입히는 곳을 나눠 두던 종전 그대로다.
  * 모아보기(/protected/shrine/collection?tab=theme)만 준다: 신당 방 아래 테마 칩 줄이 걷히면서
- * (CEO 6차 지시 ②) **적용 손잡이가 이 화면으로 옮겨 왔다**. 손잡이가 없으면 산 테마를 입힐 길이 없다.
+ * (CEO 6차 지시 ②) **적용 손잡이가 이 화면으로 옮겨 왔다**. 손잡이가 없으면 열린 테마를 입힐 길이 없다.
  */
 export interface ThemeApplyScope {
   /** 지금 이 신당에 걸려 있는 테마 코드 */
@@ -33,11 +36,15 @@ export interface ThemeApplyScope {
   familyMemberId: string | null
 }
 
-/** 상점 신당 테마 탭 — 그라디언트 프리뷰 + 복채 구매. `apply` 를 주면 적용까지 여기서 한다. */
+/**
+ * 신당 테마 그리드 — 방 프리뷰 + 멤버십 등급 개방(2026-09-18 구매 폐지). `apply` 를 주면 적용까지 여기서 한다.
+ *
+ * 쓸 수 있는 테마 = 소유(기본·보상·예전 봉헌) 또는 지금 등급이 닿는 것. 등급으로 여는 테마는 소유 행을
+ * 만들지 않는다 — 입히는 순간 서버(activateThemePack)가 같은 규칙으로 다시 판정한다.
+ */
 export function ThemeShopGrid({ themes, apply }: { themes: ThemePack[]; apply?: ThemeApplyScope }) {
   const t = useTranslations('store')
   const router = useRouter()
-  const [ownedExtra, setOwnedExtra] = useState<Set<string>>(new Set())
   const [loadingCode, setLoadingCode] = useState<string | null>(null)
   /** 낙관 반영한 현재 테마. 서버 값(apply.activeCode)에서 출발한다 */
   const [activeCode, setActiveCode] = useState(apply?.activeCode ?? null)
@@ -57,43 +64,31 @@ export function ThemeShopGrid({ themes, apply }: { themes: ThemePack[]; apply?: 
       router.refresh()
     } else {
       setActiveCode(prev)
-      toast.error('테마 변경 실패')
+      toast.error(
+        res.error === 'TIER_REQUIRED' && pack.requiredTier
+          ? t('themeBuy', { price: TIER_LABEL[pack.requiredTier] })
+          : '테마 변경 실패'
+      )
     }
   }
 
-  const buy = async (pack: ThemePack) => {
-    setLoadingCode(pack.code)
-    const res = await purchaseThemePack(pack.code)
-    setLoadingCode(null)
-    if (res.success || res.error === 'ALREADY_OWNED') {
-      setOwnedExtra((prev) => new Set(prev).add(pack.code))
-      toast.success(t('themeBought', { name: pack.name }), { description: t('themeBoughtDesc') })
-      // 봉헌 즉시 적용 — 걷어낸 테마 칩 줄이 하던 약속("봉헌 즉시 이 신당에 적용됩니다") 그대로다
-      if (apply) await applyPack(pack)
-    } else if (res.error === 'INSUFFICIENT_BOKCHAE') {
-      toast.error(t('insufficientBokchae'))
-    } else {
-      toast.error(t('purchaseFailed'))
-    }
-  }
-
-  const ownedCount = themes.filter((p) => p.owned || ownedExtra.has(p.code)).length
+  const usableCount = themes.filter((p) => p.owned || p.unlocked).length
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <p className="font-sans text-xs text-ink-light/40">{t('themeHint')}</p>
         <span className="shrink-0 font-serif text-[11px] font-bold tabular-nums text-gold-500">
-          {ownedCount}/{themes.length} 수집
+          {usableCount}/{themes.length} 열림
         </span>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {themes.map((pack) => {
-          const owned = pack.owned || ownedExtra.has(pack.code)
-          const free = pack.priceBokchae === 0
+          const usable = pack.owned || pack.unlocked
+          const free = pack.requiredTier === null
           const loading = loadingCode === pack.code
           const accent = pack.assets.accent ?? '#c9a84c'
-          const devotionLvl = !owned ? devotionLevelForTheme(pack.code) : null
+          const devotionLvl = !pack.owned ? devotionLevelForTheme(pack.code) : null
           return (
             <div
               key={pack.id}
@@ -156,7 +151,7 @@ export function ThemeShopGrid({ themes, apply }: { themes: ThemePack[]; apply?: 
                 {devotionLvl != null && (
                   <p className="text-[10px] text-gold-500/70 font-sans">🕯 기원 {devotionLvl}단 무료</p>
                 )}
-                {owned && apply ? (
+                {usable && apply ? (
                   activeCode === pack.code ? (
                     <span className="mt-auto flex items-center justify-center gap-1 rounded-lg border border-gold-500/50 bg-gold-500/[0.16] py-1.5 text-[11px] font-bold text-gold-200">
                       <Check className="w-3 h-3" />
@@ -171,26 +166,21 @@ export function ThemeShopGrid({ themes, apply }: { themes: ThemePack[]; apply?: 
                       {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : '신당에 입히기'}
                     </button>
                   )
-                ) : owned ? (
+                ) : usable ? (
                   <Link
-                    href="/protected/shrine"
+                    href="/protected/shrine/collection?tab=theme"
                     className="mt-auto flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-gold-500/[0.12] border border-gold-500/35 text-gold-300"
                   >
                     <Check className="w-3 h-3" />
-                    {free ? t('themeFree') : t('themeOwned')}
+                    {free ? t('themeFree') : pack.owned ? t('themeOwned') : '멤버십으로 열림 · 신당에서 적용'}
                   </Link>
                 ) : (
-                  <button
-                    onClick={() => void buy(pack)}
-                    disabled={loading}
-                    className="mt-auto flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-seal/15 border border-seal/40 text-seal disabled:opacity-50"
+                  <Link
+                    href={MEMBERSHIP_HREF}
+                    className="mt-auto flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-seal/15 border border-seal/40 text-seal"
                   >
-                    {loading ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      t('themeBuy', { price: pack.priceBokchae })
-                    )}
-                  </button>
+                    {pack.requiredTier ? t('themeBuy', { price: TIER_LABEL[pack.requiredTier] }) : t('themeFree')}
+                  </Link>
                 )}
               </div>
             </div>

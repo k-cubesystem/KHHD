@@ -175,15 +175,15 @@ export function NotificationSettingsForm({ initialPrefs }: NotificationSettingsF
             />
           </div>
 
-          {/* 출석 보상 */}
+          {/* 출석 */}
           <div className="flex items-center justify-between py-1 border-b border-primary/10">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Calendar className="w-4 h-4 text-primary" strokeWidth={1} />
               </div>
               <div>
-                <p className="text-sm font-light text-ink-light">출석 보상</p>
-                <p className="text-xs text-ink-light/50 font-light">출석 체크 복채 적립 알림</p>
+                <p className="text-sm font-light text-ink-light">출석 체크</p>
+                <p className="text-xs text-ink-light/50 font-light">출석 체크 알림</p>
               </div>
             </div>
             <Switch
@@ -194,15 +194,15 @@ export function NotificationSettingsForm({ initialPrefs }: NotificationSettingsF
             />
           </div>
 
-          {/* 복채 결제 */}
+          {/* 결제 */}
           <div className="flex items-center justify-between py-1">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <CreditCard className="w-4 h-4 text-primary" strokeWidth={1} />
               </div>
               <div>
-                <p className="text-sm font-light text-ink-light">복채 결제</p>
-                <p className="text-xs text-ink-light/50 font-light">충전 및 사용 내역 알림</p>
+                <p className="text-sm font-light text-ink-light">이용권 결제</p>
+                <p className="text-xs text-ink-light/50 font-light">이용권 구매·사용 내역 알림</p>
               </div>
             </div>
             <Switch

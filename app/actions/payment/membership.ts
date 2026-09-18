@@ -1,69 +1,70 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/helpers'
+import { getActiveMembership } from '@/lib/auth/subscription'
 import { hasUnlimitedAccess, UNLIMITED_TIER_LIMITS } from '@/lib/auth/privileges'
-import { FREE_TIER_LIMITS } from '@/lib/domain/payment/membership-benefits'
+import { FREE_TIER_LIMITS, UNLIMITED_STORAGE_LIMIT } from '@/lib/domain/payment/membership-benefits'
 import { DEFAULT_MEMBER_CATEGORY, MEMBER_CATEGORY_META, type MemberCategory } from '@/lib/domain/family/member-category'
 
+type ServerClient = Awaited<ReturnType<typeof createClient>>
+
+interface TierLimits {
+  tier: string | null
+  relationship_limit: number
+  storage_limit: number
+  is_subscribed: boolean
+}
+
+interface LimitCheck {
+  allowed: boolean
+  current: number
+  limit: number
+  message?: string
+}
+
+const FREE_LIMITS: TierLimits = {
+  tier: null,
+  relationship_limit: FREE_TIER_LIMITS.relationshipLimit,
+  storage_limit: FREE_TIER_LIMITS.storageLimit,
+  is_subscribed: false,
+}
+
+/** 검수 계정 — 등급과 무관한 고정 한도(갈래마다 10명 · 기록 20개). */
+const TESTER_LIMITS: TierLimits = {
+  tier: 'TESTER',
+  relationship_limit: 10,
+  storage_limit: 20,
+  is_subscribed: true,
+}
+
+const LOGIN_REQUIRED: LimitCheck = { allowed: false, current: 0, limit: 0, message: '로그인이 필요합니다.' }
+
 /**
- * Get user's membership tier and limits
+ * 등급 한도(인연·기록 보관). 멤버십 판정은 lib/auth/subscription(getActiveMembership) 한 곳을 따른다.
+ *
+ * 🔴 status='ACTIVE' 만 보면 «기간 끝 해지»를 누른 즉시 무료 한도(보관 5개)로 떨어지고, 결제 기간이 남았는데도
+ *    다음 기록 저장 때 오래된 기록이 지워진다(history.ts 자동 정리 — 약관 제6조 4항 위반).
+ *    이용권 월 몫·등급 기능과 같은 판정을 써야 한도만 먼저 끊기지 않는다.
  */
-export async function getUserTierLimits() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+async function readTierLimits(supabase: ServerClient, userId: string): Promise<TierLimits> {
+  const [role, membership] = await Promise.all([getUserRole(supabase, userId), getActiveMembership(userId)])
 
-  if (!user) {
-    return null
-  }
+  if (hasUnlimitedAccess(role)) return { ...UNLIMITED_TIER_LIMITS }
+  if (role === 'tester') return { ...TESTER_LIMITS }
+  if (!membership?.planId) return { ...FREE_LIMITS }
 
-  // Check if user is tester - give special privileges
-  const role = await getUserRole(supabase, user.id)
+  const { data } = await supabase
+    .from('membership_plans')
+    .select('tier, relationship_limit, storage_limit')
+    .eq('id', membership.planId)
+    .maybeSingle()
 
-  // 마스터: 가족·기록·일일한도 전부 개방 (구독 여부 무관)
-  if (hasUnlimitedAccess(role)) {
-    return { ...UNLIMITED_TIER_LIMITS }
-  }
-
-  if (role === 'tester') {
-    return {
-      tier: 'TESTER',
-      daily_talisman_limit: 100, // 100만냥/day
-      relationship_limit: 10, // 갈래마다 10명 (가족 10 · 지인 10)
-      storage_limit: 20, // 기록 20개 — 멤버십과 같은 한도
-      is_subscribed: true,
-    }
-  }
-
-  // Get active subscription and plan
-  const { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('plan_id, status, membership_plans(*)')
-    .eq('user_id', user.id)
-    .eq('status', 'ACTIVE')
-    .single()
-
-  if (!subscription || !subscription.membership_plans) {
-    // 무료 사용자 한도 — 화면(등급 비교표)과 같은 출처를 쓴다. membership-benefits.ts 참조.
-    return {
-      tier: null,
-      daily_talisman_limit: FREE_TIER_LIMITS.dailyTalismanLimit,
-      relationship_limit: FREE_TIER_LIMITS.relationshipLimit,
-      storage_limit: FREE_TIER_LIMITS.storageLimit,
-      is_subscribed: false,
-    }
-  }
-
-  const plan = Array.isArray(subscription.membership_plans)
-    ? subscription.membership_plans[0]
-    : subscription.membership_plans
+  const plan = data as { tier: string | null; relationship_limit: number; storage_limit: number } | null
+  if (!plan) return { ...FREE_LIMITS }
 
   return {
     tier: plan.tier,
-    daily_talisman_limit: plan.daily_talisman_limit,
     relationship_limit: plan.relationship_limit,
     storage_limit: plan.storage_limit,
     is_subscribed: true,
@@ -71,55 +72,48 @@ export async function getUserTierLimits() {
 }
 
 /**
- * Check if user can add more relationships
+ * 등급과 한도(인연·기록 보관). 이용권 장 수는 여기서 다루지 않는다 — 정본은 이용권 요약(getMyPassSummary).
  */
-/**
- * 인연을 하나 더 등록할 수 있는가 — **갈래별로 따로 센다**(CEO 지시 2026-08-16).
- *
- * 🔴 합산으로 세면 지인을 많이 등록한 사람의 «가족 자리»가 줄어든다. 가족은 지울 수 없는
- *    사람들이고 지인은 늘었다 줄었다 하는 목록이라, 한 통에 담으면 늘 가족이 밀린다.
- *    그래서 한도 하나(relationship_limit)를 **갈래마다 각각** 적용한다 — 가족 10 · 지인 10.
- */
-export async function canAddRelationship(category: MemberCategory = DEFAULT_MEMBER_CATEGORY): Promise<{
-  allowed: boolean
-  current: number
-  limit: number
-  message?: string
-}> {
+export async function getUserTierLimits(): Promise<TierLimits | null> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    return { allowed: false, current: 0, limit: 0, message: '로그인이 필요합니다.' }
-  }
+  if (!user) return null
+  return readTierLimits(supabase, user.id)
+}
 
-  // Get tier limits
-  const limits = await getUserTierLimits()
-  const relationshipLimit = limits?.relationship_limit || 3
+/**
+ * 인연을 하나 더 등록할 수 있는가 — **갈래별로 따로 센다**(CEO 지시 2026-08-16).
+ *
+ * 🔴 합산으로 세면 지인을 많이 등록한 사람의 «가족 자리»가 줄어든다. 가족은 지울 수 없는
+ *    사람들이고 지인은 늘었다 줄었다 하는 목록이라, 한 통에 담으면 늘 가족이 밀린다.
+ *    그래서 한도 하나(relationship_limit)를 **갈래마다 각각** 적용한다.
+ */
+async function checkRelationship(
+  supabase: ServerClient,
+  userId: string,
+  limits: TierLimits,
+  category: MemberCategory
+): Promise<LimitCheck> {
+  const relationshipLimit = limits.relationship_limit || FREE_TIER_LIMITS.relationshipLimit
 
-  // 같은 갈래만 센다 — 지인을 채워도 가족 자리는 그대로 남는다.
   const { count } = await supabase
     .from('family_members')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('member_category', category)
 
   const currentCount = count || 0
 
-  // 마스터는 getUserTierLimits 의 admin 분기(UNLIMITED_TIER_LIMITS)로 여기 도달 —
-  // 999 를 상한이 아니라 무제한으로 해석한다(canStoreResult 와 동일 규약).
+  // 마스터(UNLIMITED_TIER_LIMITS)의 999 는 상한이 아니라 «상한 없음»이다(canStoreResult 와 동일 규약).
   if (relationshipLimit >= UNLIMITED_TIER_LIMITS.relationship_limit) {
-    return {
-      allowed: true,
-      current: currentCount,
-      limit: relationshipLimit,
-    }
+    return { allowed: true, current: currentCount, limit: relationshipLimit }
   }
 
   if (currentCount >= relationshipLimit) {
-    const upgradeMessage = limits?.is_subscribed
+    const upgradeMessage = limits.is_subscribed
       ? '더 높은 등급으로 업그레이드하여 더 많은 인연의 복을 관리하세요.'
       : '복지기 멤버십에 가입하여 더 많은 인연의 복을 관리하세요.'
 
@@ -131,170 +125,25 @@ export async function canAddRelationship(category: MemberCategory = DEFAULT_MEMB
     }
   }
 
-  return {
-    allowed: true,
-    current: currentCount,
-    limit: relationshipLimit,
-  }
+  return { allowed: true, current: currentCount, limit: relationshipLimit }
 }
 
-/**
- * Check daily talisman usage limit
- */
-export async function canUseTalisman(): Promise<{
-  allowed: boolean
-  used: number
-  limit: number
-  message?: string
-}> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+async function checkStorage(supabase: ServerClient, userId: string, limits: TierLimits): Promise<LimitCheck> {
+  const storageLimit = limits.storage_limit || FREE_TIER_LIMITS.storageLimit
 
-  if (!user) {
-    return { allowed: false, used: 0, limit: 0, message: '로그인이 필요합니다.' }
-  }
-
-  // Get tier limits
-  const limits = await getUserTierLimits()
-  const dailyLimit = limits?.daily_talisman_limit ?? 0
-
-  // Get today's usage (무료분 소비량)
-  const { data: usageLog } = await supabase
-    .from('daily_usage_logs')
-    .select('talismans_used')
-    .eq('user_id', user.id)
-    .eq('usage_date', new Date().toISOString().split('T')[0]) // Today's date (YYYY-MM-DD)
-    .maybeSingle()
-
-  const usedToday = usageLog?.talismans_used || 0
-  const capRemaining = Math.max(0, dailyLimit - usedToday)
-
-  // 무료 한도가 남았거나, 충전 복채가 있으면 사용 가능(충전분 캡 무관 — 2026-07-12 정책)
-  const admin = createAdminClient()
-  const { data: charged } = await admin.rpc('get_charge_exempt_remaining', { p_user_id: user.id })
-  const chargeExemptRemaining = typeof charged === 'number' ? charged : 0
-
-  if (capRemaining <= 0 && chargeExemptRemaining <= 0) {
-    return {
-      allowed: false,
-      used: usedToday,
-      limit: dailyLimit,
-      message:
-        dailyLimit > 0
-          ? `오늘의 일일 복채 한도에 도달했습니다. (${usedToday}/${dailyLimit}만냥) 복채를 충전하거나 자정에 리셋됩니다.`
-          : '복채를 충전하면 이용할 수 있어요.',
-    }
-  }
-
-  return {
-    allowed: true,
-    used: usedToday,
-    limit: dailyLimit,
-  }
-}
-
-/**
- * Increment daily talisman usage
- */
-export async function incrementDailyUsage(amount: number = 1): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { success: false, error: '로그인이 필요합니다.' }
-  }
-
-  const today = new Date().toISOString().split('T')[0]
-
-  // 일일 사용량 기록은 service_role 전용(유저가 자기 한도를 리셋하지 못하도록 — Fable 검토 R4).
-  const admin = createAdminClient()
-
-  // Upsert usage log
-  const { error } = await admin.from('daily_usage_logs').upsert(
-    {
-      user_id: user.id,
-      usage_date: today,
-      talismans_used: amount,
-    },
-    {
-      onConflict: 'user_id,usage_date',
-      ignoreDuplicates: false,
-    }
-  )
-
-  // If record exists, increment
-  if (error && error.code === '23505') {
-    // Unique constraint violation - record exists, increment it
-    const { data: existing } = await admin
-      .from('daily_usage_logs')
-      .select('talismans_used')
-      .eq('user_id', user.id)
-      .eq('usage_date', today)
-      .single()
-
-    if (existing) {
-      const { error: updateError } = await admin
-        .from('daily_usage_logs')
-        .update({ talismans_used: existing.talismans_used + amount })
-        .eq('user_id', user.id)
-        .eq('usage_date', today)
-
-      if (updateError) {
-        return { success: false, error: updateError.message }
-      }
-    }
-  } else if (error) {
-    return { success: false, error: error.message }
-  }
-
-  return { success: true }
-}
-
-/**
- * Check storage limit
- */
-export async function canStoreResult(): Promise<{
-  allowed: boolean
-  current: number
-  limit: number
-  message?: string
-}> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { allowed: false, current: 0, limit: 0, message: '로그인이 필요합니다.' }
-  }
-
-  // Get tier limits
-  const limits = await getUserTierLimits()
-  const storageLimit = limits?.storage_limit || 10
-
-  // Count stored results (saju_records table)
   const { count } = await supabase
     .from('saju_records')
     .select('*', { count: 'exact', head: true })
-    .eq('member_id', user.id)
+    .eq('member_id', userId)
 
   const currentCount = count || 0
 
-  // 999 means unlimited
-  if (storageLimit === 999) {
-    return {
-      allowed: true,
-      current: currentCount,
-      limit: storageLimit,
-    }
+  if (storageLimit >= UNLIMITED_STORAGE_LIMIT) {
+    return { allowed: true, current: currentCount, limit: storageLimit }
   }
 
   if (currentCount >= storageLimit) {
-    const upgradeMessage = limits?.is_subscribed
+    const upgradeMessage = limits.is_subscribed
       ? '더 높은 등급으로 업그레이드하여 저장 공간을 늘리세요.'
       : '멤버십에 가입하여 더 많은 결과를 저장하세요.'
 
@@ -306,21 +155,44 @@ export async function canStoreResult(): Promise<{
     }
   }
 
-  return {
-    allowed: true,
-    current: currentCount,
-    limit: storageLimit,
-  }
+  return { allowed: true, current: currentCount, limit: storageLimit }
 }
 
-/**
- * Get user's current limits summary
- */
+export async function canAddRelationship(category: MemberCategory = DEFAULT_MEMBER_CATEGORY): Promise<LimitCheck> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { ...LOGIN_REQUIRED }
+  return checkRelationship(supabase, user.id, await readTierLimits(supabase, user.id), category)
+}
+
+export async function canStoreResult(): Promise<LimitCheck> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { ...LOGIN_REQUIRED }
+  return checkStorage(supabase, user.id, await readTierLimits(supabase, user.id))
+}
+
+/** 한도 요약 — 등급 판정은 한 번만 하고 두 개수는 나란히 센다. */
 export async function getUserLimitsSummary() {
-  const limits = await getUserTierLimits()
-  const relationshipCheck = await canAddRelationship()
-  const talismanCheck = await canUseTalisman()
-  const storageCheck = await canStoreResult()
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const limits = user ? await readTierLimits(supabase, user.id) : null
+  const [relationshipCheck, storageCheck] =
+    user && limits
+      ? await Promise.all([
+          checkRelationship(supabase, user.id, limits, DEFAULT_MEMBER_CATEGORY),
+          checkStorage(supabase, user.id, limits),
+        ])
+      : [LOGIN_REQUIRED, LOGIN_REQUIRED]
 
   return {
     tier: limits?.tier,
@@ -330,15 +202,11 @@ export async function getUserLimitsSummary() {
       limit: relationshipCheck.limit,
       remaining: relationshipCheck.limit - relationshipCheck.current,
     },
-    daily_talismans: {
-      used: talismanCheck.used,
-      limit: talismanCheck.limit,
-      remaining: talismanCheck.limit - talismanCheck.used,
-    },
     storage: {
       current: storageCheck.current,
       limit: storageCheck.limit,
-      remaining: storageCheck.limit === 999 ? '무제한' : storageCheck.limit - storageCheck.current,
+      // null = 개수 제한 없음. 화면에 «무제한»이라는 말을 싣지 않는다.
+      remaining: storageCheck.limit >= UNLIMITED_STORAGE_LIMIT ? null : storageCheck.limit - storageCheck.current,
     },
   }
 }

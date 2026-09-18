@@ -1,406 +1,136 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { createServerClient } from '@supabase/ssr'
-import { isEdgeEnabled } from '@/lib/supabase/edge-config'
-import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
-import { getShrineEffects } from '@/lib/services/shrine-effects'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { accrueDevotion } from '@/lib/services/devotion'
+import { formatKstDate } from '@/lib/utils'
 import { logger } from '@/lib/utils/logger'
-
-// RLS를 우회해 attendance_logs를 안전하게 조회하기 위한 admin client
-function createAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) return null
-  return createServerClient(url, key, {
-    cookies: { getAll: () => [], setAll: () => {} },
-  })
-}
-
-// KST(UTC+9) 기준 오늘 날짜 문자열 반환
-function getKSTDateString(): string {
-  const now = new Date()
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
-  return kst.toISOString().split('T')[0]
-}
-
-// KST 기준 이번 주 월요일 날짜 문자열 반환
-function getKSTWeekStartString(): string {
-  const now = new Date()
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
-  const day = kst.getUTCDay() // 0=일
-  const daysFromMonday = day === 0 ? 6 : day - 1
-  kst.setUTCDate(kst.getUTCDate() - daysFromMonday)
-  return kst.toISOString().split('T')[0]
-}
+import {
+  STREAK_LOOKBACK_DAYS,
+  consecutiveStreak,
+  kstMonthRange,
+  kstWeekStart,
+  shiftKstDate,
+} from '@/lib/domain/attendance/streak'
 
 /**
- * 오늘 출석 체크 가능 여부 확인
+ * 출석 — 보상은 재화가 아니라 신당 정성(기원) 하루다(2026-09-18 복채 폐지, 주간 개근 보너스도 폐지).
+ *
+ * 🔴 attendance_logs 는 service_role 로만 읽고 쓴다. 클라이언트 INSERT 정책은 이용권 전환 때 걷었고,
+ *    유저 클라이언트로 강등하면 조용한 실패가 된다.
+ * 🔴 정성은 record_shrine_devotion 의 KST 멱등이 하루 한 번으로 묶는다 — 같은 날 기도와 출석은 하루로 센다.
  */
-export async function checkAttendanceAvailability() {
-  if (isEdgeEnabled('payment')) {
-    return invokeEdgeSafe('payment', { action: 'checkAttendanceAvailability' })
-  }
-  const supabase = await createClient()
-  const admin = createAdminClient()
-  // R7: service role 부재 시 사용자 클라이언트로 강등하지 않는다 — S1b 이후 강등은 조용한 지급 실패가 된다
-  if (!admin) throw new Error('[R7] SUPABASE_SERVICE_ROLE_KEY 부재 — 지급 경로 강등 금지')
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
 
-  if (!user) {
-    return { success: false, error: '로그인이 필요합니다.', canCheckIn: false }
-  }
-
-  const today = getKSTDateString()
-  const db = admin
-
-  const { data: todayRecord } = await db
-    .from('attendance_logs')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('checked_date', today)
-    .maybeSingle()
-
-  if (todayRecord) {
-    return { success: true, canCheckIn: false, alreadyChecked: true }
-  }
-
-  return { success: true, canCheckIn: true, alreadyChecked: false }
-}
-
-/**
- * 출석 체크 실행
- * - 매일 1 복채 지급
- * - 주 7일 완료 시 마지막날 +3 복채 보너스 (주당 총 10 복채)
- */
-export async function checkInAttendance() {
-  if (isEdgeEnabled('payment')) {
-    return invokeEdgeSafe('payment', { action: 'checkInAttendance' })
-  }
+async function sessionUserId(): Promise<string | null> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  return user?.id ?? null
+}
 
-  if (!user) {
-    return { success: false, error: '로그인이 필요합니다.' }
-  }
+function causeOf(error: unknown): unknown {
+  return error instanceof Error ? error.message : error
+}
+
+/** 오늘(KST) 출석할 수 있는지 — 신당 안내 바가 쓴다. */
+export async function checkAttendanceAvailability(): Promise<{ success: boolean; canCheckIn: boolean }> {
+  const userId = await sessionUserId()
+  if (!userId) return { success: false, canCheckIn: false }
 
   try {
-    // 이미 체크인했는지 확인 (admin client로)
-    const admin = createAdminClient()
-    // R7: service role 부재 시 사용자 클라이언트로 강등하지 않는다 — S1b 이후 강등은 조용한 지급 실패가 된다
-    if (!admin) throw new Error('[R7] SUPABASE_SERVICE_ROLE_KEY 부재 — 지급 경로 강등 금지')
-    const db = admin
-
-    const todayStr = getKSTDateString()
-    const weekStartStr = getKSTWeekStartString()
-
-    const { data: todayRecord } = await db
+    const { data, error } = await createAdminClient()
       .from('attendance_logs')
       .select('id')
-      .eq('user_id', user.id)
-      .eq('checked_date', todayStr)
+      .eq('user_id', userId)
+      .eq('checked_date', formatKstDate())
       .maybeSingle()
-
-    if (todayRecord) {
-      return { success: false, error: '오늘은 이미 출석 체크를 완료했습니다.' }
+    if (error) {
+      logger.error(new Error('[Attendance] 오늘 출석 여부 조회 실패'), { userId, error })
+      return { success: false, canCheckIn: false }
     }
+    return { success: true, canCheckIn: data === null }
+  } catch (error) {
+    logger.error(new Error('[Attendance] 오늘 출석 여부 조회 실패'), { userId, cause: causeOf(error) })
+    return { success: false, canCheckIn: false }
+  }
+}
 
-    // 이번 주 출석 횟수 확인
-    const { data: weekRecords } = await db
+/** 이번 달 출석 날짜 + 연속 출석일 — 내 정보 화면의 출석 달력. */
+export async function getMonthlyAttendance(): Promise<{
+  success: boolean
+  checkedDates: string[]
+  consecutiveStreak: number
+  canCheckIn: boolean
+}> {
+  const empty = { success: false, checkedDates: [], consecutiveStreak: 0, canCheckIn: false }
+  const userId = await sessionUserId()
+  if (!userId) return empty
+
+  const today = formatKstDate()
+  const month = kstMonthRange(today)
+  const lookback = shiftKstDate(today, -STREAK_LOOKBACK_DAYS)
+
+  try {
+    const { data, error } = await createAdminClient()
       .from('attendance_logs')
       .select('checked_date')
-      .eq('user_id', user.id)
-      .eq('week_start', weekStartStr)
-
-    const weekCount = weekRecords?.length || 0
-    const isLastDayOfWeek = weekCount === 6 // 이번이 7번째(마지막)
-    const baseReward = 1
-    const weeklyBonus = isLastDayOfWeek ? 3 : 0
-    const subtotal = baseReward + weeklyBonus
-
-    // ⚡ 배치 효험: 복 부적(attendance_bonus)을 신당에 모시면 출석 보상 +N%(반올림)
-    const effects = await getShrineEffects(user.id)
-    const charmBonus =
-      effects.attendanceBonusPercent > 0 ? Math.round((subtotal * effects.attendanceBonusPercent) / 100) : 0
-    const totalReward = subtotal + charmBonus
-
-    const rewardReason = [
-      `출석 체크 (${totalReward}만냥`,
-      isLastDayOfWeek ? ` = 기본 ${baseReward} + 주간 보너스 ${weeklyBonus}` : '',
-      charmBonus > 0 ? `${isLastDayOfWeek ? '' : ' = 기본 1'} + 복 부적 ${charmBonus}` : '',
-      ')',
-    ].join('')
-
-    // 복채 지급(잔액 쓰기)은 service_role 전용 — 위에서 만든 db(admin, R7 가드 통과분) 재사용.
-
-    // 1. 먼저 wallet이 존재하는지 확인하고 없으면 생성
-    const { data: existingWallet } = await db.from('wallets').select('balance').eq('user_id', user.id).maybeSingle()
-
-    if (!existingWallet) {
-      logger.log(`[Attendance] Creating wallet for user ${user.id}`)
-      const { error: walletCreateError } = await db.from('wallets').insert({ user_id: user.id, balance: 0 })
-
-      if (walletCreateError) {
-        logger.error('[Attendance] Failed to create wallet:', walletCreateError)
-        throw new Error(`지갑 생성 실패: ${walletCreateError.message}`)
-      }
+      .eq('user_id', userId)
+      .gte('checked_date', lookback < month.start ? lookback : month.start)
+      .lte('checked_date', month.end)
+      .order('checked_date', { ascending: true })
+    if (error) {
+      logger.error(new Error('[Attendance] 출석 달력 조회 실패'), { userId, error })
+      return empty
     }
 
-    // 2. 출석 기록 저장
-    logger.log(`[Attendance] Inserting attendance log...`)
-    const { error: insertError } = await supabase.from('attendance_logs').insert({
-      user_id: user.id,
-      checked_date: todayStr,
-      week_start: weekStartStr,
-      bokchae_awarded: totalReward,
-      is_weekly_bonus: isLastDayOfWeek,
-    })
-
-    if (insertError) {
-      logger.error('[Attendance] Failed to insert attendance log:', insertError)
-      throw new Error(`출석 기록 실패: ${insertError.message}`)
-    }
-
-    logger.log(`[Attendance] Attendance log inserted successfully`)
-
-    // 3. 복채 지급 - RPC 함수 사용
-    logger.log(`[Attendance] Crediting ${totalReward} bokchae via RPC...`)
-    const { data: rpcResult, error: rpcError } = await db.rpc('add_bokchae', {
-      p_user_id: user.id,
-      p_amount: totalReward,
-      p_reason: rewardReason,
-    })
-
-    if (rpcError) {
-      logger.warn('[Attendance] RPC add_bokchae failed, using direct method:', rpcError)
-
-      // RPC 실패 시 직접 처리
-      const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
-
-      const currentBalance = wallet?.balance || 0
-      const newBalance = currentBalance + totalReward
-
-      logger.log(`[Attendance] Direct credit: ${currentBalance} -> ${newBalance}`)
-
-      const { error: updateError } = await db.from('wallets').update({ balance: newBalance }).eq('user_id', user.id)
-
-      if (updateError) {
-        logger.error('[Attendance] Failed to update wallet:', updateError)
-        throw new Error(`복채 지급 실패: ${updateError.message}`)
-      }
-
-      const { error: txError } = await supabase.from('wallet_transactions').insert({
-        user_id: user.id,
-        amount: totalReward,
-        type: 'BONUS',
-        description: rewardReason,
-      })
-
-      if (txError) {
-        logger.error('[Attendance] Failed to record transaction:', txError)
-        // 트랜잭션 기록 실패는 치명적이지 않으므로 warning만
-      }
-    } else {
-      logger.log(`[Attendance] RPC add_bokchae succeeded:`, rpcResult)
-    }
-
-    // 4. 최종 검증: 복채가 실제로 지급되었는지 확인
-    const { data: finalWallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
-
-    logger.log(`[Attendance] Final wallet balance: ${finalWallet?.balance}`)
-
+    const dates = (data ?? []).map((row) => String(row.checked_date))
+    const checked = new Set(dates)
     return {
       success: true,
-      reward: totalReward,
-      isWeeklyBonus: isLastDayOfWeek,
-      weeklyBonusAmount: weeklyBonus,
-      weekCount: weekCount + 1,
-      currentBalance: finalWallet?.balance || 0,
-      message: isLastDayOfWeek
-        ? `주간 출석 완료! 복채 ${totalReward}만냥 (보너스 포함) 지급! 💰`
-        : `출석 체크 완료! 복채 ${totalReward}만냥 지급! 💰`,
+      checkedDates: dates.filter((d) => d >= month.start),
+      consecutiveStreak: consecutiveStreak(checked, today),
+      canCheckIn: !checked.has(today),
     }
-  } catch (error: unknown) {
-    logger.error('[Attendance] Critical error:', error)
-    const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
-    return {
-      success: false,
-      error: msg,
-    }
+  } catch (error) {
+    logger.error(new Error('[Attendance] 출석 달력 조회 실패'), { userId, cause: causeOf(error) })
+    return empty
   }
 }
 
-/**
- * 이번 주 출석 현황 조회
- */
-export async function getWeeklyAttendance() {
-  if (isEdgeEnabled('payment')) {
-    return invokeEdgeSafe('payment', { action: 'getWeeklyAttendance' })
-  }
-  const supabase = await createClient()
-  const admin = createAdminClient()
-  // R7: service role 부재 시 사용자 클라이언트로 강등하지 않는다 — S1b 이후 강등은 조용한 지급 실패가 된다
-  if (!admin) throw new Error('[R7] SUPABASE_SERVICE_ROLE_KEY 부재 — 지급 경로 강등 금지')
-  const db = admin
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+/** 오늘 출석 — 기록 한 줄 + 신당 정성 하루. */
+export async function recordDailyAttendance(): Promise<
+  | { success: true; devotionGained: boolean; devotionTotalDays: number }
+  | { success: false; error: string; alreadyChecked?: boolean }
+> {
+  const userId = await sessionUserId()
+  if (!userId) return { success: false, error: '로그인이 필요합니다.' }
 
-  if (!user)
-    return {
-      success: false,
-      records: [],
-      weekDays: [] as Array<{
-        date: string
-        dayLabel: string
-        checked: boolean
-        isToday: boolean
-        isFuture: boolean
-      }>,
-      weekCount: 0,
-      totalBokchae: 0,
+  const today = formatKstDate()
+  const failed = { success: false as const, error: '출석을 기록하지 못했어요. 잠시 후 다시 시도해 주세요.' }
+
+  try {
+    const { error } = await createAdminClient()
+      .from('attendance_logs')
+      .insert({
+        user_id: userId,
+        checked_date: today,
+        week_start: kstWeekStart(today),
+        // 열 기본값이 1 이라 비워 두면 준 적 없는 보상이 기록에 남는다.
+        bokchae_awarded: 0,
+      })
+    if (error?.code === '23505') {
+      return { success: false, alreadyChecked: true, error: '오늘은 이미 출석했어요.' }
     }
-
-  const todayStr = getKSTDateString()
-  const weekStartStr = getKSTWeekStartString()
-
-  const { data: records } = await db
-    .from('attendance_logs')
-    .select('checked_date, bokchae_awarded, is_weekly_bonus')
-    .eq('user_id', user.id)
-    .eq('week_start', weekStartStr)
-    .order('checked_date', { ascending: true })
-
-  const checkedDates = new Set(records?.map((r) => r.checked_date) || [])
-
-  // 이번 주 7일 배열 생성 (월~일, KST 기준)
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStartStr + 'T00:00:00+09:00')
-    d.setDate(d.getDate() + i)
-    const dateStr = d.toISOString().split('T')[0]
-    return {
-      date: dateStr,
-      dayLabel: ['월', '화', '수', '목', '금', '토', '일'][i],
-      checked: checkedDates.has(dateStr),
-      isToday: dateStr === todayStr,
-      isFuture: dateStr > todayStr,
+    if (error) {
+      logger.error(new Error('[Attendance] 출석 기록 실패'), { userId, error })
+      return failed
     }
-  })
-
-  return {
-    success: true,
-    records: records || [],
-    weekDays,
-    weekCount: records?.length || 0,
-    totalBokchae: records?.reduce((sum, r) => sum + r.bokchae_awarded, 0) || 0,
-  }
-}
-
-/**
- * 이번 달 출석 현황 + 연속 출석 스트릭 조회
- */
-export async function getMonthlyAttendance() {
-  if (isEdgeEnabled('payment')) {
-    return invokeEdgeSafe('payment', { action: 'getMonthlyAttendance' })
-  }
-  const supabase = await createClient()
-  const admin = createAdminClient()
-  // R7: service role 부재 시 사용자 클라이언트로 강등하지 않는다 — S1b 이후 강등은 조용한 지급 실패가 된다
-  if (!admin) throw new Error('[R7] SUPABASE_SERVICE_ROLE_KEY 부재 — 지급 경로 강등 금지')
-  const db = admin
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  const emptyResult = {
-    success: false,
-    checkedDates: [] as string[],
-    monthTotal: 0,
-    consecutiveStreak: 0,
-    weekCount: 0,
-    totalBokchae: 0,
-    canCheckIn: false,
+  } catch (error) {
+    logger.error(new Error('[Attendance] 출석 기록 실패'), { userId, cause: causeOf(error) })
+    return failed
   }
 
-  if (!user) return emptyResult
-
-  // KST 기준 오늘 / 이번 달 범위
-  const todayStr = getKSTDateString()
-  const [year, month] = todayStr.split('-').map(Number)
-  const monthStart = `${year}-${String(month).padStart(2, '0')}-01`
-  const lastDay = new Date(year, month, 0).getDate()
-  const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-
-  const { data: monthRecords } = await db
-    .from('attendance_logs')
-    .select('checked_date, bokchae_awarded')
-    .eq('user_id', user.id)
-    .gte('checked_date', monthStart)
-    .lte('checked_date', monthEnd)
-    .order('checked_date', { ascending: true })
-
-  const checkedDates = monthRecords?.map((r) => r.checked_date) || []
-  const checkedSet = new Set(checkedDates)
-  const canCheckIn = !checkedSet.has(todayStr)
-
-  // 연속 출석 스트릭 계산 (오늘 또는 어제부터 역방향)
-  let streak = 0
-  const cursor = new Date(todayStr + 'T00:00:00+09:00')
-  // 오늘 아직 체크 안 했으면 어제부터 카운트
-  if (!checkedSet.has(todayStr)) {
-    cursor.setDate(cursor.getDate() - 1)
-  } else {
-    streak = 1
-    cursor.setDate(cursor.getDate() - 1)
-  }
-  // 과거 최대 365일 탐색
-  for (let i = 0; i < 365; i++) {
-    const dateStr = cursor.toISOString().split('T')[0]
-    // 달이 바뀌어도 DB에서 모두 가져오려면 전체 조회 필요 — 이 함수에서는 월 범위 밖 날짜 처리를 위해
-    // 간단히 체크: 이번 달 범위 내라면 checkedSet 사용, 범위 밖이면 DB 추가 조회 없이 break
-    if (dateStr < monthStart) {
-      // 이전 달 날짜 — streak이 이미 월초까지 이어진 경우 추가 DB 조회
-      const { data: prevRecord } = await supabase
-        .from('attendance_logs')
-        .select('checked_date')
-        .eq('user_id', user.id)
-        .eq('checked_date', dateStr)
-        .maybeSingle()
-      if (prevRecord) {
-        streak++
-        cursor.setDate(cursor.getDate() - 1)
-      } else {
-        break
-      }
-    } else {
-      if (checkedSet.has(dateStr)) {
-        streak++
-        cursor.setDate(cursor.getDate() - 1)
-      } else {
-        break
-      }
-    }
-  }
-
-  // 이번 주 출석 수
-  const weekStartStr = getKSTWeekStartString()
-  const { data: weekRecords } = await db
-    .from('attendance_logs')
-    .select('checked_date')
-    .eq('user_id', user.id)
-    .eq('week_start', weekStartStr)
-
-  return {
-    success: true,
-    checkedDates,
-    monthTotal: checkedDates.length,
-    consecutiveStreak: streak,
-    weekCount: weekRecords?.length || 0,
-    totalBokchae: monthRecords?.reduce((sum, r) => sum + r.bokchae_awarded, 0) || 0,
-    canCheckIn,
-  }
+  const devotion = await accrueDevotion(userId)
+  return { success: true, devotionGained: devotion.gained, devotionTotalDays: devotion.totalDays }
 }

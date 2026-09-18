@@ -47,7 +47,7 @@ export default function PrivacyPolicyPage() {
             처리
           </li>
           <li>
-            <strong>유료 서비스 결제</strong>: 복채(포인트) 충전, 멤버십 구독, 결제 처리 및 환불
+            <strong>유료 서비스 결제</strong>: 이용권 구매, 멤버십 구독, 결제 처리 및 환불
           </li>
           <li>
             <strong>마케팅 및 서비스 개선</strong>: 신규 서비스 개발, 이벤트 안내, 접속 빈도 분석, 서비스 이용 통계

@@ -2,10 +2,14 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { ExternalLink, History, Loader2, Sparkles } from 'lucide-react'
+import { Crown, ExternalLink, History, Loader2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { generateNarrative, type RecentTogether } from '@/app/actions/circle/narrative'
-import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { formatFeatureCost } from '@/lib/domain/payment/feature-costs'
+import { tierAllows, tierUpsellLine } from '@/lib/domain/payment/membership-tiers'
+import { useInsufficientPass } from '@/hooks/use-insufficient-pass'
+import { useRefreshPasses } from '@/hooks/use-passes'
+import { InsufficientPassModal } from '@/components/payment/insufficient-pass-modal'
 import { TOGETHER_MAX, TOGETHER_MIN } from '@/lib/domain/circle/circle'
 import { parseTogetherSections } from '@/lib/domain/circle/narrative'
 import type { ActivityKind, ElementNeeds } from '@/lib/domain/circle/element-lore'
@@ -17,14 +21,17 @@ import { AD_DISCLOSURE_COUPANG } from '@/lib/domain/ads/rewarded'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
- * AI 풀이 — 둘·셋·넷 함께 보기 (CEO 2026-09-13 「그룹 전체 풀이와 합쳐 재구성 · 서로의 오행을 복채로 · 장점·단점·필요한 것」).
+ * AI 풀이 — 둘·셋·넷 함께 보기 (CEO 2026-09-13 「그룹 전체 풀이와 합쳐 재구성 · 서로의 오행을 유료 AI 로 · 장점·단점·필요한 것」).
  *
  * 사람을 고르면(2~4) 엔진이 그 조합의 관계·모자란 기운을 정하고 AI 가 여섯 토막(한눈에 보면 · 잘 맞는 점 · 부딪히기 쉬운 점 ·
  * 사람마다 이렇게 · 곁에 두면 좋은 것 · 이번 주에 해 볼 것)으로 쉬운 말과 비유로 풀어 쓴다(프롬프트: together-prompt.ts). 풀이 아래 「필요한 것」 물건·자리는 엔진 값(사전·개운 표) 그대로이고 쿠팡 링크가 붙는다.
- * 같은 조합이면 30일 안에는 다시 사지 않는다. «최근 본 조합»은 이미 산 풀이를 서버 없이 다시 연다(복채 0).
+ * 같은 조합이면 30일 안에는 이용권을 다시 쓰지 않는다. «최근 본 조합»은 이미 받은 풀이를 서버 없이 다시 연다(이용권 0).
+ * 등급: 비즈니스 멤버십부터(membership-tiers `togetherView`). 판정은 서버가 하고, 화면은 받은 등급으로 미리 안내만 한다.
  */
 
-const STORE_HREF = '/protected/store?tab=bokchae'
+const STORE_HREF = '/protected/store?tab=pass'
+const MEMBERSHIP_HREF = '/protected/store?tab=membership'
+const TIER_ERRORS: ReadonlySet<string> = new Set(['TIER_REQUIRED', 'MEMBERSHIP'])
 
 export interface TogetherPerson {
   targetId: string
@@ -213,9 +220,12 @@ export function TogetherPanel({
   shopLinks = {},
   care = [],
   cautions = [],
+  tier,
 }: {
   people: readonly TogetherPerson[]
   kind: string
+  /** 서버가 읽은 멤버십 등급(null = 비회원). 모르면 넘기지 않는다 — 그때는 서버 판정만 따른다. */
+  tier?: string | null
   /** 최근 본 조합(30일) — 이 화면의 사람들로만 이루어진 것만 보인다. */
   recent?: readonly RecentTogether[]
   /** 다섯 기운의 물건·자리(서버 계산). */
@@ -234,8 +244,12 @@ export function TogetherPanel({
     return recent.filter((r) => r.ids.every((id) => here.has(id)))
   })
   const [pending, startTransition] = useTransition()
-  const cost = FEATURE_COST.togetherNarrative.display
-  const canRun = picked.length >= TOGETHER_MIN && picked.length <= TOGETHER_MAX && !pending
+  const [tierBlocked, setTierBlocked] = useState<string | null>(() =>
+    tier !== undefined && !tierAllows(tier, 'togetherView') ? tierUpsellLine('togetherView') : null
+  )
+  const { passModal, closePassModal, handleChargeResult } = useInsufficientPass()
+  const refreshPasses = useRefreshPasses()
+  const canRun = picked.length >= TOGETHER_MIN && picked.length <= TOGETHER_MAX && !pending && tierBlocked === null
 
   const toggle = (id: string) =>
     setPicked((prev) => {
@@ -257,12 +271,19 @@ export function TogetherPanel({
     startTransition(async () => {
       const res = await generateNarrative('together', ids.join(','))
       if (!res.success) {
-        toast.error(res.error)
-        if (res.errorType === 'INSUFFICIENT_BALANCE') {
+        if (handleChargeResult(res, { featureLabel: '함께 보기' })) {
           trackEvent({ action: 'together_narrative_insufficient', category: 'conversion', label: kind })
+          return
         }
+        if (TIER_ERRORS.has(res.errorType)) {
+          setTierBlocked(res.error)
+          trackEvent({ action: 'together_narrative_tier_required', category: 'conversion', label: kind })
+          return
+        }
+        toast.error(res.error)
         return
       }
+      if (!res.cached) void refreshPasses()
       const entry: RecentTogether = { ids, names, text: res.text, createdAt: res.createdAt }
       setResult(entry)
       remember(entry)
@@ -327,7 +348,7 @@ export function TogetherPanel({
       {history.length > 0 && (
         <div className="space-y-1.5">
           <p className="flex items-center gap-1 text-[10.5px] tracking-[0.1em] text-ink-light/45">
-            <History className="h-3 w-3" /> 최근 본 조합 — 다시 여는 데 복채가 들지 않습니다
+            <History className="h-3 w-3" /> 최근 본 조합 — 다시 여는 데 이용권이 들지 않습니다
           </p>
           <ul className="flex flex-wrap gap-1.5">
             {history.map((r) => {
@@ -386,24 +407,42 @@ export function TogetherPanel({
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          disabled={!canRun}
-          onClick={run}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gold-500/45 bg-gold-500/[0.12] py-2.5 font-serif text-[12.5px] font-bold text-gold-200 hover:bg-gold-500/20 disabled:opacity-50"
-        >
-          {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          {pickedNames.length >= TOGETHER_MIN ? `${pickedNames.join('·')} 함께 보기` : '두 명 이상 고르세요'}
-          <span className="font-sans text-[11px] font-normal text-gold-200/70">· {cost}만냥</span>
-        </button>
-        <Link href={STORE_HREF} className="font-serif text-[11px] text-ink-light/45 hover:text-gold-300">
-          복채 충전
-        </Link>
-      </div>
+      {tierBlocked ? (
+        <div className="space-y-2 rounded-lg border border-gold-500/30 bg-gold-500/[0.08] p-3 text-center">
+          <p className="text-[12px] leading-relaxed text-gold-200/90" style={{ wordBreak: 'keep-all' }}>
+            {tierBlocked}
+          </p>
+          <Link
+            href={MEMBERSHIP_HREF}
+            onClick={() => trackEvent({ action: 'together_tier_upsell_click', category: 'conversion', label: kind })}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gold-500/45 bg-gold-500/[0.12] px-4 py-2 font-serif text-[12px] font-bold text-gold-200 hover:bg-gold-500/20"
+          >
+            <Crown className="h-3.5 w-3.5" /> 멤버십 보기
+          </Link>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={!canRun}
+            onClick={run}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gold-500/45 bg-gold-500/[0.12] py-2.5 font-serif text-[12.5px] font-bold text-gold-200 hover:bg-gold-500/20 disabled:opacity-50"
+          >
+            {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {pickedNames.length >= TOGETHER_MIN ? `${pickedNames.join('·')} 함께 보기` : '두 명 이상 고르세요'}
+            <span className="font-sans text-[11px] font-normal text-gold-200/70">
+              · {formatFeatureCost('togetherNarrative')}
+            </span>
+          </button>
+          <Link href={STORE_HREF} className="font-serif text-[11px] text-ink-light/45 hover:text-gold-300">
+            이용권 구매
+          </Link>
+        </div>
+      )}
       <p className="text-[10.5px] text-ink-light/40">
-        같은 조합이면 30일 안에는 다시 사지 않습니다. 기운이 바뀌었을 때만 새로 짓습니다.
+        같은 조합이면 30일 안에는 이용권을 다시 쓰지 않습니다. 기운이 바뀌었을 때만 새로 짓습니다.
       </p>
+      <InsufficientPassModal {...passModal} onClose={closePassModal} />
     </section>
   )
 }

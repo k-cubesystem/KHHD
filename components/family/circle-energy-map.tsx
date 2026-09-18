@@ -21,7 +21,7 @@ import { trackEvent } from '@/lib/analytics/ga4'
  * 기운 지도 v3 (CEO 2026-09-13):
  *  - 「오행이란?」 접이식 설명을 다시 위에.
  *  - 겹친 오각형은 없앴다 — 드롭다운으로 **한 사람씩** 본다(복잡해서 뭔지 모르겠다).
- *  - 「서로의 관계」 무료 목록은 없앴다 — 서로의 오행은 **복채 AI**(둘·셋·넷 함께 보기)가 장점·단점·필요한 것으로 풀어 쓴다.
+ *  - 「서로의 관계」 무료 목록은 없앴다 — 서로의 오행은 **유료 AI**(둘·셋·넷 함께 보기, 이용권)가 장점·단점·필요한 것으로 풀어 쓴다.
  *  - 그룹 전체 AI 풀이는 함께 보기에 합쳤다(문 하나). 필요한 물건은 쿠팡 링크와 함께.
  *  - 「기운 한 장」 인쇄 문은 없앴다(2026-09-14 — 가족에 이어 팀 그룹도).
  *
@@ -207,6 +207,7 @@ export function CircleEnergyMapView({
   recentTogether = [],
   needs,
   shopLinks = {},
+  tier,
 }: {
   payload: CircleEnergyPayload
   /** 최근 본 함께 보기 조합(30일 안) — 이 화면의 사람들로만 이루어진 것이 걸러져 보인다. */
@@ -215,6 +216,8 @@ export function CircleEnergyMapView({
   needs: Record<Element, ElementNeeds>
   /** 물건 이름 → 쿠팡 파트너스 링크. */
   shopLinks?: Record<string, string>
+  /** 서버가 읽은 멤버십 등급(null = 비회원) — 함께 보기의 등급 안내를 버튼 단계에서 미리 띄운다. */
+  tier?: string | null
 }) {
   const { circle, energy } = payload
   const meta = CIRCLE_KIND_META[circle.kind]
@@ -280,6 +283,7 @@ export function CircleEnergyMapView({
           shopLinks={shopLinks}
           care={energy.care}
           cautions={energy.cautions}
+          tier={tier}
         />
       </div>
 

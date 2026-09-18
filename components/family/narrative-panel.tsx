@@ -2,19 +2,25 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { Loader2, ScrollText, Sparkles } from 'lucide-react'
+import { Crown, Loader2, ScrollText, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { generateNarrative, type CachedNarrative } from '@/app/actions/circle/narrative'
 import type { NarrativeKind } from '@/lib/domain/circle/narrative'
-import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { formatFeatureCost } from '@/lib/domain/payment/feature-costs'
+import { useInsufficientPass } from '@/hooks/use-insufficient-pass'
+import { useRefreshPasses } from '@/hooks/use-passes'
+import { InsufficientPassModal } from '@/components/payment/insufficient-pass-modal'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
- * AI 풀이 패널 — 처방전·그룹 지도 아래. 지난 풀이가 있으면 바로 보이고(무료), 새로 받으면 복채를 낸다.
+ * AI 풀이 패널 — 처방전·그룹 지도 아래. 지난 풀이가 있으면 바로 보이고(무료), 새로 받으면 이용권을 쓴다.
  * 값은 엔진이 정하고 AI 는 풀어 쓴다 — 패널 머리에 그 말을 적어 둔다.
+ * 등급(패밀리부터)은 서버가 판정한다. 막히면 서버 문구(tierUpsellLine) 그대로 멤버십 안내를 띄운다.
  */
 
-const STORE_HREF = '/protected/store?tab=bokchae'
+const STORE_HREF = '/protected/store?tab=pass'
+const MEMBERSHIP_HREF = '/protected/store?tab=membership'
+const TIER_ERRORS: ReadonlySet<string> = new Set(['TIER_REQUIRED', 'MEMBERSHIP'])
 
 function paragraphs(text: string): string[] {
   return text
@@ -36,18 +42,27 @@ export function NarrativePanel({
 }) {
   const [narrative, setNarrative] = useState<CachedNarrative | null>(initial)
   const [pending, startTransition] = useTransition()
-  const cost = FEATURE_COST.circleNarrative.display
+  const [tierBlocked, setTierBlocked] = useState<string | null>(null)
+  const { passModal, closePassModal, handleChargeResult } = useInsufficientPass()
+  const refreshPasses = useRefreshPasses()
 
   const run = () => {
     startTransition(async () => {
       const result = await generateNarrative(kind, targetKey)
       if (!result.success) {
-        toast.error(result.error)
-        if (result.errorType === 'INSUFFICIENT_BALANCE') {
+        if (handleChargeResult(result, { featureLabel: 'AI 풀이' })) {
           trackEvent({ action: 'circle_narrative_insufficient', category: 'conversion', label: kind })
+          return
         }
+        if (TIER_ERRORS.has(result.errorType)) {
+          setTierBlocked(result.error)
+          trackEvent({ action: 'circle_narrative_tier_required', category: 'conversion', label: kind })
+          return
+        }
+        toast.error(result.error)
         return
       }
+      if (!result.cached) void refreshPasses()
       setNarrative({ text: result.text, createdAt: result.createdAt })
       trackEvent({
         action: result.cached ? 'circle_narrative_cached' : 'circle_narrative_generate',
@@ -86,24 +101,41 @@ export function NarrativePanel({
         </p>
       )}
 
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          disabled={pending}
-          onClick={run}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gold-500/45 bg-gold-500/[0.12] py-2.5 font-serif text-[12.5px] font-bold text-gold-200 hover:bg-gold-500/20 disabled:opacity-50"
-        >
-          {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          {narrative ? '다시 풀이 받기' : 'AI 풀이 받기'}
-          <span className="font-sans text-[11px] font-normal text-gold-200/70">· {cost}만냥</span>
-        </button>
-        <Link href={STORE_HREF} className="font-serif text-[11px] text-ink-light/45 hover:text-gold-300">
-          복채 충전
-        </Link>
-      </div>
+      {tierBlocked ? (
+        <div className="space-y-2 rounded-lg border border-gold-500/30 bg-gold-500/[0.08] p-3 text-center">
+          <p className="text-[12px] leading-relaxed text-gold-200/90" style={{ wordBreak: 'keep-all' }}>
+            {tierBlocked}
+          </p>
+          <Link
+            href={MEMBERSHIP_HREF}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gold-500/45 bg-gold-500/[0.12] px-4 py-2 font-serif text-[12px] font-bold text-gold-200 hover:bg-gold-500/20"
+          >
+            <Crown className="h-3.5 w-3.5" /> 멤버십 보기
+          </Link>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={run}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gold-500/45 bg-gold-500/[0.12] py-2.5 font-serif text-[12.5px] font-bold text-gold-200 hover:bg-gold-500/20 disabled:opacity-50"
+          >
+            {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {narrative ? '다시 풀이 받기' : 'AI 풀이 받기'}
+            <span className="font-sans text-[11px] font-normal text-gold-200/70">
+              · {formatFeatureCost('circleNarrative')}
+            </span>
+          </button>
+          <Link href={STORE_HREF} className="font-serif text-[11px] text-ink-light/45 hover:text-gold-300">
+            이용권 구매
+          </Link>
+        </div>
+      )}
       <p className="text-[10px] leading-snug text-ink-light/35" style={{ wordBreak: 'keep-all' }}>
-        같은 기운이면 30일 안에는 다시 사지 않습니다. 기운이 바뀌었을 때만 새로 짓습니다.
+        같은 기운이면 30일 안에는 이용권을 다시 쓰지 않습니다. 기운이 바뀌었을 때만 새로 짓습니다.
       </p>
+      <InsufficientPassModal {...passModal} onClose={closePassModal} />
     </section>
   )
 }

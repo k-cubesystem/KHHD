@@ -24,16 +24,16 @@ import '@/app/shrine-scene.css'
  *
  * ── 화면을 새로 그리지 않았다
  * 셋 다 **이미 있는 화면을 탭 안으로 들여왔다**. 새로 만들면 같은 목록이 두 벌이 되고,
- * 구매·좌정·적용 같은 손 대는 동작이 갈라져 한쪽만 고치는 사고가 난다.
+ * 모시기·좌정·적용 같은 손 대는 동작이 갈라져 한쪽만 고치는 사고가 난다.
  *   · 신위  → DeityPantheon      (구 /protected/shrine/deities. 그 라우트는 여기로 리다이렉트한다)
  *   · 테마  → ThemeShopGrid      (통합 상점 테마 탭과 같은 그리드. 여기서는 **적용**까지 한다)
  *   · 아이템 → ShrineShopClient   (통합 상점 신물 탭과 같은 그리드)
- * 통합 상점(/protected/store)의 두 탭은 그대로 둔다 — 상점은 복채·멤버십과 함께 파는 곳이고,
+ * 통합 상점(/protected/store)의 두 탭은 그대로 둔다 — 상점은 이용권·멤버십과 함께 보여 주는 곳이고,
  * 여기는 "내 신당의 것을 모아 보는 곳"이라 목적이 다르다. 컴포넌트가 한 벌이라 화면은 갈리지 않는다.
  *
  * ── 테마 적용 손잡이가 여기로 왔다
  * 방 아래 테마 칩 줄이 걷히면서(지시 ②) 테마를 **입히는** 유일한 손잡이가 사라졌다.
- * 그래서 이 화면의 테마 탭에만 `apply` 를 준다(상점은 종전대로 파는 것까지만).
+ * 그래서 이 화면의 테마 탭에만 `apply` 를 준다(상점은 종전대로 보여 주는 것까지만).
  *
  * ── 기원 보상 트랙도 여기로 왔다
  * 「기원 N단」 스트립이 방에서 걷히면서(지시 ④) 무료 보상 수령 버튼도 함께 사라졌다.
@@ -163,7 +163,7 @@ async function ItemTab() {
   )
 }
 
-/** 신수 탭 — 보유(인벤토리)와 착좌(shrines.guardians)를 함께 싣는다. 구매는 아이템 탭의 몫이다. */
+/** 신수 탭 — 보유(인벤토리)와 착좌(shrines.guardians)를 함께 싣는다. 모셔 오기(무료 받기)도 이 그리드에서 한다. */
 async function GuardianTab({ familyMemberId }: { familyMemberId: string | null }) {
   const [ownedNames, scene] = await Promise.all([listOwnedGuardianNames(), getSceneData(familyMemberId)])
   return <GuardianGrid ownedNames={ownedNames} equipped={scene?.guardians ?? []} familyMemberId={familyMemberId} />

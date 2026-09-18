@@ -13,16 +13,16 @@ export const maxDuration = 60
 
 /** 코드가 .rpc() 로 호출하는 필수 함수 — 새 RPC 추가 시 여기도 추가할 것 */
 const REQUIRED_RPCS = [
-  // 재화 (가장 치명적 — 무음 실패 시 지급 누락)
-  'add_wallet_balance',
-  'deduct_wallet_balance',
-  'add_bokchae',
-  'add_bok_points',
-  'deduct_bok_points',
+  // 이용권 (가장 치명적 — 무음 실패 시 발급 누락·풀이 전면 차단)
+  'ent_grant',
+  'ent_consume',
+  'ent_refund',
+  'ent_revoke_for_payment',
+  'ent_admin_adjust',
+  // 속풀이 질문권
   'add_shaman_credits',
   'consume_shaman_credit',
   'record_ai_chat_turn',
-  'get_charge_exempt_remaining',
   // 신당
   'award_deity_bond',
   'grant_shrine_item',
@@ -49,8 +49,9 @@ const NIL_UUID = '00000000-0000-0000-0000-000000000000'
 /** 존재해야 하는 핵심 테이블 (재구축 소실 감지) */
 const REQUIRED_TABLES = [
   'profiles',
-  'wallets',
-  'wallet_transactions',
+  'entitlement_grants',
+  'subscription_usage',
+  'entitlement_ledger',
   'shrines',
   'shrine_deities',
   'shrine_item_catalog',
@@ -132,7 +133,7 @@ export async function GET(req: NextRequest) {
     issues.push({ kind: 'config', detail: 'Gemini API 키 미설정 — AI 기능 전면 실패' })
   }
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    issues.push({ kind: 'config', detail: 'SERVICE_ROLE 키 미설정 — 재화 지급·어드민 경로 실패' })
+    issues.push({ kind: 'config', detail: 'SERVICE_ROLE 키 미설정 — 이용권 발급·사용·어드민 경로 실패' })
   }
 
   const healthy = issues.length === 0

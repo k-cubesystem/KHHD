@@ -54,11 +54,11 @@ export const GA = {
   paywallView: () => trackEvent({ action: 'paywall_view', category: 'conversion' }),
   paywallClick: (cta: string) => trackEvent({ action: 'paywall_click', category: 'conversion', label: cta }),
 
-  membershipPurchase: (plan: string, value: number) =>
-    trackEvent({ action: 'purchase', category: 'membership', label: plan, value }),
-  voucherPurchase: (kind: string, value: number) =>
-    trackEvent({ action: 'purchase', category: 'voucher', label: kind, value }),
-  bokchaeCharge: (amount: number) => trackEvent({ action: 'bokchae_charge', category: 'payment', value: amount }),
+  // value 는 둘 다 «실제 결제 금액(원)». 옛 bokchae_charge 는 냥 액면을 실어 매출이 부풀었고, 멤버십은 0을 실었다.
+  membershipPurchase: (plan: string, priceKrw: number) =>
+    trackEvent({ action: 'purchase', category: 'membership', label: plan, value: priceKrw }),
+  passPurchase: (passes: number, amountKrw: number) =>
+    trackEvent({ action: 'pass_purchase', category: 'payment', label: String(passes), value: amountKrw }),
 
   // ── 결제 퍼널 (로드맵 P1-5) — 상점 진입 → 탭 → 결제 시도 → 성공/실패 ──
   // 이탈 지점을 보려면 네 단계가 모두 찍혀야 한다. GA4 에서 storeView→checkoutStart 전환율로 확인.
@@ -80,10 +80,10 @@ export const GA = {
   checkoutPayClick: (plan: string, value: number) =>
     trackEvent({ action: 'checkout_pay_click', category: 'funnel', label: plan, value }),
 
-  // ── 결제 도우미 — 상점의 «복채 vs 멤버십» 안내 모달.
+  // ── 결제 도우미 — 상점의 «이용권 vs 멤버십» 안내 모달.
   //    open 의 label 은 auto(첫 진입 자동) / manual(«결제 안내» 버튼) — 자동 노출이 실제로
   //    읽히는지, 나중에 다시 열어보는 사람이 있는지를 갈라 본다.
-  //    cta 의 label 은 bokchae | membership | voucher | manage.
+  //    cta 의 label 은 pass | membership | manage. 상점 탭 label(storeView·storeTab)도 pass | membership | theme | items.
   paymentGuideOpen: (trigger: string) =>
     trackEvent({ action: 'payment_guide_open', category: 'funnel', label: trigger }),
   paymentGuideClose: () => trackEvent({ action: 'payment_guide_close', category: 'funnel' }),
@@ -109,9 +109,8 @@ export const GA = {
   // 어느 오행이 실제로 받아지는지와 완주 한정판(이달의 복)이 완주 동기로 작동하는지를 가른다.
   wallpaperView: () => trackEvent({ action: 'wallpaper_view', category: 'engagement' }),
   wallpaperDownload: (label: string) => trackEvent({ action: 'wallpaper_download', category: 'engagement', label }),
-  // 해금 경로 셋 — 산 것(purchase) ↔ 광고를 «본» 것(ad_view) ↔ 그 광고로 «연» 것(ad_unlock).
+  // 광고 해금 — 광고를 «본» 것(ad_view) ↔ 그 광고로 «연» 것(ad_unlock). 구매 경로는 2026-09-18 폐지.
   // 시청과 해금을 가르는 이유는 중도 이탈(15초를 못 채우고 닫음)이 그 차이로만 보이기 때문이다.
-  wallpaperPurchase: (label: string) => trackEvent({ action: 'wallpaper_purchase', category: 'engagement', label }),
   wallpaperAdView: (label: string) => trackEvent({ action: 'wallpaper_ad_view', category: 'engagement', label }),
   wallpaperAdUnlock: (label: string) => trackEvent({ action: 'wallpaper_ad_unlock', category: 'engagement', label }),
 
@@ -123,8 +122,6 @@ export const GA = {
   membershipCta: (tier: string) => trackEvent({ action: 'membership_cta', category: 'funnel', label: tier }),
   dailyFortuneView: () => trackEvent({ action: 'daily_fortune_view', category: 'engagement' }),
 
-  bokPointsEarn: (amount: number) => trackEvent({ action: 'bok_points_earn', category: 'engagement', value: amount }),
-  bokMissionComplete: () => trackEvent({ action: 'bok_mission_complete', category: 'engagement' }),
   familyAdd: () => trackEvent({ action: 'family_add', category: 'engagement' }),
 
   // ── 가족 초대(R-2) — 링크 발급 ↔ 수락. label 은 관계(어머니·배우자…)로, 어느 자리가 실제로
@@ -142,8 +139,6 @@ export const GA = {
 
   shrineCreate: (theme: string) => trackEvent({ action: 'shrine_create', category: 'shrine', label: theme }),
   shrineWishAdd: (category: string) => trackEvent({ action: 'shrine_wish_add', category: 'shrine', label: category }),
-  shrineItemPurchase: (itemType: string, price: number) =>
-    trackEvent({ action: 'shrine_item_purchase', category: 'shrine', label: itemType, value: price }),
   shrineVisit: () => trackEvent({ action: 'shrine_visit', category: 'shrine' }),
   shrineShare: (platform: string) => trackEvent({ action: 'shrine_share', category: 'social', label: platform }),
 } as const

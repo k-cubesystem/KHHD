@@ -4,8 +4,8 @@
  * 여기서 지키는 약속:
  *  1. 세 갈래 판정 — 전액 남음 / 일부·전부 소진 / 취소 대상 아님.
  *  2. 청약철회 7일 경계는 **사용자 유리**하게(7일째까지 수수료 0), 수수료는 내림.
- *  3. 손실 처리량은 «지갑에 남지 않아 회수 못 하는 복채»와 정확히 같다(RPC 가 실제로 하는 계산).
- *  4. 멤버십 일할 환불은 기간·복채 소진 중 **더 큰 쪽 하나만** 공제한다.
+ *  3. 손실 처리량은 «이미 써서 회수 못 하는 이용권»과 정확히 같다(RPC 가 실제로 하는 계산).
+ *  4. 멤버십 일할 환불은 기간·이번 달 이용권 사용 중 **더 큰 쪽 하나만** 공제한다.
  */
 import {
   CANCEL_MEMO_MAX_LENGTH,
@@ -27,9 +27,9 @@ function chargeInput(overrides: Partial<Parameters<typeof classifyChargeCancel>[
     paidAmount: 10_000,
     grantedCredits: 20,
     ledgerRemaining: 20,
-    walletBalance: 20,
+    unusedPasses: 20,
     status: 'completed',
-    bokchaeType: 'charge',
+    bokchaeType: 'pass',
     paidAt: paidDaysAgo(1),
     now: NOW,
     ...overrides,
@@ -37,8 +37,8 @@ function chargeInput(overrides: Partial<Parameters<typeof classifyChargeCancel>[
 }
 
 describe('classifyChargeCancel — 세 갈래 판정', () => {
-  it('(a) 지급 복채가 전액 남아 있으면 즉시 취소 가능', () => {
-    const plan = classifyChargeCancel(chargeInput({ walletBalance: 50 }))
+  it('(a) 발급 이용권을 한 장도 안 썼으면 즉시 취소 가능', () => {
+    const plan = classifyChargeCancel(chargeInput({ unusedPasses: 20 }))
 
     expect(plan.verdict).toBe('FULL_REFUNDABLE')
     expect(plan.recoverableCredits).toBe(20)
@@ -48,7 +48,7 @@ describe('classifyChargeCancel — 세 갈래 판정', () => {
   })
 
   it('(b) 일부 소진이면 취소 불가 갈래로 떨어지고 부족분이 손실 처리 대상이 된다', () => {
-    const plan = classifyChargeCancel(chargeInput({ walletBalance: 8 }))
+    const plan = classifyChargeCancel(chargeInput({ unusedPasses: 8 }))
 
     expect(plan.verdict).toBe('PARTIALLY_SPENT')
     expect(plan.recoverableCredits).toBe(8)
@@ -58,8 +58,8 @@ describe('classifyChargeCancel — 세 갈래 판정', () => {
     expect(plan.lossAmount).toBe(6_000)
   })
 
-  it('(b) 전부 소진해도 같은 갈래다 — 환불액은 전액, 손실은 지급 전량', () => {
-    const plan = classifyChargeCancel(chargeInput({ walletBalance: 0 }))
+  it('(b) 전부 써도 같은 갈래다 — 환불액은 전액, 손실은 발급 전량', () => {
+    const plan = classifyChargeCancel(chargeInput({ unusedPasses: 0 }))
 
     expect(plan.verdict).toBe('PARTIALLY_SPENT')
     expect(plan.spentCredits).toBe(20)
@@ -77,16 +77,28 @@ describe('classifyChargeCancel — 세 갈래 판정', () => {
     expect(plan.lossCredits).toBe(0)
   })
 
-  it('(c) 충전 결제가 아니면 취소 대상이 아니다', () => {
+  it('(c) 이용권 구매 결제가 아니면 취소 대상이 아니다', () => {
     const plan = classifyChargeCancel(chargeInput({ bokchaeType: 'feature' }))
 
     expect(plan.verdict).toBe('NOT_CANCELLABLE')
     expect(plan.blockedReason).toBe('NOT_A_CHARGE')
   })
 
+  it('🔴 (c) 옛 복채 충전 결제는 셀프 취소 대상이 아니다 — 결제에 묶인 이용권이 없어 회수할 수 없다', () => {
+    expect(classifyChargeCancel(chargeInput({ bokchaeType: 'charge' })).blockedReason).toBe('NOT_A_CHARGE')
+    expect(classifyChargeCancel(chargeInput({ bokchaeType: null })).blockedReason).toBe('NOT_A_CHARGE')
+  })
+
+  it('회수 가능량은 원장에 남은 발급분을 넘지 않는다 — 다른 결제의 이용권을 끌어오지 않는다', () => {
+    const plan = classifyChargeCancel(chargeInput({ ledgerRemaining: 12, unusedPasses: 20 }))
+
+    expect(plan.recoverableCredits).toBe(12)
+    expect(plan.spentCredits).toBe(0)
+  })
+
   it('(c) 결제 완료 상태가 아니면 취소 대상이 아니다', () => {
     expect(classifyChargeCancel(chargeInput({ status: 'pending' })).blockedReason).toBe('NOT_COMPLETED')
-    expect(classifyChargeCancel(chargeInput({ status: 'wallet_failed' })).blockedReason).toBe('NOT_COMPLETED')
+    expect(classifyChargeCancel(chargeInput({ status: 'grant_failed' })).blockedReason).toBe('NOT_COMPLETED')
   })
 
   it('(c) 이미 전액 취소돼 남은 결제 금액이 없으면 취소 대상이 아니다', () => {
@@ -188,33 +200,33 @@ describe('computeMembershipRefund — 잔여기간 일할 환불', () => {
       price: 9_900,
       periodStart,
       periodEnd,
-      grantedCredits: 10,
-      walletBalance: 10,
+      monthlyPasses: 10,
+      usedPasses: 0,
       now: new Date('2026-08-02T00:00:00Z'),
       ...overrides,
     }
   }
 
-  it('복채를 쓰지 않았으면 순수 일할 환불', () => {
+  it('이번 달 이용권을 쓰지 않았으면 순수 일할 환불', () => {
     const plan = computeMembershipRefund(membershipInput())
 
     expect(plan.totalDays).toBe(30)
     expect(plan.usedDays).toBe(1)
     expect(plan.remainingDays).toBe(29)
     expect(plan.refundAmount).toBe(9_570) // floor(9900 × 29/30)
-    expect(plan.keptCredits).toBe(10)
+    expect(plan.usedPasses).toBe(0)
   })
 
-  it('지급 복채를 다 써버렸으면 이용 비율 100% — 환불 0', () => {
-    const plan = computeMembershipRefund(membershipInput({ walletBalance: 0 }))
+  it('이번 달 이용권을 다 썼으면 이용 비율 100% — 환불 0', () => {
+    const plan = computeMembershipRefund(membershipInput({ usedPasses: 10 }))
 
     expect(plan.creditUsageRatio).toBe(1)
     expect(plan.usageRatio).toBe(1)
     expect(plan.refundAmount).toBe(0)
   })
 
-  it('기간과 복채 중 더 큰 쪽 하나만 공제한다(이중 공제 금지)', () => {
-    const plan = computeMembershipRefund(membershipInput({ now: new Date('2026-08-16T00:00:00Z'), walletBalance: 7 }))
+  it('기간과 이용권 중 더 큰 쪽 하나만 공제한다(이중 공제 금지)', () => {
+    const plan = computeMembershipRefund(membershipInput({ now: new Date('2026-08-16T00:00:00Z'), usedPasses: 3 }))
 
     expect(plan.dayUsageRatio).toBeCloseTo(0.5)
     expect(plan.creditUsageRatio).toBeCloseTo(0.3)
@@ -223,8 +235,8 @@ describe('computeMembershipRefund — 잔여기간 일할 환불', () => {
     expect(plan.refundAmount).toBe(4_950)
   })
 
-  it('복채를 기간보다 빨리 소진했으면 복채 비율이 이긴다', () => {
-    const plan = computeMembershipRefund(membershipInput({ walletBalance: 2 }))
+  it('이용권을 기간보다 빨리 썼으면 이용권 비율이 이긴다', () => {
+    const plan = computeMembershipRefund(membershipInput({ usedPasses: 8 }))
 
     expect(plan.creditUsageRatio).toBeCloseTo(0.8)
     expect(plan.usageRatio).toBeCloseTo(0.8)
@@ -261,8 +273,22 @@ describe('computeMembershipRefund — 잔여기간 일할 환불', () => {
   })
 
   it('위약금을 붙이지 않는다 — 잔여 대금 전부가 환불 대상', () => {
-    const plan = computeMembershipRefund(membershipInput({ now: periodStart, walletBalance: 10 }))
+    const plan = computeMembershipRefund(membershipInput({ now: periodStart, usedPasses: 0 }))
 
     expect(plan.refundAmount).toBe(9_900)
+  })
+
+  it('사용 장 수가 월 장 수를 넘어와도 100% 로 자른다 — 음수 환불이 나오지 않는다', () => {
+    const plan = computeMembershipRefund(membershipInput({ usedPasses: 99 }))
+
+    expect(plan.creditUsageRatio).toBe(1)
+    expect(plan.refundAmount).toBe(0)
+  })
+
+  it('월 장 수가 0 인 플랜은 기간만으로 계산한다', () => {
+    const plan = computeMembershipRefund(membershipInput({ monthlyPasses: 0, usedPasses: 0 }))
+
+    expect(plan.creditUsageRatio).toBe(0)
+    expect(plan.refundAmount).toBe(9_570)
   })
 })

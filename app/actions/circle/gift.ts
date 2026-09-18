@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
-import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { sendPushToUser } from '@/lib/services/webpush'
 import { isElement, type Element } from '@/lib/domain/shrine/types'
 import { EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
@@ -19,15 +18,15 @@ import {
 } from '@/lib/domain/circle/gift'
 
 /**
- * 기운 선물 — 처방전 ④「신당 살림」에서 상대에게 필요한 오행의 살림을 복채로 사서 놓아 준다.
+ * 기운 선물 — 처방전 ④「신당 살림」에서 상대에게 필요한 오행의 살림을 놓아 준다. **무료**다
+ * (2026-09-18 이용권 전환 — 신물이 무료가 되면서 선물도 값을 받지 않는다).
  *
  * 순서: 소유·품목 검증 → 멱등 키(같은 분 안 재요청은 같은 선물) → 하루 상한 → 기록 행(service_role)
- *       → 복채 차감(단일 경로 spendBokchae) → 지급(grant_shrine_item RPC) → 알림.
- * 차감·지급이 실패하면 기록 행을 지우고 복채를 돌려준다(purchaseToInventory 와 같은 best-effort 롤백).
+ *       → 지급(grant_shrine_item RPC) → 알림. 지급이 실패하면 기록 행을 지운다(상한을 헛되이 쓰지 않게).
  *
- * 🔴 받는 쪽은 복채를 얻지 않는다. 연결된 실사용자면 그 사람 보관함에 살림 한 점, 아니면 내 보관함
+ * 🔴 받는 쪽은 재화를 얻지 않는다. 연결된 실사용자면 그 사람 보관함에 살림 한 점, 아니면 내 보관함
  *    (내 신당의 그 사람 선반에 내가 놓아 준다).
- * 🔴 여기 말고 다른 «선물» 경로를 만들지 않는다 — 차감·지급·기록이 한 자리에 있어야 감사가 된다.
+ * 🔴 여기 말고 다른 «선물» 경로를 만들지 않는다 — 지급·기록이 한 자리에 있어야 감사가 된다.
  */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -39,7 +38,6 @@ export type GiftError =
   | 'SELF'
   | 'ITEM_NOT_GIFTABLE'
   | 'DAILY_LIMIT'
-  | 'INSUFFICIENT_BOKCHAE'
   | 'GRANT_FAILED'
   | 'DB_ERROR'
 
@@ -50,7 +48,6 @@ export type GiftResult =
       recipientName: string
       itemName: string
       duplicate: boolean
-      balance?: number
     }
   | { success: false; error: GiftError }
 
@@ -59,7 +56,6 @@ interface CatalogRow {
   name: string
   element: string | null
   is_active: boolean
-  price_bokchae: number
 }
 
 export async function giftItem(input: {
@@ -86,7 +82,7 @@ export async function giftItem(input: {
       .maybeSingle(),
     supabase
       .from('shrine_item_catalog')
-      .select('id, name, element, is_active, price_bokchae')
+      .select('id, name, element, is_active')
       .eq('id', input.catalogItemId)
       .maybeSingle(),
     supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
@@ -102,13 +98,12 @@ export async function giftItem(input: {
     name: item.name,
     element,
     isActive: item.is_active,
-    priceBokchae: item.price_bokchae,
   })
   if (refusal || !element) return { success: false, error: 'ITEM_NOT_GIFTABLE' }
 
   const recipientName = (member.name as string) || '가족'
   const linkedUserId = (member.linked_user_id as string | null) ?? null
-  // 자기 자신에게 연결된 자리(본인 계정을 가족으로 등록한 경우)는 선물이 아니라 구매다.
+  // 자기 자신에게 연결된 자리(본인 계정을 가족으로 등록한 경우)는 선물이 아니라 상점 받기다.
   if (linkedUserId === user.id) return { success: false, error: 'SELF' }
 
   const now = new Date()
@@ -153,7 +148,8 @@ export async function giftItem(input: {
       catalog_item_id: item.id,
       element,
       delivery,
-      price_bokchae: item.price_bokchae,
+      // 선물은 값을 받지 않는다 — 열은 옛 기록과 모양을 맞추려 남기고 0 으로 적는다.
+      price_bokchae: 0,
       message,
       idempotency_key: key,
     })
@@ -168,17 +164,6 @@ export async function giftItem(input: {
     return { success: false, error: 'DB_ERROR' }
   }
 
-  const price = item.price_bokchae
-  let balance: number | undefined
-  if (price > 0) {
-    const spent = await spendBokchae(price, `${recipientName}님께 ${item.name} 선물`)
-    if (!spent.success) {
-      await admin.from('energy_gifts').delete().eq('id', giftRow.id)
-      return { success: false, error: 'INSUFFICIENT_BOKCHAE' }
-    }
-    balance = spent.balance
-  }
-
   const grantTo = delivery === 'inventory_recipient' && linkedUserId ? linkedUserId : user.id
   const { error: grantError } = await admin.rpc('grant_shrine_item', {
     p_user_id: grantTo,
@@ -187,7 +172,6 @@ export async function giftItem(input: {
   })
   if (grantError) {
     logger.error('[gift] 지급 실패:', grantError.message)
-    if (price > 0) await refundBokchae(user.id, price, `${item.name} 선물 취소 환불`)
     await admin.from('energy_gifts').delete().eq('id', giftRow.id)
     return { success: false, error: 'GRANT_FAILED' }
   }
@@ -203,7 +187,7 @@ export async function giftItem(input: {
 
   revalidatePath('/protected/shrine')
   revalidatePath('/protected/prescription')
-  return { success: true, delivery, recipientName, itemName: item.name, duplicate: false, balance }
+  return { success: true, delivery, recipientName, itemName: item.name, duplicate: false }
 }
 
 export interface GiftSummary {

@@ -6,11 +6,12 @@ import { useTranslations } from 'next-intl'
 import { issueBillingKey, executeFirstPayment } from '@/app/actions/payment/subscription'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Crown, Loader2, XCircle, Gift } from 'lucide-react'
+import { Crown, Loader2, XCircle, Ticket } from 'lucide-react'
 import Link from 'next/link'
 import confetti from 'canvas-confetti'
 import { logger } from '@/lib/utils/logger'
 import { GA } from '@/lib/analytics/ga4'
+import { useRefreshPasses } from '@/hooks/use-passes'
 
 type Step = 'issuing' | 'paying' | 'success' | 'error'
 
@@ -18,6 +19,7 @@ function MembershipSuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const t = useTranslations('payment')
+  const refreshPasses = useRefreshPasses()
   const [step, setStep] = useState<Step>('issuing')
   const [error, setError] = useState<string>('')
 
@@ -43,6 +45,7 @@ function MembershipSuccessContent() {
         }
 
         setStep('success')
+        void refreshPasses()
         triggerConfetti()
         return
       }
@@ -74,9 +77,11 @@ function MembershipSuccessContent() {
         return
       }
 
-      // Success!
+      // Success! — 머리글·상점의 «이번 달 N장»이 이 결제로 생긴 몫을 바로 보이게 다시 읽는다.
       setStep('success')
-      GA.membershipPurchase(planId ?? 'unknown', 0)
+      void refreshPasses()
+      // value 는 실제 결제 금액(원) — 예전엔 0을 실어 멤버십 매출이 GA 에서 비었다.
+      GA.membershipPurchase(planId ?? 'unknown', paymentResult.subscription?.plan?.price ?? 0)
       triggerConfetti()
     } catch (err) {
       logger.error('Subscription process error:', err)
@@ -122,7 +127,7 @@ function MembershipSuccessContent() {
     processSubscription()
     // 🔴 결제 처리는 마운트 시 «정확히 한 번»이다. customerKey·planId 는 URL 에서 오므로 이 화면이
     //    사는 동안 바뀌지 않고, processSubscription 은 메모이즈되지 않은 함수라 의존성에 넣으면
-    //    렌더마다 다시 구독 처리를 호출한다 — 이중 결제·이중 지급이 된다.
+    //    렌더마다 다시 구독 처리를 호출한다 — 이중 결제가 된다.
     //    (이 화면은 토스 복귀 지점이라 재실행이 곧 돈 문제다.)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -177,7 +182,7 @@ function MembershipSuccessContent() {
 
               <div className="bg-surface/50 rounded-lg p-4 space-y-3 border border-primary/20">
                 <div className="flex items-center justify-center gap-2 text-primary">
-                  <Gift className="w-5 h-5" strokeWidth={1} />
+                  <Ticket className="w-5 h-5" strokeWidth={1} />
                   <span className="font-bold">{t('talismanGranted')}</span>
                 </div>
                 <p className="text-sm text-ink-light/70">{t('unlimitedFortune')}</p>

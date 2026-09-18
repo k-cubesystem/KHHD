@@ -78,8 +78,8 @@ test.describe('가이드 — 하단 바 부재 + 상단 종', () => {
 
     await expect(page.getByText('사주팔자(四柱八字)')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByText('오행(五行) 분포')).toBeVisible()
-    // 복채·등급·신위 세 칸이 각자 제 화면으로 간다
-    await expect(page.getByText('복채', { exact: true })).toBeVisible()
+    // 이용권·등급·신위 세 칸이 각자 제 화면으로 간다
+    await expect(page.getByText('이용권', { exact: true })).toBeVisible()
     await expect(page.getByText('등급', { exact: true })).toBeVisible()
     await expect(page.getByRole('link', { name: /만세력에서 자세히 보기/ })).toBeVisible()
     console.log('[PASS] 태극 팝업 — 명식·오행·계정 요약')

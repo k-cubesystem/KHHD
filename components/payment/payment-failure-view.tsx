@@ -8,7 +8,7 @@ import { describePaymentFailure, type PaymentFailureKind } from '@/lib/domain/pa
 import { SUPPORT_ASK_REPEAT } from '@/lib/domain/support/contact'
 
 /**
- * 결제가 끝나지 못했을 때 보는 화면 — **복채 충전과 멤버십이 함께 쓴다**.
+ * 결제가 끝나지 못했을 때 보는 화면 — **이용권 구매와 멤버십이 함께 쓴다**.
  *
  * 🔴 두 화면이 각자 그리던 것을 하나로 모았다. 예전엔 같은 상황(사용자 취소)을 한쪽은 붉은
  *    느낌표 + 「결제 실패」로, 다른 쪽은 X 아이콘 + 다른 문구로 그렸다. 문구를 화면에서 만들면

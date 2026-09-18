@@ -116,7 +116,7 @@ import { FixtureHandle, type FixtureBox } from './FixtureHandle'
 import { PanCoachmark } from './PanCoachmark'
 import type { FamilyHallData } from '@/app/actions/shrine/family-hall'
 import { saveShrineLayout, saveFixtureOffsets, activateThemePack, setPlacementLit } from '@/app/actions/shrine/scene'
-import { purchaseThemePack } from '@/app/actions/shrine/deities'
+import { TIER_LABEL } from '@/lib/domain/payment/membership-tiers'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
 import type { DevotionStatus } from '@/app/actions/shrine/devotion'
@@ -326,7 +326,7 @@ interface Props {
   aekmak?: AekmakStatus | null
   /**
    * 오방기 현황(소유자 뷰에서만 주입). null 이면 의식 진입점을 그리지 않는다 —
-   * 무료 잔여를 오표시하면 **복채를 물릴 자리에서 무료라고 말하게 된다**(액막이보다 더 엄격하다).
+   * 무료 잔여를 오표시하면 **이용권을 쓰는 자리에서 무료라고 말하게 된다**(액막이보다 더 엄격하다).
    */
   obangki?: ObangkiStatus | null
   /** 척전(엽전 세 닢) 현황 — 갈림길 도구. null 이면 독에서 행을 그리지 않는다 */
@@ -446,8 +446,6 @@ export function ShrineRoomClient({
   const effectsRef = useRef<EffectsHandle>(null)
   /** 기도 의식 중에만 띄우는 임시 불꽃 id — 저장된 lit 상태와 섞이지 않게 따로 추적한다 */
   const prayFlames = useRef<string[]>([])
-  // 이 세션에서 방금 구매한 테마 코드 (서버 owned 플래그 재로드 없이 즉시 반영)
-  const [purchasedCodes, setPurchasedCodes] = useState<Set<string>>(new Set())
   // 신탁 선톡 — 좌정 主神이 선제적으로 건넨 신탁(있으면 말풍선에 특별 표시)
   const [oracle, setOracle] = useState<{ message: string; id: string } | null>(null)
   /**
@@ -594,7 +592,7 @@ export function ShrineRoomClient({
 
   const isOwner = scene.isOwner
   const activePack = scene.themes.find((t) => t.code === activeCode)
-  const ownedThemeCount = scene.themes.filter((t) => t.owned || purchasedCodes.has(t.code)).length
+  const usableThemeCount = scene.themes.filter((t) => t.owned || t.unlocked).length
 
   // ── 무대(舞臺) — stage 보유 테마만 조립식 렌더, 없으면 레거시 완성 일러스트 ──
   const activeStage = activePack?.stage ?? null
@@ -1640,7 +1638,11 @@ export function ShrineRoomClient({
       const res = await activateThemePack(pack.code, scene.familyMemberId)
       if (!res.success) {
         setActiveCode(prev)
-        toast.error('테마 변경 실패')
+        toast.error(
+          res.error === 'TIER_REQUIRED' && pack.requiredTier
+            ? `${TIER_LABEL[pack.requiredTier]} 멤버십부터 쓸 수 있어요`
+            : '테마 변경 실패'
+        )
       } else {
         trackEvent({ action: 'pack_activate', category: 'shrine', label: pack.code })
       }
@@ -1648,37 +1650,19 @@ export function ShrineRoomClient({
     [activeCode, keeperSay, play, scene.familyMemberId]
   )
 
-  // 미보유 유료 테마 — 그 자리에서 복채 구매 후 즉시 적용
-  const buyAndApplyTheme = useCallback(
+  // 등급이 닿지 않는 테마 — 구매 경로는 없다(2026-09-18). 어느 등급에서 열리는지 알리고 멤버십 탭으로 잇는다.
+  const onSelectTheme = useCallback(
     async (pack: ThemePack) => {
-      const r = await purchaseThemePack(pack.code)
-      if (!r.success && r.error !== 'ALREADY_OWNED') {
-        toast.error(
-          r.error === 'INSUFFICIENT_BOKCHAE'
-            ? '복채가 부족합니다 — 상점에서 충전할 수 있어요'
-            : '봉헌이 이루어지지 않았습니다. 다시 시도해주세요.'
+      if (!pack.owned && !pack.unlocked) {
+        toast(
+          pack.requiredTier ? `${pack.name} — ${TIER_LABEL[pack.requiredTier]} 멤버십부터 쓸 수 있어요` : pack.name,
+          { action: { label: '멤버십 보기', onClick: () => router.push('/protected/store?tab=membership') } }
         )
         return
       }
-      setPurchasedCodes((prevSet) => new Set(prevSet).add(pack.code))
-      if (r.success) toast.success(`${pack.name} 봉헌 완료 — 신당에 적용합니다`)
       await applyTheme(pack)
     },
-    [applyTheme]
-  )
-
-  const onSelectTheme = useCallback(
-    async (pack: ThemePack) => {
-      if (!pack.owned && !purchasedCodes.has(pack.code)) {
-        toast(`${pack.name} — 복채 ${pack.priceBokchae}만냥으로 봉헌할까요?`, {
-          description: '봉헌 즉시 이 신당에 적용됩니다',
-          action: { label: `복채 ${pack.priceBokchae}만냥 봉헌`, onClick: () => void buyAndApplyTheme(pack) },
-        })
-        return
-      }
-      await applyTheme(pack)
-    },
-    [applyTheme, buyAndApplyTheme, purchasedCodes]
+    [applyTheme, router]
   )
 
   // (공개/비공개 토글은 2026-08-25 CEO 지시로 물러났다 — 신당은 기본 비공개, 공개 전환 문 없음.
@@ -1851,7 +1835,7 @@ export function ShrineRoomClient({
 
       {/* 거니는 신수(神獸) — 종전에는 主神 초상 오브가 거닐었다(WalkingKeeper). 신은 제단에
           좌정해 있는데 같은 신이 바닥을 뛰는 것은 세계가 어긋난다 — 거니는 일은 착좌한 신수의
-          몫이다(최대 2, 상점 구매 → 모아보기에서 착좌). 없으면 아무도 거닐지 않는다. */}
+          몫이다(최대 2, 상점에서 받기 → 모아보기에서 착좌). 없으면 아무도 거닐지 않는다. */}
       <GuardianWalkers
         slugs={scene.guardians}
         range={keeperRange}
@@ -2209,13 +2193,13 @@ export function ShrineRoomClient({
           <div className="flex items-center gap-2">
             <span className="font-sans text-[10px] text-ink-light/40">테마 수집</span>
             <span className="font-serif text-[10px] font-bold text-gold-500 tabular-nums">
-              {ownedThemeCount}/{scene.themes.length}
+              {usableThemeCount}/{scene.themes.length}
             </span>
           </div>
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {scene.themes.map((t) => {
-              const owned = t.owned || purchasedCodes.has(t.code)
-              const rewardLvl = !owned ? devotionLevelForTheme(t.code) : null
+              const owned = t.owned || t.unlocked
+              const rewardLvl = !t.owned ? devotionLevelForTheme(t.code) : null
               const reached = rewardLvl != null && devotion != null && devotion.level >= rewardLvl
               return (
                 <button
@@ -2232,7 +2216,13 @@ export function ShrineRoomClient({
                   {!owned && <Lock className="mr-1 -mt-0.5 inline h-2.5 w-2.5" />}
                   {t.name}
                   <span className="ml-1 text-[9.5px] tabular-nums opacity-70">
-                    {owned ? '보유' : t.priceBokchae > 0 ? `복채 ${t.priceBokchae}만냥` : '무료'}
+                    {t.owned
+                      ? '보유'
+                      : owned
+                        ? '멤버십'
+                        : t.requiredTier
+                          ? `${TIER_LABEL[t.requiredTier]}부터`
+                          : '무료'}
                   </span>
                   {rewardLvl != null && (
                     <span className={`ml-1 text-[9px] ${reached ? 'text-seal font-bold' : 'text-gold-500/70'}`}>

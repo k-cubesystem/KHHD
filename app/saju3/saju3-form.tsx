@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { readSaju3, readChild } from '@/app/actions/saju3'
 import { shareText, type Saju3Result, type ChildResult } from '@/lib/domain/saju/saju3'
-import { SIGNUP_BONUS_TALISMANS, SIGNUP_BONUS_SAJU_COUNT } from '@/lib/domain/payment/feature-costs'
+import { ONBOARDING_PASSES } from '@/lib/domain/entitlement/pass'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { Saju3Card } from './saju3-card'
 
@@ -110,15 +110,14 @@ export function Saju3Form({ siteUrl, utm, initialMode = 'me' }: Props) {
         <section className="rounded-xl border border-gold-500/25 bg-gold-500/[0.06] p-5 text-center">
           <p className="font-serif text-[15px] text-ink-primary">이건 지도의 첫 장이야</p>
           <p className="mt-1.5 break-keep font-sans text-[13px] leading-relaxed text-ink-light/75">
-            여덟 글자 전부랑 올해 흐름까지 보려면 가입하면 돼. 복채 {SIGNUP_BONUS_TALISMANS}만냥(사주 풀이{' '}
-            {SIGNUP_BONUS_SAJU_COUNT}회분) 주니까 바로 볼 수 있어.
+            여덟 글자 전부랑 올해 흐름까지 보려면 가입하면 돼. 풀이 {ONBOARDING_PASSES}회는 무료라 바로 볼 수 있어.
           </p>
           <Button asChild className="mt-4 w-full">
             <Link
               href={withUtm('/auth/sign-up', utm, 'saju3')}
               onClick={() => trackEvent({ action: 'saju3_cta_signup', category: 'saju3', label: result.type.slug })}
             >
-              복채 {SIGNUP_BONUS_TALISMANS}만냥 받고 전체 보기
+              풀이 {ONBOARDING_PASSES}회 무료로 전체 보기
             </Link>
           </Button>
         </section>
@@ -174,14 +173,14 @@ export function Saju3Form({ siteUrl, utm, initialMode = 'me' }: Props) {
 
         <section className="rounded-xl border border-gold-500/25 bg-gold-500/[0.06] p-5 text-center">
           <p className="break-keep font-sans text-[13px] leading-relaxed text-ink-light/75">
-            해마다 어떻게 달라지는지까지 보려면 가입하면 돼. 복채 {SIGNUP_BONUS_TALISMANS}만냥 주니까 바로 볼 수 있어.
+            해마다 어떻게 달라지는지까지 보려면 가입하면 돼. 풀이 {ONBOARDING_PASSES}회는 무료라 바로 볼 수 있어.
           </p>
           <Button asChild className="mt-3.5 w-full">
             <Link
               href={withUtm('/auth/sign-up', utm, 'saju3_child')}
               onClick={() => trackEvent({ action: 'saju3_cta_signup', category: 'saju3', label: 'child' })}
             >
-              복채 {SIGNUP_BONUS_TALISMANS}만냥 받고 시작하기
+              풀이 {ONBOARDING_PASSES}회 무료로 시작하기
             </Link>
           </Button>
         </section>

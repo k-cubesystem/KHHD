@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { TYPE_SLUGS, isTypeSlug, typeBySlug, TYPE_NOTE } from '@/lib/domain/saju/saju3'
-import { SIGNUP_BONUS_TALISMANS, SIGNUP_BONUS_SAJU_COUNT } from '@/lib/domain/payment/feature-costs'
+import { ONBOARDING_PASSES } from '@/lib/domain/entitlement/pass'
 import { TypeHeadline } from '../saju3-card'
 import { getSiteUrl } from '@/lib/utils/site-url'
 
@@ -83,12 +83,12 @@ export default async function Saju3TypePage({ params }: PageProps) {
 
       <section className="mt-4 rounded-xl border border-gold-500/25 bg-gold-500/[0.06] p-5 text-center">
         <p className="break-keep font-sans text-[13px] leading-relaxed text-ink-light/75">
-          한 줄은 지도의 첫 장이야. 여덟 글자 전부랑 올해 흐름까지 보려면 가입하면 돼. 복채 {SIGNUP_BONUS_TALISMANS}
-          만냥(사주 풀이 {SIGNUP_BONUS_SAJU_COUNT}회분) 주니까.
+          한 줄은 지도의 첫 장이야. 여덟 글자 전부랑 올해 흐름까지 보려면 가입하면 돼. 풀이 {ONBOARDING_PASSES}회는
+          무료로 볼 수 있어.
         </p>
         <Button asChild variant="outline" className="mt-3 w-full">
           <Link href={`/auth/sign-up?utm_source=threads&utm_medium=type_page&utm_content=${type}`}>
-            복채 {SIGNUP_BONUS_TALISMANS}만냥 받고 시작하기
+            풀이 {ONBOARDING_PASSES}회 무료로 시작하기
           </Link>
         </Button>
       </section>

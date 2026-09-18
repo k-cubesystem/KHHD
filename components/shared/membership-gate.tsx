@@ -1,12 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-import { Crown, Check, ArrowRight, Ticket, Loader2 } from 'lucide-react'
+import { Crown, Check, ArrowRight } from 'lucide-react'
 import { GA } from '@/lib/analytics/ga4'
-import { purchaseVoucher } from '@/app/actions/payment/vouchers'
-import { VOUCHER_CATALOG, type VoucherType } from '@/lib/domain/payment/vouchers'
 
 interface MembershipGateProps {
   /** GA 라벨용 대상 식별자(counsel/shrine/family). */
@@ -15,28 +12,19 @@ interface MembershipGateProps {
   description: string
   /** 혜택 리스트(玄·골드 업셀). */
   benefits: string[]
-  /** 지정 시 즉석 구매 가능한 1일 이용권(속풀이 전용). */
-  dayPassType?: VoucherType
   /** 기능별 추가 입장로(예: 속풀이 광고 리워드 CTA) — 게이트는 내용을 모른 채 자리만 내준다. */
   footerSlot?: React.ReactNode
 }
 
 /**
  * 멤버십 게이트(업셀 화면) — 玄·골드, 혜택 리스트, 상점 멤버십 탭 CTA(DESIGN.md 준수).
- * 리다이렉트 없이 in-place 로 렌더 → 데이터는 보존, 가입/이용권 구매 즉시 router.refresh 로 통과.
+ * 리다이렉트 없이 in-place 로 렌더 → 데이터는 보존, 가입 즉시 router.refresh 로 통과.
  * 마스터(admin)·멤버는 서버에서 이 컴포넌트를 렌더하지 않는다(privileges + subscription 경유).
+ *
+ * 🔴 여기서 파는 것은 멤버십 하나다. 입장만 여는 «1일 이용권»은 판매 종료됐다(빈 방 열쇠가 됐다).
  */
-export function MembershipGate({
-  feature,
-  title,
-  description,
-  benefits,
-  dayPassType,
-  footerSlot,
-}: MembershipGateProps) {
+export function MembershipGate({ feature, title, description, benefits, footerSlot }: MembershipGateProps) {
   const router = useRouter()
-  const [buying, setBuying] = useState(false)
-  const dayPass = dayPassType ? VOUCHER_CATALOG[dayPassType] : null
 
   useEffect(() => {
     GA.paywallView()
@@ -45,26 +33,6 @@ export function MembershipGate({
   const goMembership = () => {
     GA.paywallClick(`gate_${feature}`)
     router.push('/protected/store?tab=membership')
-  }
-
-  const buyDayPass = async () => {
-    if (!dayPassType) return
-    setBuying(true)
-    try {
-      const res = await purchaseVoucher(dayPassType)
-      if (res.success) {
-        GA.voucherPurchase(dayPassType, VOUCHER_CATALOG[dayPassType].priceBokchae)
-        toast.success('이용권 구매 완료 — 바로 입장합니다')
-        router.refresh() // 서버 게이트 재평가 → 통과 시 콘텐츠 렌더
-      } else if (res.errorType === 'INSUFFICIENT_BALANCE') {
-        toast.error('복채가 부족합니다. 충전 후 다시 시도해주세요.')
-        router.push('/protected/store?tab=bokchae')
-      } else {
-        toast.error(res.error || '구매에 실패했습니다.')
-      }
-    } finally {
-      setBuying(false)
-    }
   }
 
   return (
@@ -101,33 +69,6 @@ export function MembershipGate({
           멤버십 시작하기
           <ArrowRight className="w-4 h-4" />
         </button>
-
-        {dayPass && (
-          <>
-            <div className="relative my-3 flex items-center gap-3">
-              <div className="flex-1 h-px bg-white/10" />
-              <span className="text-[10px] text-ink-light/35 font-sans">또는</span>
-              <div className="flex-1 h-px bg-white/10" />
-            </div>
-            <button
-              onClick={buyDayPass}
-              disabled={buying}
-              className="relative w-full h-11 rounded-xl bg-white/[0.04] border border-white/[0.12] text-ink-light/80 font-sans text-sm flex items-center justify-center gap-2 hover:border-gold-500/40 transition-colors disabled:opacity-50"
-            >
-              {buying ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <Ticket className="w-4 h-4 text-gold-400" />
-                  {dayPass.label} · 복채 {dayPass.priceBokchae}만냥
-                </>
-              )}
-            </button>
-            <p className="relative text-[10px] text-ink-light/35 mt-2 font-sans">
-              구매 즉시 {dayPass.durationHours}시간 입장 · 멤버십엔 상시 포함
-            </p>
-          </>
-        )}
 
         {footerSlot && <div className="relative">{footerSlot}</div>}
       </div>

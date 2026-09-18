@@ -7,7 +7,6 @@ import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { calculateManse } from '@/lib/domain/saju/manse'
 import { saveAnalysisHistoryObserved } from '@/app/actions/user/history'
-import { addBokPoints } from '@/lib/services/bok-grant'
 import { logger } from '@/lib/utils/logger'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
@@ -202,8 +201,6 @@ export async function generateDailyFortune(
     } catch (e) {
       logger.error('Failed to save history:', e)
     }
-
-    await addBokPoints(10, 'FORTUNE', undefined, '오늘의 운세 확인').catch(() => {})
 
     return { success: true, content: text, cached: false }
   } catch (error) {

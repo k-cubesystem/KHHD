@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
+import { tierAtLeast } from '@/lib/domain/payment/membership-tiers'
 import { logger } from '@/lib/utils/logger'
 import { parseHallSeats, type HallSeatMap } from '@/lib/domain/shrine/family-hall-layout'
 
@@ -15,8 +16,10 @@ import { parseHallSeats, type HallSeatMap } from '@/lib/domain/shrine/family-hal
  * 실시간이 아니다. 진입 시 1회 로드하고 끝낸다(PRD §7: presence 는 "다음 진입 시 재생").
  */
 
-/** 사랑방이 열리는 등급. MASTER 는 subscription.ts 가 privileges 기준으로 붙여 주는 값이다. */
-const FAMILY_HALL_TIERS: ReadonlySet<string> = new Set(['FAMILY', 'BUSINESS', 'MASTER'])
+/** 사랑방이 열리는 등급 — 패밀리부터(MASTER 는 subscription.ts 가 privileges 기준으로 붙여 준다). 등급 순서의 정본은 membership-tiers. */
+function opensFamilyHall(tier: string): boolean {
+  return tierAtLeast(tier, 'FAMILY')
+}
 
 export interface FamilyHallMember {
   /** null = 본인 좌석 (family_members 행이 아니다) */
@@ -103,7 +106,7 @@ async function loadHallSeats(supabase: SupabaseServer, userId: string): Promise<
 export async function getFamilyHallData(): Promise<FamilyHallData> {
   // 인증 + 등급을 한 번에 — getCurrentUserMembership 은 비로그인이면 null 을 준다.
   const membership = await getCurrentUserMembership()
-  if (!membership || !FAMILY_HALL_TIERS.has(membership.tier)) return LOCKED
+  if (!membership || !opensFamilyHall(membership.tier)) return LOCKED
 
   const supabase = await createClient()
   const {
@@ -137,7 +140,7 @@ export async function getFamilyHallData(): Promise<FamilyHallData> {
  *
  * 보안 — 이 파일은 'use server' 라 export 가 곧 공개 엔드포인트다:
  * · 재화·권한을 건드리지 않는다. 쓰는 것은 본인 신당 한 행의 `hall_seats` 좌표뿐이다.
- * · 등급 게이트는 읽기와 같은 기준(FAMILY_HALL_TIERS) — 사랑방이 잠긴 계정은 쓰지도 못한다.
+ * · 등급 게이트는 읽기와 같은 기준(opensFamilyHall) — 사랑방이 잠긴 계정은 쓰지도 못한다.
  * · 소유자 검증을 액션에서 한다(`user_id = auth.uid()` + `family_member_id IS NULL`). RLS 는 2중 방어.
  * · 좌표는 **서버에서 다시 클램프**한다(parseHallSeats) — 클라 클램프를 신뢰하지 않는다.
  *
@@ -146,7 +149,7 @@ export async function getFamilyHallData(): Promise<FamilyHallData> {
 export async function saveFamilyHallSeats(seats: HallSeatMap | null): Promise<{ success: boolean; error?: string }> {
   const membership = await getCurrentUserMembership()
   if (!membership) return { success: false, error: 'UNAUTHORIZED' }
-  if (!FAMILY_HALL_TIERS.has(membership.tier)) return { success: false, error: 'FORBIDDEN' }
+  if (!opensFamilyHall(membership.tier)) return { success: false, error: 'FORBIDDEN' }
 
   const supabase = await createClient()
   const {

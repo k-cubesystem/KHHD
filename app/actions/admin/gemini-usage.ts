@@ -2,9 +2,16 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
-import { bokchaeForAction, getActionLabel } from '@/lib/domain/gemini/actions'
+import { ACTION_TO_COST_KEY, getActionLabel } from '@/lib/domain/gemini/actions'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { USAGE_RANGE_LABEL, isUsageRange, type UsageRange } from '@/lib/domain/gemini/usage-range'
-import { KRW_PER_TALISMAN } from '@/lib/constants'
+import { KRW_PER_PASS } from '@/lib/constants'
+import { requireAdmin } from '@/lib/admin/require-admin'
+
+// 🔴 'use server' export 는 로그인한 누구나 부를 수 있는 엔드포인트다 — 원가·호출 기록·RPM 변경은 관리자만.
+async function isAdmin(): Promise<boolean> {
+  return (await requireAdmin()).authorized
+}
 
 export interface GeminiDailyStat {
   stat_date: string
@@ -69,19 +76,26 @@ export interface GeminiCostVsPrice {
   total_cost_usd: number
   /** 호출당 평균 원가(₩, 반올림) */
   avg_cost_krw: number
-  /** 현재 복채 가격(만냥) — ai_prompts.talisman_cost. null = 미설정/내부기능 */
-  bokchae_cost: number | null
-  /** 복채 가격 원화 환산(₩) */
-  bokchae_krw: number | null
-  /** 원가율(%) = 호출당 원가 ÷ 복채 매출. null = 무료/미설정 */
+  /** 이 호출이 쓰는 이용권 장수 — feature-costs. 0 = 무료, null = 이용권을 쓰지 않는 내부 기능 */
+  pass_units: number | null
+  /** 이용권 매출 원화 환산(₩) = 장수 × KRW_PER_PASS */
+  pass_krw: number | null
+  /** 원가율(%) = 호출당 원가 ÷ 이용권 매출. null = 무료/내부 기능 */
   cost_ratio_pct: number | null
 }
 
+/** action_type → 쓰는 이용권 장수. 판가 단일 출처는 feature-costs 다(DB 표가 아니다). */
+function passUnitsForAction(actionType: string): number | null {
+  const key = ACTION_TO_COST_KEY[actionType]
+  return key ? FEATURE_COST[key].display : null
+}
+
 /**
- * 기능별 "원가 vs 복채" — 가격 책정 근거.
- * get_gemini_action_stats(원가) 를 ai_prompts.talisman_cost(복채)와 조인한다.
+ * 기능별 "원가 vs 이용권 매출" — 가격 책정 근거.
+ * get_gemini_action_stats(원가) 를 feature-costs(이용권 장수)와 맞댄다.
  */
 export async function getGeminiCostVsPrice(daysBack: number = 30): Promise<GeminiCostVsPrice[]> {
+  if (!(await isAdmin())) return []
   const supabase = await createClient()
   const [statsRes, usdKrwRate] = await Promise.all([
     supabase.rpc('get_gemini_action_stats', { days_back: daysBack }),
@@ -94,34 +108,33 @@ export async function getGeminiCostVsPrice(daysBack: number = 30): Promise<Gemin
   }
 
   // 🔴 판가는 ai_prompts 가 아니라 feature-costs 단일 출처에서 가져온다.
-  //    DB 표는 낡아 있었다(cheonjiin_analysis: 0 — 실제 2만냥). 0 이 «무료»로 읽혀
-  //    원가율이 통째로 «측정 안 됨»이 됐다.
+  //    DB 표(ai_prompts.talisman_cost)는 낡아 있었다 — 0 이 «무료»로 읽혀 원가율이 통째로 «측정 안 됨»이 됐다.
   const stats = (statsRes.data ?? []) as GeminiActionStat[]
   return stats.map((s): GeminiCostVsPrice => {
     const calls = Number(s.call_count) || 0
     const totalUsd = Number(s.total_cost_usd) || 0
     const avgCostKrw = calls > 0 ? Math.round((totalUsd / calls) * usdKrwRate) : 0
 
-    const bokchaeCost = bokchaeForAction(s.action_type)
-    const bokchaeKrw = bokchaeCost !== null ? bokchaeCost * KRW_PER_TALISMAN : null
+    const passUnits = passUnitsForAction(s.action_type)
+    const passKrw = passUnits !== null ? passUnits * KRW_PER_PASS : null
 
-    // 원가율: 복채 매출 대비 원가. 무료(0)·미설정(null)은 산정 불가 → null
-    const costRatioPct =
-      bokchaeKrw !== null && bokchaeKrw > 0 ? Math.round((avgCostKrw / bokchaeKrw) * 1000) / 10 : null
+    // 원가율: 이용권 매출 대비 원가. 무료(0)·내부 기능(null)은 산정 불가 → null
+    const costRatioPct = passKrw !== null && passKrw > 0 ? Math.round((avgCostKrw / passKrw) * 1000) / 10 : null
 
     return {
       action_type: s.action_type,
       call_count: calls,
       total_cost_usd: totalUsd,
       avg_cost_krw: avgCostKrw,
-      bokchae_cost: bokchaeCost,
-      bokchae_krw: bokchaeKrw,
+      pass_units: passUnits,
+      pass_krw: passKrw,
       cost_ratio_pct: costRatioPct,
     }
   })
 }
 
 export async function getGeminiDailyStats(daysBack: number = 30): Promise<GeminiDailyStat[]> {
+  if (!(await isAdmin())) return []
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_gemini_daily_stats', { days_back: daysBack })
   if (error) {
@@ -132,6 +145,7 @@ export async function getGeminiDailyStats(daysBack: number = 30): Promise<Gemini
 }
 
 export async function getGeminiActionStats(daysBack: number = 30): Promise<GeminiActionStat[]> {
+  if (!(await isAdmin())) return []
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_gemini_action_stats', { days_back: daysBack })
   if (error) {
@@ -141,28 +155,32 @@ export async function getGeminiActionStats(daysBack: number = 30): Promise<Gemin
   return (data ?? []) as GeminiActionStat[]
 }
 
+const EMPTY_TODAY_SUMMARY: GeminiTodaySummary = {
+  total_calls: 0,
+  success_calls: 0,
+  error_calls: 0,
+  rate_limited_calls: 0,
+  cached_calls: 0,
+  total_tokens: 0,
+  total_input_tokens: 0,
+  total_output_tokens: 0,
+  total_cost_usd: 0,
+  avg_latency_ms: 0,
+}
+
 export async function getGeminiTodaySummary(): Promise<GeminiTodaySummary> {
+  if (!(await isAdmin())) return EMPTY_TODAY_SUMMARY
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_gemini_today_summary')
   if (error || !data) {
     logger.error('[gemini-usage] getGeminiTodaySummary error:', error)
-    return {
-      total_calls: 0,
-      success_calls: 0,
-      error_calls: 0,
-      rate_limited_calls: 0,
-      cached_calls: 0,
-      total_tokens: 0,
-      total_input_tokens: 0,
-      total_output_tokens: 0,
-      total_cost_usd: 0,
-      avg_latency_ms: 0,
-    }
+    return EMPTY_TODAY_SUMMARY
   }
   return data as GeminiTodaySummary
 }
 
 export async function getGeminiRecentLogs(logLimit: number = 50): Promise<GeminiRecentLog[]> {
+  if (!(await isAdmin())) return []
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_gemini_recent_logs', { log_limit: logLimit })
   if (error) {
@@ -173,6 +191,7 @@ export async function getGeminiRecentLogs(logLimit: number = 50): Promise<Gemini
 }
 
 export async function getGeminiRpmConfig(): Promise<GeminiRpmConfig | null> {
+  if (!(await isAdmin())) return null
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('gemini_token_bucket')
@@ -190,6 +209,8 @@ export async function updateGeminiRpm(
   newRpm: number,
   newModel?: string
 ): Promise<{ success: boolean; error?: string; data?: GeminiRpmConfig }> {
+  const actor = await requireAdmin()
+  if (!actor.authorized) return { success: false, error: actor.error }
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('update_gemini_rpm', {
     new_rpm: newRpm,
@@ -223,11 +244,12 @@ export interface GeminiUserUsageRow {
  * **누가 · 무엇에 · 얼마나** 썼는지. 원가 관리의 실질 단위다.
  *
  * 🔴 액션별 합계만으로는 «한 사람이 몰아 쓰는 것»을 못 본다. 어뷰징·무료 남용은 회원 단위로만
- *    드러난다(복채를 안 받는 내부 기능 — 고민상담·신탁 — 이 특히 그렇다).
+ *    드러난다(이용권을 쓰지 않는 내부 기능 — 고민상담·신탁 — 이 특히 그렇다).
  *
  * ⚠️ `user_id` 가 없는 호출(크론·시스템)은 「시스템」으로 묶는다. 버리면 합계가 안 맞는다.
  */
 export async function getGeminiUserUsage(daysBack: number = 30, limit: number = 30): Promise<GeminiUserUsageRow[]> {
+  if (!(await isAdmin())) return []
   const supabase = await createClient()
   const since = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString()
 
@@ -325,18 +347,7 @@ function kstMidnightIso(): string {
  *    바꿔도 카드는 그대로 0 이라, 오늘 호출이 없는 날이면 「측정이 안 된다」로 보였다.
  */
 export async function getGeminiRangeSummary(days: number = 0): Promise<GeminiRangeSummary> {
-  const supabase = await createClient()
   const range: UsageRange = isUsageRange(days) ? days : 0
-  const since = range === 0 ? kstMidnightIso() : new Date(Date.now() - range * 24 * 60 * 60 * 1000).toISOString()
-
-  const [{ data, error }, usdKrwRate] = await Promise.all([
-    supabase
-      .from('gemini_api_logs')
-      .select('status, cached, input_tokens, output_tokens, total_tokens, estimated_cost_usd')
-      .gte('created_at', since),
-    getUsdKrwRate(),
-  ])
-
   const empty: GeminiRangeSummary = {
     range_days: range,
     range_label: USAGE_RANGE_LABEL[range],
@@ -350,6 +361,18 @@ export async function getGeminiRangeSummary(days: number = 0): Promise<GeminiRan
     total_cost_usd: 0,
     total_cost_krw: 0,
   }
+  if (!(await isAdmin())) return empty
+
+  const supabase = await createClient()
+  const since = range === 0 ? kstMidnightIso() : new Date(Date.now() - range * 24 * 60 * 60 * 1000).toISOString()
+
+  const [{ data, error }, usdKrwRate] = await Promise.all([
+    supabase
+      .from('gemini_api_logs')
+      .select('status, cached, input_tokens, output_tokens, total_tokens, estimated_cost_usd')
+      .gte('created_at', since),
+    getUsdKrwRate(),
+  ])
 
   if (error) {
     logger.error('[gemini-usage] getGeminiRangeSummary error:', error)

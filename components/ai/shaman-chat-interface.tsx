@@ -20,7 +20,12 @@ import {
   type PastChatSession,
 } from '@/app/actions/ai/shaman-chat'
 import { greetingToContent, type Greeting } from '@/lib/domain/chat/greeting'
-import { PURCHASE_QUESTIONS, totalRemainingOf } from '@/lib/domain/chat/entitlements'
+import { PURCHASE_EXPIRE_DAYS, PURCHASE_QUESTIONS, totalRemainingOf } from '@/lib/domain/chat/entitlements'
+import { formatFeatureCost } from '@/lib/domain/payment/feature-costs'
+import { passBadgeLabel } from '@/lib/domain/entitlement/pass'
+import { usePassSummary, useRefreshPasses } from '@/hooks/use-passes'
+import { useInsufficientPass } from '@/hooks/use-insufficient-pass'
+import { InsufficientPassModal } from '@/components/payment/insufficient-pass-modal'
 import { GreetingIntro } from '@/components/ai/chat/greeting-intro'
 import { AiDisclosureBadge } from '@/components/shared/AiDisclosureBadge'
 import { ChatMoreSheet } from '@/components/ai/chat/chat-more-sheet'
@@ -30,9 +35,8 @@ import { useTts } from '@/hooks/useTts'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 import { voiceProfileFor } from '@/lib/domain/shrine/voice-profiles'
 import { getVoiceProfileForDeity } from '@/app/actions/shrine/voice'
-import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Loader2, Send, Coins, MoreHorizontal, X, ChevronLeft, Flame, MessageCircle } from 'lucide-react'
+import { Loader2, Send, Ticket, MoreHorizontal, X, ChevronLeft, Flame, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { GAChat } from '@/lib/analytics/chat-ga'
@@ -505,7 +509,6 @@ export function ShamanChatInterface({
   initialDeity = null,
   oracleId,
 }: { initialDeity?: SeatedDeityInfo | null; oracleId?: string } = {}) {
-  const router = useRouter()
   const tCommon = useTranslations('common')
   const reduceMotion = useReducedMotion()
   const [messages, setMessages] = useState<ShamanChatMessage[]>([])
@@ -525,6 +528,9 @@ export function ShamanChatInterface({
   const [adAvail, setAdAvail] = useState<AdRewardAvailability | null>(null)
   const [showAdSheet, setShowAdSheet] = useState(false)
   const [showMore, setShowMore] = useState(false)
+  const { data: passSummary } = usePassSummary()
+  const refreshPasses = useRefreshPasses()
+  const { passModal, handleChargeResult, closePassModal } = useInsufficientPass()
 
   // 좌정 主神 표정 아바타 (신당 3.0). 서버 시딩(initialDeity)으로 첫 로드부터 신위 표시,
   // 이후 응답에서 받은 마지막 값 유지 — deityCode는 한번 정해지면 유지.
@@ -719,32 +725,20 @@ export function ShamanChatInterface({
     }
   }
 
-  // 충전
+  // 이용권 1장 → 질문 10문
   const handleRecharge = async () => {
-    const balance = questionStatus?.walletBalance ?? 0
-    if (balance < 1) {
-      toast.error('복채가 부족합니다', {
-        description: `${balance.toLocaleString()}만냥 보유 · 1만냥 필요`,
-        action: {
-          label: '복채 충전',
-          onClick: () => {
-            // 다른 페이월과 충전 동선 통일 — 멤버십 관리가 아니라 상점 복채 탭(P0-F5)
-            GAChat.rechargeRedirect()
-            router.push('/protected/store?tab=bokchae')
-          },
-        },
-      })
-      return
-    }
     setIsRecharging(true)
     try {
       const result = await purchaseShamanQuestions()
+      if (handleChargeResult(result, { featureLabel: `속풀이 질문 ${PURCHASE_QUESTIONS}문` })) {
+        GAChat.rechargeRedirect()
+        return
+      }
       if (result.success) {
         setQuestionStatus((prev) =>
           prev
             ? {
                 ...prev,
-                walletBalance: result.remainingBalance ?? prev.walletBalance,
                 purchasedCredits: result.newPurchasedCredits ?? prev.purchasedCredits,
                 totalRemaining: totalRemainingOf({
                   onboarding: prev.onboardingCredits,
@@ -755,12 +749,13 @@ export function ShamanChatInterface({
               }
             : prev
         )
+        void refreshPasses()
         GAChat.ticketPurchase()
-        toast.success(`질문권 ${PURCHASE_QUESTIONS}회 충전 완료`, {
-          description: `남은 복채: ${(result.remainingBalance ?? 0).toLocaleString()}만냥`,
+        toast.success(`질문 ${PURCHASE_QUESTIONS}문을 열었어요`, {
+          description: `${formatFeatureCost('shamanQuestions')} 사용 · ${PURCHASE_EXPIRE_DAYS}일 안에 여쭤보세요`,
         })
       } else {
-        toast.error(result.error || '충전 실패')
+        toast.error(result.error || '질문을 열지 못했어요')
       }
     } finally {
       setIsRecharging(false)
@@ -774,7 +769,12 @@ export function ShamanChatInterface({
 
     if ((questionStatus?.totalRemaining ?? 0) <= 0) {
       GAChat.limitHit()
-      toast.error('질문 횟수가 소진되었습니다.', { action: { label: '충전하기', onClick: handleRecharge } })
+      toast.error('남은 질문이 없어요.', {
+        action: {
+          label: `${formatFeatureCost('shamanQuestions')}으로 +${PURCHASE_QUESTIONS}문`,
+          onClick: handleRecharge,
+        },
+      })
       return
     }
 
@@ -904,7 +904,13 @@ export function ShamanChatInterface({
 
     /** 실패 처리 — 되돌리고 알린다. */
     const applyFailure = (message: string, noCredits = false) => {
-      if (noCredits) toast.error('질문 횟수 소진', { action: { label: '충전', onClick: handleRecharge } })
+      if (noCredits)
+        toast.error('남은 질문이 없어요', {
+          action: {
+            label: `${formatFeatureCost('shamanQuestions')}으로 +${PURCHASE_QUESTIONS}문`,
+            onClick: handleRecharge,
+          },
+        })
       else toast.error(message)
       GAChat.sendError()
       rollbackSend()
@@ -1252,7 +1258,7 @@ export function ShamanChatInterface({
             「대신 목소리를 낸다」로 층을 나눈다. 상시 1줄(대화가 흐르면 위로 밀려 사라지므로
             메시지 목록이 아니라 입력 영역에 고정한다). */}
 
-        {/* 잔여·충전 — 남은 질문과 복채는 «지금 쓸 수 있는 것»이라 흐리면 안 된다(CEO 지시 08-24).
+        {/* 남은 질문·이용권 — «지금 쓸 수 있는 것»이라 흐리면 안 된다(CEO 지시 08-24).
             한 줄 텍스트였던 것을 칩 두 개로 세워 숫자가 먼저 읽히게 한다. */}
         <div className="flex items-center justify-between gap-2 mb-2 px-0.5">
           {isStatusLoading ? (
@@ -1271,8 +1277,8 @@ export function ShamanChatInterface({
                 남은 질문 <b className="font-bold">{totalRemaining}</b>회
               </span>
               <span className="inline-flex items-center gap-1 rounded-full border border-white/[0.12] bg-white/[0.04] px-2.5 py-1 text-[12px] text-ink-light/75 tabular-nums">
-                <Coins className="w-3.5 h-3.5 text-gold-400/80" />
-                <b className="font-bold text-gold-200">{(questionStatus?.walletBalance ?? 0).toLocaleString()}</b>만냥
+                <Ticket className="w-3.5 h-3.5 text-gold-400/80" />
+                {passSummary ? passBadgeLabel(passSummary) : '이용권'}
               </span>
             </div>
           )}
@@ -1292,8 +1298,8 @@ export function ShamanChatInterface({
               disabled={isRecharging || isStatusLoading}
               className="flex items-center gap-1 rounded-full border border-primary/25 bg-primary/[0.08] px-2.5 py-1 text-[11.5px] text-primary/85 hover:bg-primary/15 transition-colors disabled:opacity-40"
             >
-              {isRecharging ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Coins className="w-3.5 h-3.5" />}
-              충전 +{PURCHASE_QUESTIONS}회
+              {isRecharging ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ticket className="w-3.5 h-3.5" />}+
+              {PURCHASE_QUESTIONS}문 · {formatFeatureCost('shamanQuestions')}
             </button>
           </div>
         </div>
@@ -1315,7 +1321,9 @@ export function ShamanChatInterface({
                   handleSend()
                 }
               }}
-              placeholder={isLimitReached ? '질문 한도 소진 · 충전해주세요' : '무엇이든 편하게 여쭤보세요…'}
+              placeholder={
+                isLimitReached ? '남은 질문이 없어요 · 이용권으로 더 여쭤보세요' : '무엇이든 편하게 여쭤보세요…'
+              }
               disabled={isLoading || isLimitReached || isSessionLoading}
               rows={1}
               className={cn(
@@ -1348,6 +1356,8 @@ export function ShamanChatInterface({
           </motion.button>
         </div>
       </div>
+
+      <InsufficientPassModal {...passModal} onClose={closePassModal} />
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {

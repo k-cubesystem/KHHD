@@ -8,6 +8,23 @@
  */
 
 import { FAMILY_SEAT_TYPES } from './shelf'
+import { BAEKIL_ITEM_NAME } from '@/lib/domain/ritual/baekil'
+
+/**
+ * 완주 보상 전용 품목 — 상점에서 받을 수 없다(서버 purchaseToInventory·기운 선물이 거절한다).
+ *
+ * 2026-09-18 신물이 전부 무료가 되면서 «정가를 비싸게 두어 막던» 방식(20260730_shrine_vows.sql)은
+ * 더 이상 막이가 아니다 — 이 목록이 유일한 막이다. 카탈로그에 code 칸이 없어 이름이 열쇠다.
+ * 🔴 가격 0·비활성으로 숨기지 않는다 — 비활성이면 이미 배치한 사람의 신당 렌더가 깨진다.
+ */
+export const REWARD_ONLY_ITEM_NAMES: readonly string[] = Object.freeze([BAEKIL_ITEM_NAME])
+
+export function isRewardOnlyItem(name: string): boolean {
+  return REWARD_ONLY_ITEM_NAMES.includes(name)
+}
+
+/** 무료로 받는 신물 한 가지를 보관함에 둘 수 있는 수 — 무료 자원이라 상한이 곧 남용 막이다. */
+export const SHOP_CLAIM_MAX_QTY = 10
 
 export interface ShopSection {
   readonly key: string

@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Check, Loader2 } from 'lucide-react'
@@ -17,11 +16,12 @@ import { EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { mattersLabel } from '@/lib/domain/shrine/item-matters'
 
 /**
- * 신수(神獸) 그리드 — 봉헌(구매)과 착좌를 한 자리에서.
+ * 신수(神獸) 그리드 — 모셔 오기(무료 받기)와 착좌를 한 자리에서.
  *
- * 처음에는 구매를 아이템 탭에 미뤘는데, 32좌를 보고 → 탭을 건너가 사고 → 돌아와 고르는
- * 왕복이 "선택이 안 된다"로 읽혔다(CEO 보고). 미보유 카드는 누르면 그 자리에서 봉헌되고,
- * 결제·인벤토리는 purchaseToInventory 한 벌을 재사용한다 — 파는 곳이 두 곳이어도 경로는 하나다.
+ * 처음에는 받기를 아이템 탭에 미뤘는데, 32좌를 보고 → 탭을 건너가 받고 → 돌아와 고르는
+ * 왕복이 "선택이 안 된다"로 읽혔다(CEO 보고). 미보유 카드는 누르면 그 자리에서 모셔 오고,
+ * 인벤토리 지급은 purchaseToInventory 한 벌을 재사용한다 — 받는 곳이 두 곳이어도 경로는 하나다.
+ * 2026-09-18 이용권 전환으로 신수는 무료다 — 카드에 값이 붙지 않는다.
  */
 
 const CATEGORY_ORDER: readonly GuardianCategory[] = ['beast', 'chasa', 'dokkaebi', 'spirit']
@@ -31,32 +31,32 @@ export function GuardianGrid({
   equipped,
   familyMemberId,
 }: {
-  /** 보유한 신수의 카탈로그 이름 (구매가 인벤토리에 남긴다) */
+  /** 보유한 신수의 카탈로그 이름 (받기가 인벤토리에 남긴다) */
   ownedNames: string[]
   /** 지금 착좌한 슬러그 (서버 스냅샷) */
   equipped: string[]
   familyMemberId: string | null
 }) {
   const router = useRouter()
-  /** 이 화면에서 방금 봉헌한 것 — 서버 스냅샷(ownedNames)에 아직 없다 */
+  /** 이 화면에서 방금 모셔 온 것 — 서버 스냅샷(ownedNames)에 아직 없다 */
   const [ownedExtra, setOwnedExtra] = useState<Set<string>>(new Set())
   const owned = useMemo(() => new Set([...ownedNames, ...ownedExtra]), [ownedNames, ownedExtra])
   const [selected, setSelected] = useState<string[]>(equipped)
   const [saving, setSaving] = useState(false)
   const [buyingSlug, setBuyingSlug] = useState<string | null>(null)
 
-  /** 봉헌 → 성공하면 그 자리에서 바로 고를 수 있게 착좌 후보에도 넣어 준다(빈 자리가 있으면) */
-  const buy = async (slug: string, name: string) => {
+  /** 모셔 오기 → 성공하면 그 자리에서 바로 고를 수 있게 착좌 후보에도 넣어 준다(빈 자리가 있으면) */
+  const bring = async (slug: string, name: string) => {
     setBuyingSlug(slug)
     const res = await purchaseGuardian(slug)
     setBuyingSlug(null)
     if (!res.success) {
-      toast.error(res.error === 'INSUFFICIENT_BOKCHAE' ? '복채가 모자랍니다' : '봉헌이 이루어지지 않았습니다')
+      toast.error('모셔 오지 못했습니다. 다시 시도해주세요.')
       return
     }
     setOwnedExtra((prev) => new Set(prev).add(name))
     setSelected((prev) => (prev.length < MAX_GUARDIANS && !prev.includes(slug) ? [...prev, slug] : prev))
-    // 빈자리가 있으면 서버가 봉헌과 함께 착좌까지 마친다 — 토스트가 다음 할 일을 정확히 말해야 한다
+    // 빈자리가 있으면 서버가 모셔 오기와 함께 착좌까지 마친다 — 토스트가 다음 할 일을 정확히 말해야 한다
     toast.success(
       res.seated === true
         ? `${name} — 모셔 왔습니다. 신당에 바로 착좌했어요`
@@ -128,7 +128,7 @@ export function GuardianGrid({
                   key={g.slug}
                   type="button"
                   disabled={!has && buyingSlug !== null}
-                  onClick={() => (has ? toggle(g.slug) : void buy(g.slug, g.name))}
+                  onClick={() => (has ? toggle(g.slug) : void bring(g.slug, g.name))}
                   className={`relative rounded-xl border p-2.5 text-left transition-colors ${
                     on
                       ? 'border-gold-500/55 bg-gold-500/[0.12]'
@@ -174,11 +174,7 @@ export function GuardianGrid({
                   )}
                   {!has && (
                     <span className="absolute bottom-1.5 right-2 inline-flex items-center gap-1 rounded-md border border-gold-500/40 bg-gold-500/[0.12] px-1.5 py-0.5 font-sans text-[9.5px] font-bold text-gold-200">
-                      {buyingSlug === g.slug ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <>복채 {g.price}만냥 봉헌</>
-                      )}
+                      {buyingSlug === g.slug ? <Loader2 className="h-3 w-3 animate-spin" /> : <>무료로 모셔 오기</>}
                     </span>
                   )}
                 </button>
@@ -189,12 +185,7 @@ export function GuardianGrid({
       ))}
 
       <p className="font-sans text-[10.5px] leading-relaxed text-ink-light/35">
-        카드를 누르면 그 자리에서 봉헌(구매)됩니다 — 신을 아직 모시지 않았어도 신수는 먼저 곁에 둘 수 있습니다. 복채
-        충전은{' '}
-        <Link href="/protected/store" className="text-gold-500/70 underline underline-offset-2">
-          상점
-        </Link>
-        에서.
+        카드를 누르면 그 자리에서 무료로 모셔 옵니다 — 신을 아직 모시지 않았어도 신수는 먼저 곁에 둘 수 있습니다.
       </p>
     </div>
   )

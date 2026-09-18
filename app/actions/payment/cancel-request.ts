@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { clawbackPaymentCredits } from '@/lib/services/wallet-grant'
+import { revokePaymentPasses } from '@/lib/services/pass-revoke'
 import { requestTossCancel } from '@/lib/domain/payment/toss-cancel'
 import {
   CANCEL_REASONS,
@@ -37,6 +37,7 @@ import {
   type LossCapStatus,
   type LossCapUsage,
 } from '@/lib/domain/payment/loss-cap'
+import { formatPassUnits, membershipWindow } from '@/lib/domain/entitlement/pass'
 import { getUserRole } from '@/lib/supabase/helpers'
 import { hasUnlimitedAccess } from '@/lib/auth/privileges'
 import { logger } from '@/lib/utils/logger'
@@ -50,8 +51,8 @@ import { rateLimit } from '@/lib/utils/rate-limit'
  *      1) 인가 — 결제·구독 조회에 **항상 `user_id = 본인`** 을 건다(다른 사람 결제 취소 차단).
  *      2) rate limit — 취소는 돈이 움직이는 경로라 분당 5회로 좁힌다.
  *      3) 판정은 **서버에서 다시 계산**한다. 클라이언트가 보낸 금액·판정은 쓰지 않는다.
- *      4) 지갑 잔액 변경은 `clawbackPaymentCredits()`(service_role RPC) 단일 경로로만.
- *         이 파일에서 wallets 를 직접 INSERT/UPDATE 하지 않는다.
+ *      4) 이용권 회수는 `revokePaymentPasses()`(service_role RPC) 단일 경로로만.
+ *         이 파일에서 entitlement_grants 를 직접 INSERT/UPDATE 하지 않는다.
  *      5) 손실 처리 상한(최근 365일 · 계정당 2회 / 10만원)의 **최종 판정은 DB 함수**
  *         `open_charge_cancel_request` 가 잠금 아래에서 한다. 여기서 하는 사전 판정은 «안내»용이다
  *         — 따닥으로 두 요청이 동시에 들어오면 애플리케이션 레벨 검사는 둘 다 통과시킨다.
@@ -64,7 +65,7 @@ const STALE_REQUEST_MINUTES = 10
 
 /**
  * 🔴 취소는 **결제가 일어난 상점의 키**로 불러야 한다.
- * 복채 충전은 일반결제 상점(khaehwjxqe), 멤버십은 정기결제 상점(bill_khaehqj1a) 소관이다.
+ * 이용권 구매는 일반결제 상점(khaehwjxqe), 멤버십은 정기결제 상점(bill_khaehqj1a) 소관이다.
  * 한쪽 키로 다른 상점 결제를 취소하려 하면 토스가 거절한다 — 사용자는 «환불이 안 된다» 만 본다.
  */
 
@@ -79,9 +80,9 @@ function tossCancelReason(code: string): string {
 
 const BLOCKED_MESSAGES: Readonly<Record<string, string>> = {
   ALREADY_CANCELLED: '이미 취소된 결제입니다.',
-  NOT_A_CHARGE: '복채 충전 결제만 취소할 수 있습니다.',
+  NOT_A_CHARGE: '이용권 구매 결제만 취소할 수 있습니다.',
   NOT_COMPLETED: `결제가 완료되지 않아 취소할 수 없습니다. ${SUPPORT_ASK}`,
-  NOTHING_GRANTED: `지급된 복채가 없어 자동 취소 대상이 아닙니다. ${SUPPORT_ASK}`,
+  NOTHING_GRANTED: `발급된 이용권이 없어 자동 취소 대상이 아닙니다. ${SUPPORT_ASK}`,
 }
 
 interface PaymentRow {
@@ -97,15 +98,41 @@ interface PaymentRow {
   created_at: string
 }
 
-async function getWalletBalance(userId: string): Promise<number> {
-  const admin = createAdminClient()
-  const { data } = await admin.from('wallets').select('balance').eq('user_id', userId).maybeSingle()
-  const balance = (data as { balance?: number } | null)?.balance
-  return typeof balance === 'number' && Number.isFinite(balance) ? balance : 0
+interface GrantUnitsRow {
+  payment_id: string | null
+  quantity: number
+  consumed: number
+  revoked: number
+}
+
+/**
+ * 결제별로 발급된 이용권 중 아직 쓰지 않은 장 수. 조회에 실패하면 null — 판정을 추측하지 않는다.
+ * 기한이 지난 장도 «쓰지 않은 장»이다(회수 RPC 도 기한을 보지 않는다).
+ */
+async function readUnusedPassesByPayment(userId: string, paymentIds: string[]): Promise<Map<string, number> | null> {
+  const unused = new Map<string, number>()
+  if (paymentIds.length === 0) return unused
+
+  const { data, error } = await createAdminClient()
+    .from('entitlement_grants')
+    .select('payment_id, quantity, consumed, revoked')
+    .eq('user_id', userId)
+    .in('payment_id', paymentIds)
+
+  if (error) {
+    logger.error(new Error('[PaymentCancel] 결제별 이용권 조회 실패'), { userId, message: error.message })
+    return null
+  }
+  for (const row of (data ?? []) as GrantUnitsRow[]) {
+    if (!row.payment_id) continue
+    const left = Math.max(0, row.quantity - row.consumed - row.revoked)
+    unused.set(row.payment_id, (unused.get(row.payment_id) ?? 0) + left)
+  }
+  return unused
 }
 
 function packLabelFor(plan: ChargeCancelPlan): string {
-  return `복채 ${plan.grantedCredits}만냥`
+  return formatPassUnits(plan.grantedCredits)
 }
 
 // ────────────────────────────────────────────────────────────
@@ -174,40 +201,43 @@ async function isLossCapExempt(supabase: Awaited<ReturnType<typeof createClient>
 }
 
 // ────────────────────────────────────────────────────────────
-// 1. 복채 충전 취소
+// 1. 이용권 구매 취소
 // ────────────────────────────────────────────────────────────
 
-/** 본인의 취소 가능 충전 내역 + 판정. 화면이 보여주는 모든 숫자는 여기서 나온다. */
+/** 본인의 취소 가능 이용권 구매 내역 + 판정. 화면이 보여주는 모든 숫자는 여기서 나온다. */
 export async function getChargeCancelOverview(): Promise<ChargeCancelOverview> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { walletBalance: 0, items: [], lossCap: LOSS_CAP_OPEN }
+  if (!user) return { items: [], lossCap: LOSS_CAP_OPEN }
 
   const admin = createAdminClient()
-  const [{ data: rows }, walletBalance] = await Promise.all([
-    admin
-      .from('payments')
-      .select(
-        'id, order_id, payment_key, amount, cancelled_amount, credits_purchased, credits_remaining, status, bokchae_type, created_at'
-      )
-      .eq('user_id', user.id)
-      .eq('bokchae_type', 'charge')
-      .in('status', ['completed', 'refunded'])
-      .order('created_at', { ascending: false })
-      .limit(20),
-    getWalletBalance(user.id),
-  ])
+  const { data: rows } = await admin
+    .from('payments')
+    .select(
+      'id, order_id, payment_key, amount, cancelled_amount, credits_purchased, credits_remaining, status, bokchae_type, created_at'
+    )
+    .eq('user_id', user.id)
+    .eq('bokchae_type', 'pass')
+    .in('status', ['completed', 'refunded'])
+    .order('created_at', { ascending: false })
+    .limit(20)
 
   const payments = (rows ?? []) as PaymentRow[]
+  const unusedByPayment = await readUnusedPassesByPayment(
+    user.id,
+    payments.map((row) => row.id)
+  )
+
   const items: ChargeCancelItem[] = payments.map((row) => {
     const plan = classifyChargeCancel({
       paidAmount: row.amount,
       cancelledAmount: row.cancelled_amount,
       grantedCredits: row.credits_purchased,
       ledgerRemaining: row.credits_remaining,
-      walletBalance,
+      // 조회 실패면 안내는 낙관적으로 두고, 실제 판정은 접수 때 다시 한다(그때도 실패하면 접수하지 않는다).
+      unusedPasses: unusedByPayment ? (unusedByPayment.get(row.id) ?? 0) : row.credits_remaining,
       status: row.status,
       bokchaeType: row.bokchae_type,
       paidAt: row.created_at,
@@ -226,7 +256,7 @@ export async function getChargeCancelOverview(): Promise<ChargeCancelOverview> {
   const needsLossPath = items.some((item) => item.plan.verdict === 'PARTIALLY_SPENT')
   const lossCap = needsLossPath ? await readLossCapStatus(supabase, user.id) : LOSS_CAP_OPEN
 
-  return { walletBalance, items, lossCap }
+  return { items, lossCap }
 }
 
 /** 화면 안내용 상한 상태. 🔴 잔여 횟수·금액은 절대 DTO 에 싣지 않는다(악용 유인). */
@@ -240,13 +270,13 @@ async function readLossCapStatus(
 }
 
 /**
- * 복채 충전 취소 실행.
+ * 이용권 구매 취소 실행.
  *
- * 흐름: 인가 → 판정 재계산 → 요청 기록(REQUESTED) → 토스 취소 API → 복채 회수(기존 RPC) → 결과 기록.
+ * 흐름: 인가 → 판정 재계산 → 요청 기록(REQUESTED) → 토스 취소 API → 이용권 회수(RPC) → 결과 기록.
  *
- * 🔴 회수는 **전액 회수**로 고정한다. 7일 경과 수수료(10%) 때문에 토스 쪽은 부분 취소가 되지만,
- *    사용자 입장에서 이 충전은 «취소»된 것이므로 남은 복채를 10% 남겨두면 안 된다.
- *    → `clawbackPaymentCredits` 에 `tossStatus='CANCELED' / balanceAmount=0` 을 넘겨 전량 회수시킨다.
+ * 🔴 회수는 **전량 회수**로 고정한다. 7일 경과 수수료(10%) 때문에 토스 쪽은 부분 취소가 되지만,
+ *    사용자 입장에서 이 구매는 «취소»된 것이므로 이용권을 10% 남겨두면 안 된다.
+ *    → `revokePaymentPasses` 에 `tossStatus='CANCELED' / balanceAmount=0` 을 넘겨 전량 회수시킨다.
  *    멱등키는 토스가 돌려준 실제 `transactionKey` 로 만들어지므로, 뒤늦게 도착하는 웹훅은
  *    같은 키에 걸려 `ALREADY_PROCESSED` 가 되고 이중 회수가 일어나지 않는다.
  */
@@ -285,13 +315,16 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
   if (!paymentRow) return { success: false, error: '취소할 결제를 찾을 수 없습니다.' }
 
   const payment = paymentRow as PaymentRow
-  const walletBalance = await getWalletBalance(user.id)
+  const unusedByPayment = await readUnusedPassesByPayment(user.id, [payment.id])
+  if (!unusedByPayment) {
+    return { success: false, error: '이용권 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.' }
+  }
   const plan = classifyChargeCancel({
     paidAmount: payment.amount,
     cancelledAmount: payment.cancelled_amount,
     grantedCredits: payment.credits_purchased,
     ledgerRemaining: payment.credits_remaining,
-    walletBalance,
+    unusedPasses: unusedByPayment.get(payment.id) ?? 0,
     status: payment.status,
     bokchaeType: payment.bokchae_type,
     paidAt: payment.created_at,
@@ -326,7 +359,7 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
       success: false,
       requiresLossAcknowledgement: true,
       lossCredits: plan.lossCredits,
-      error: `충전하신 복채 중 ${plan.spentCredits}만냥을 이미 사용하셔서 자동 취소가 어렵습니다.`,
+      error: `구매하신 이용권 중 ${plan.spentCredits}장을 이미 사용하셔서 자동 취소가 어렵습니다.`,
     }
   }
 
@@ -423,8 +456,8 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
     return { success: false, error: outcome.message }
   }
 
-  // 회수는 기존 단일 경로로. 전액 회수 강제(위 주석 참고).
-  const clawback = await clawbackPaymentCredits({
+  // 회수는 단일 경로로. 전량 회수 강제(위 주석 참고).
+  const revoke = await revokePaymentPasses({
     orderId: payment.order_id,
     tossStatus: 'CANCELED',
     totalAmount: outcome.payment.totalAmount ?? payment.amount,
@@ -432,7 +465,7 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
     cancels: outcome.payment.cancels,
   })
 
-  const lossCredits = Math.max(plan.lossCredits, clawback.shortfall)
+  const lossCredits = Math.max(plan.lossCredits, revoke.shortfall)
   const lossAmount =
     plan.grantedCredits > 0 ? Math.floor((plan.grossAmount * lossCredits) / plan.grantedCredits) : plan.lossAmount
 
@@ -440,7 +473,7 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
     .from('payment_cancel_requests')
     .update({
       status: 'SUCCEEDED',
-      clawed_credits: clawback.clawed,
+      clawed_credits: revoke.revoked,
       loss_credits: lossCredits,
       loss_amount: lossAmount,
       processed_at: new Date().toISOString(),
@@ -449,7 +482,7 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
 
   if (lossCredits > 0) {
     // 손실 처리는 회사가 돈을 잃는 사건이다 — Error 를 첫 인자로 넘겨 Sentry 로 올린다.
-    logger.error(new Error('[PaymentCancel] 취소 손실 처리 발생 — 회수하지 못한 복채'), {
+    logger.error(new Error('[PaymentCancel] 취소 손실 처리 발생 — 이미 써서 회수하지 못한 이용권'), {
       userId: user.id,
       requestId,
       lossCredits,
@@ -461,7 +494,7 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
   revalidatePath('/protected/payment/cancel')
   revalidatePath('/protected/store')
 
-  return { success: true, refundAmount: plan.refundAmount, lossCredits, clawedCredits: clawback.clawed }
+  return { success: true, refundAmount: plan.refundAmount, lossCredits, revokedPasses: revoke.revoked }
 }
 
 // ────────────────────────────────────────────────────────────
@@ -472,7 +505,7 @@ interface SubscriptionPlanRow {
   name: string | null
   tier: string | null
   price: number | null
-  talismans_per_period: number | null
+  monthly_passes: number | null
 }
 
 interface SubscriptionRow {
@@ -480,6 +513,8 @@ interface SubscriptionRow {
   status: string
   current_period_start: string | null
   current_period_end: string | null
+  start_date: string | null
+  end_date: string | null
   next_billing_date: string | null
   plan: SubscriptionPlanRow | SubscriptionPlanRow[] | null
 }
@@ -501,7 +536,7 @@ const EMPTY_MEMBERSHIP_OVERVIEW: MembershipCancelOverview = {
   planName: '',
   tier: '',
   price: 0,
-  grantedCredits: 0,
+  monthlyPasses: 0,
   periodStart: null,
   periodEnd: null,
   nextBillingDate: null,
@@ -514,8 +549,7 @@ const EMPTY_MEMBERSHIP_OVERVIEW: MembershipCancelOverview = {
     creditUsageRatio: 0,
     usageRatio: 0,
     refundAmount: 0,
-    keptCredits: 0,
-    consumedCredits: 0,
+    usedPasses: 0,
   },
 }
 
@@ -528,7 +562,7 @@ async function loadActiveSubscription(userId: string): Promise<{
   const { data } = await admin
     .from('subscriptions')
     .select(
-      'id, status, current_period_start, current_period_end, next_billing_date, plan:membership_plans(name, tier, price, talismans_per_period)'
+      'id, status, current_period_start, current_period_end, start_date, end_date, next_billing_date, plan:membership_plans(name, tier, price, monthly_passes)'
     )
     .eq('user_id', userId)
     .eq('status', 'ACTIVE')
@@ -553,6 +587,35 @@ async function loadActiveSubscription(userId: string): Promise<{
   return { subscription, plan, lastPayment: (paymentData as LastSubscriptionPaymentRow | null) ?? null }
 }
 
+/**
+ * 이번 달 창에서 쓴 멤버십 이용권 장 수. 조회에 실패하면 null.
+ *
+ * 창은 사용 경로(lib/services/entitlement)와 같은 규칙(membershipWindow · 같은 앵커)으로 잡는다 —
+ * 다르게 잡으면 subscription_usage 의 다른 행을 읽어 «안 썼다»로 계산된다.
+ */
+async function readWindowUsedPasses(userId: string, subscription: SubscriptionRow): Promise<number | null> {
+  const anchor = subscription.current_period_start ?? subscription.start_date
+  if (!anchor) return 0
+  const end = subscription.current_period_end ?? subscription.end_date
+  const window = membershipWindow(new Date(anchor).getTime(), end ? new Date(end).getTime() : null, Date.now())
+  if (!window) return 0
+
+  const { data, error } = await createAdminClient()
+    .from('subscription_usage')
+    .select('used')
+    .eq('user_id', userId)
+    .eq('period_start', window.startIso)
+    .eq('scope', 'reading')
+    .maybeSingle()
+
+  if (error) {
+    logger.error(new Error('[MembershipCancel] 이번 달 이용권 사용량 조회 실패'), { userId, message: error.message })
+    return null
+  }
+  const used = (data as { used?: number } | null)?.used
+  return typeof used === 'number' && Number.isFinite(used) ? used : 0
+}
+
 /** 해지 화면이 보여줄 잔여기간·환불 예상액. */
 export async function getMembershipCancelOverview(): Promise<MembershipCancelOverview> {
   const supabase = await createClient()
@@ -565,13 +628,13 @@ export async function getMembershipCancelOverview(): Promise<MembershipCancelOve
   if (!loaded) return EMPTY_MEMBERSHIP_OVERVIEW
 
   const { subscription, plan, lastPayment } = loaded
-  const walletBalance = await getWalletBalance(user.id)
+  const usedPasses = await readWindowUsedPasses(user.id, subscription)
   const refund = computeMembershipRefund({
     price: lastPayment?.amount ?? plan.price ?? 0,
     periodStart: subscription.current_period_start,
     periodEnd: subscription.current_period_end,
-    grantedCredits: plan.talismans_per_period ?? 0,
-    walletBalance,
+    monthlyPasses: plan.monthly_passes ?? 0,
+    usedPasses: usedPasses ?? 0,
     alreadyRefunded: lastPayment?.cancelled_amount ?? 0,
   })
 
@@ -580,11 +643,12 @@ export async function getMembershipCancelOverview(): Promise<MembershipCancelOve
     planName: plan.name ?? '멤버십',
     tier: plan.tier ?? '',
     price: lastPayment?.amount ?? plan.price ?? 0,
-    grantedCredits: plan.talismans_per_period ?? 0,
+    monthlyPasses: plan.monthly_passes ?? 0,
     periodStart: subscription.current_period_start,
     periodEnd: subscription.current_period_end,
     nextBillingDate: subscription.next_billing_date,
-    refundable: !!lastPayment?.payment_key,
+    // 사용량을 모르면 환불액을 약속하지 않는다 — 즉시 환불 안내를 닫는다.
+    refundable: !!lastPayment?.payment_key && usedPasses !== null,
     refund,
   }
 }
@@ -592,8 +656,8 @@ export async function getMembershipCancelOverview(): Promise<MembershipCancelOve
 /**
  * 멤버십 해지.
  *
- * 🔴 CEO 결정 — 구독으로 지급된 복채는 **회수하지 않는다.** 이 함수는 지갑을 건드리지 않는다.
- *    (다만 일할 환불액 계산에서 «이미 쓴 복채»는 이용분으로 반영된다 — 회수가 아니라 정산이다.)
+ * 🔴 멤버십은 아무것도 지급하지 않으므로 회수할 것도 없다 — 이 함수는 이용권을 건드리지 않는다.
+ *    (다만 일할 환불액 계산에서 «이번 달 쓴 이용권»은 이용분으로 반영된다 — 회수가 아니라 정산이다.)
  *
  * 다음 결제 중단은 두 겹으로 막는다.
  *   1) `status = 'CANCELLED'` — 빌링 크론이 `status='ACTIVE'` 만 긁는다.
@@ -621,18 +685,21 @@ export async function submitMembershipCancel(input: MembershipCancelSubmission):
 
   const { subscription, plan, lastPayment } = loaded
   const admin = createAdminClient()
-  const walletBalance = await getWalletBalance(user.id)
+  const immediate = input.mode === 'IMMEDIATE_REFUND'
+  const usedPasses = await readWindowUsedPasses(user.id, subscription)
+  if (immediate && usedPasses === null) {
+    return { success: false, error: '이번 달 이용 내역을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.' }
+  }
   const price = lastPayment?.amount ?? plan.price ?? 0
   const refund = computeMembershipRefund({
     price,
     periodStart: subscription.current_period_start,
     periodEnd: subscription.current_period_end,
-    grantedCredits: plan.talismans_per_period ?? 0,
-    walletBalance,
+    monthlyPasses: plan.monthly_passes ?? 0,
+    usedPasses: usedPasses ?? 0,
     alreadyRefunded: lastPayment?.cancelled_amount ?? 0,
   })
 
-  const immediate = input.mode === 'IMMEDIATE_REFUND'
   const refundAmount = immediate ? refund.refundAmount : 0
 
   if (immediate && refundAmount > 0 && !lastPayment?.payment_key) {
@@ -650,8 +717,8 @@ export async function submitMembershipCancel(input: MembershipCancelSubmission):
       reason_code: reason.reasonCode,
       reason_memo: reason.memo || null,
       verdict: immediate ? 'IMMEDIATE_REFUND' : 'PERIOD_END',
-      granted_credits: plan.talismans_per_period ?? 0,
-      recoverable_credits: refund.keptCredits,
+      granted_credits: plan.monthly_passes ?? 0,
+      recoverable_credits: 0,
       gross_amount: price,
       refund_amount: refundAmount,
       status: 'REQUESTED',
@@ -747,5 +814,5 @@ export async function submitMembershipCancel(input: MembershipCancelSubmission):
   revalidatePath('/protected/membership')
   revalidatePath('/protected/membership/cancel')
 
-  return { success: true, refundAmount, lossCredits: 0, clawedCredits: 0 }
+  return { success: true, refundAmount, lossCredits: 0, revokedPasses: 0 }
 }

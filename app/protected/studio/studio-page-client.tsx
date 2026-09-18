@@ -1,10 +1,11 @@
 'use client'
 
-import { User, Compass, Fingerprint, ArrowRight, Coins, Layers } from 'lucide-react'
+import { User, Compass, Fingerprint, ArrowRight, Ticket, Layers } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
-import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { formatFeatureCost } from '@/lib/domain/payment/feature-costs'
+import { passBadgeLabel, type PassSummary } from '@/lib/domain/entitlement/pass'
 import { JourneyCard } from '@/components/analysis/journey-card'
 
 const SERVICES = [
@@ -15,7 +16,7 @@ const SERVICES = [
     eng: 'Palmistry',
     badge: 'Secret 01',
     icon: Fingerprint,
-    cost: FEATURE_COST.palm.display,
+    costKey: 'palm' as const,
     desc: '내 손안에 쥐고 있던 재물과 생명의 지도를 읽어드립니다. 놓치고 있던 타고난 재능을 발견하세요.',
     tags: ['재물운', '생명선', '숨겨진재능'],
     gradient: 'from-bok-sprout/15 to-transparent',
@@ -28,7 +29,7 @@ const SERVICES = [
     eng: 'Physiognomy',
     badge: 'Secret 02',
     icon: User,
-    cost: FEATURE_COST.face.display,
+    costKey: 'face' as const,
     desc: '성공하는 사람들의 얼굴에는 공통점이 있습니다. 당신의 부와 명예를 부르는 징조를 찾아보세요.',
     tags: ['성공운', '인복', '리더십'],
     gradient: 'from-gold-700/25 to-transparent',
@@ -41,7 +42,7 @@ const SERVICES = [
     eng: 'Feng Shui',
     badge: 'Secret 03',
     icon: Compass,
-    cost: FEATURE_COST.fengshui.display,
+    costKey: 'fengshui' as const,
     desc: '머무는 곳이 당신의 기운을 결정합니다. 나쁜 기운은 막고 좋은 기운을 부르는 공간의 비밀.',
     tags: ['가구배치', '양택풍수', '기운전환'],
     gradient: 'from-obangsaek-blue/25 to-transparent',
@@ -54,7 +55,7 @@ const SERVICES = [
     eng: 'Comprehensive · Premium',
     badge: 'Secret 04',
     icon: Layers,
-    cost: FEATURE_COST.samhap.display,
+    costKey: 'samhap' as const,
     desc: '사주·관상·손금·풍수 네 기운을 하나로. 이미 분석한 결과를 종합해 합치점과 시기·개운 처방을 밝힙니다.',
     // 「四柱」→「사주」: 화면에 한자를 쓰지 않는다(CEO 상시 지시 — 한글, 필요시 괄호).
     // 🔴 이 한 줄은 사주·종합 통합 되돌리기의 대상이 **아니다**. 되돌린 것은 기능 통합뿐이다.
@@ -65,10 +66,10 @@ const SERVICES = [
 ]
 
 interface StudioPageClientProps {
-  initialBalance: number
+  passSummary: PassSummary | null
 }
 
-export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
+export function StudioPageClient({ passSummary }: StudioPageClientProps) {
   return (
     <div className="min-h-screen bg-background text-ink-light font-sans relative pb-24 overflow-x-hidden">
       {/* 배경 그라데이션 */}
@@ -111,17 +112,18 @@ export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
             </p>
           </div>
 
-          {/* 복채 잔액 표시 -- server-fetched, no loading state needed */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500/[0.08] border border-gold-500/15 rounded-xl"
-          >
-            <Coins className="w-3.5 h-3.5 text-gold-500" />
-            <span className="text-xs text-white/40 font-sans">보유 복채</span>
-            <span className="text-sm font-bold text-gold-500 font-serif">{initialBalance}만냥</span>
-          </motion.div>
+          {/* 이용권 요약 — 서버에서 읽어 온다(로딩 상태 없음). 주머니를 합친 숫자는 쓰지 않는다. */}
+          {passSummary && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500/[0.08] border border-gold-500/15 rounded-xl"
+            >
+              <Ticket className="w-3.5 h-3.5 text-gold-500" />
+              <span className="text-sm font-bold text-gold-500 font-serif">{passBadgeLabel(passSummary)}</span>
+            </motion.div>
+          )}
         </motion.div>
       </header>
 
@@ -156,8 +158,10 @@ export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
                   <div className="flex items-center gap-2">
                     {/* 비용 뱃지 */}
                     <div className="flex items-center gap-1 bg-gold-500/[0.08] border border-gold-500/15 rounded-full px-2.5 py-1">
-                      <Coins className="w-3 h-3 text-gold-500/70" />
-                      <span className="text-[10px] text-gold-500/70 font-bold">{service.cost}만냥</span>
+                      <Ticket className="w-3 h-3 text-gold-500/70" />
+                      <span className="text-[10px] text-gold-500/70 font-bold">
+                        {formatFeatureCost(service.costKey)}
+                      </span>
                     </div>
                     <ArrowRight className="w-4 h-4 text-white/15 group-hover:text-gold-500 group-hover:translate-x-1 transition-all duration-300" />
                   </div>

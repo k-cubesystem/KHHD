@@ -17,8 +17,11 @@ export interface ShrineEffects {
   luckyHour: boolean
   /** 신당 입장 시 이름 인사 (놋방울) */
   deityGreeting: boolean
-  /** 출석 보상 가산율 % (복 부적) */
-  attendanceBonusPercent: number
+  /**
+   * 복 부적 — 출석 기록 강조(비금전 효과). 2026-09-18 출석 재화 보상이 사라져 «보상 +N%» 는
+   * 더할 대상이 없다. 효험을 다른 혜택으로 바꾸지 않는다 — 기록을 돋보이게 하는 표시일 뿐이다.
+   */
+  attendanceMark: boolean
 }
 
 export const DEFAULT_EFFECTS: ShrineEffects = {
@@ -26,7 +29,7 @@ export const DEFAULT_EFFECTS: ShrineEffects = {
   oracleWeeklyCapBonus: 0,
   luckyHour: false,
   deityGreeting: false,
-  attendanceBonusPercent: 0,
+  attendanceMark: false,
 }
 
 function num(v: unknown, fallback: number): number {
@@ -78,8 +81,10 @@ export async function getShrineEffects(userId: string): Promise<ShrineEffects> {
         case 'deity_greeting':
           effects.deityGreeting = true
           break
+        // 옛 시드는 attendance_bonus(percent) 로 선언돼 있다 — 가산율은 읽지 않고 표시 여부만 본다
         case 'attendance_bonus':
-          effects.attendanceBonusPercent += num(eff.percent, 0)
+        case 'attendance_mark':
+          effects.attendanceMark = true
           break
         // chat_retention 은 purge/notify RPC 가 DB 에서 직접 집계 — 여기선 무시
       }

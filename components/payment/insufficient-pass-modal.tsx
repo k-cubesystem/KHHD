@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Crown, Ticket, X } from 'lucide-react'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { usePassSummary } from '@/hooks/use-passes'
 import { formatPassUnits, passSummaryLines } from '@/lib/domain/entitlement/pass'
@@ -25,6 +25,7 @@ export function InsufficientPassModal({ isOpen, onClose, requiredUnits, featureL
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="bg-[#1a1208] border border-gold-500/30 text-ink-primary max-w-sm p-0 overflow-hidden rounded-2xl">
         <DialogTitle className="sr-only">이용권 부족 안내</DialogTitle>
+        <DialogDescription className="sr-only">이용권을 구매하거나 멤버십으로 이어서 볼 수 있어요.</DialogDescription>
 
         <div className="relative bg-gradient-to-b from-[#2a1f08] to-[#1a1208] px-6 pt-6 pb-4 text-center border-b border-gold-500/20">
           <button

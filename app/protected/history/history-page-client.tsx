@@ -62,7 +62,7 @@ export function HistoryPageClient({ initialRecords, isGuest, lockedCount = 0 }: 
         <div className="text-center space-y-6">
           <BookOpen className="w-16 h-16 text-primary mx-auto" />
           <h1 className="text-2xl font-serif font-bold text-ink-light">회원 전용 기능입니다</h1>
-          <p className="text-ink-light/60">가입하고 운명 분석 기록을 영구 보존하세요</p>
+          <p className="text-ink-light/60">가입하고 운명 분석 기록을 보관하세요</p>
           <Button
             onClick={() => router.push('/auth/login')}
             className="bg-primary hover:bg-primary-dim text-background"

@@ -25,13 +25,13 @@
  *     국면 전환도 setTimeout 체인이 아니라 셔플·뽑기 애니메이션의 animationend 가 몬다.
  *  3) **색은 펼칠 때 처음 드러난다.** 말아둔 깃발 5기는 전부 같은 모양·같은 색이다 —
  *     미리 보이면 "뽑기"가 아니라 "고르기"가 된다.
- *  4) **복채가 걸린 뽑기는 낙관 UI 를 쓰지 않는다.** 무료분은 즉시 펼쳐도 되지만, 값을 무는 회차는
- *     서버가 차감을 확정한 뒤에 펼친다(뽑기 애니메이션 0.55s 가 그 대기를 덮는다).
+ *  4) **이용권이 걸린 뽑기는 낙관 UI 를 쓰지 않는다.** 무료분은 즉시 펼쳐도 되지만, 이용권을 쓰는 회차는
+ *     서버가 사용을 확정한 뒤에 펼친다(뽑기 애니메이션 0.55s 가 그 대기를 덮는다).
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Share2, Loader2, Coins, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
+import { Share2, Loader2, Ticket, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   OBANGKI_COLOR_INFO,
@@ -56,7 +56,10 @@ import {
 } from '@/lib/domain/ritual/obangki-reading'
 import { SAMGI_LAST_INDEX, SamgiRow } from './SamgiRow'
 import { drawObangki, type ObangkiStatus } from '@/app/actions/shrine/rituals'
-import { claimShareReward } from '@/app/actions/payment/bok-points'
+import { formatPassUnits } from '@/lib/domain/entitlement/pass'
+import { useInsufficientPass } from '@/hooks/use-insufficient-pass'
+import { useRefreshPasses } from '@/hooks/use-passes'
+import { InsufficientPassModal } from '@/components/payment/insufficient-pass-modal'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { logger } from '@/lib/utils/logger'
 import type { SoundKey } from '@/lib/domain/shrine/types'
@@ -68,7 +71,8 @@ const DRAW_ERROR_MSG: Record<string, string> = {
   UNAUTHORIZED: '로그인이 필요합니다',
   INVALID_MATTER: '무슨 일로 오셨는지 고르지 못했습니다',
   NEEDS_PAYMENT: '오늘 무료 점괘를 다 쓰셨습니다',
-  INSUFFICIENT_BOKCHAE: '복채가 모자랍니다',
+  NO_PASS: '이용권이 모자랍니다',
+  CHARGE_FAILED: '이용권을 확인하지 못했습니다 — 잠시 후 다시 여쭈어 주세요',
   DRAW_FAILED: '점괘가 기록되지 않았습니다 — 괘는 그대로입니다',
 }
 
@@ -81,6 +85,9 @@ interface DrawOutcome {
 
 /** 신당으로 돌아가는 문 — 실패 화면·괘 화면이 같은 문을 쓴다 */
 const SHRINE_HREF = '/protected/shrine'
+
+/** 이용권이 모자랄 때의 문 — 상점 이용권 탭 */
+const PASS_STORE_HREF = '/protected/store?tab=pass'
 
 interface Props {
   /** 서버가 내려준 오늘 현황. 페이지가 null 을 걸러 준다(비로그인·조회 실패). */
@@ -114,6 +121,8 @@ export function ObangkiRitual({ status, play }: Props) {
   const [sharing, setSharing] = useState(false)
 
   const effectsRef = useRef<EffectsHandle>(null)
+  const { passModal, handleChargeResult, closePassModal } = useInsufficientPass()
+  const refreshPasses = useRefreshPasses()
 
   const remainingFree = Math.max(0, status.freeLimit - todayCount)
   const paidDraw = remainingFree <= 0
@@ -141,7 +150,7 @@ export function ObangkiRitual({ status, play }: Props) {
 
   // ── 뽑기 의뢰 — 셔플 연출과 서버 확정을 동시에 시작한다 (CEO 7차: 사용자가 고르지 않는다) ──
   // 색은 서버가 시드·회차로 확정하고(감사 A3 "시드 역산" 근본 해소) 셔플 ~1.2s 가 응답 대기를
-  // 덮는다. 응답이 늦으면 '기를 펴는 중…'으로 자연히 이어진다. 실패(무료 소진·복채 부족)면
+  // 덮는다. 응답이 늦으면 '기를 펴는 중…'으로 자연히 이어진다. 실패(무료 소진·이용권 부족)면
   // picked 가 서지 않아 뽑힘 연출 없이 실패 카드가 뜬다.
   const startShuffle = useCallback(() => {
     setSeq(todayCount)
@@ -159,6 +168,8 @@ export function ObangkiRitual({ status, play }: Props) {
         // 화면의 괘와 기록된 향방이 갈리지 않는다(7차의 '색만 받아 자리 찾기'를 대신한다).
         if (typeof res.seq === 'number') setSeq(res.seq)
         if (res.success) {
+          // 이용권을 쓴 회차면 머리의 보유 표기가 낡는다 — 서버 요약을 다시 읽힌다
+          if (res.charged) void refreshPasses()
           setOutcome({ success: true })
           return
         }
@@ -168,15 +179,16 @@ export function ObangkiRitual({ status, play }: Props) {
           toast(DRAW_ERROR_MSG.DRAW_FAILED)
           return
         }
+        handleChargeResult(res, { featureLabel: '오방기 점괘' })
         setOutcome({ success: false, error: res.error })
       })
       .catch(() => {
         // 네트워크 단절 — 고착 방지(감사 A2 P2: 실패 경로 부재). 실패 카드로 접는다.
         setOutcome({ success: false, error: 'DRAW_FAILED' })
       })
-  }, [todayCount, matter, paidDraw, play])
+  }, [todayCount, matter, paidDraw, play, handleChargeResult, refreshPasses])
 
-  // ── 공유 — 기존 공유 보상 흐름 재사용(새 지급 경로 없음) ──
+  // ── 공유 — 공유 보상은 없다(2026-09-18 적립 중단). 링크만 건넨다. ──
   const onShare = useCallback(async () => {
     setSharing(true)
     // 질문도 선택지도 문장에 담지 않는다 — 공유물에 남는 것은 깃발 색과 괘뿐이다
@@ -190,8 +202,6 @@ export function ObangkiRitual({ status, play }: Props) {
         toast.success('링크를 복사했습니다')
       }
       trackEvent({ action: 'share_copy_link', category: 'social', label: 'obangki' })
-      // 보상 금액·수령 자격은 전부 서버가 정한다(하루 1회). 실패해도 공유 UX 는 그대로.
-      claimShareReward().catch(() => {})
     } catch (e) {
       // 사용자가 공유 시트를 닫은 경우도 여기로 온다 — 실패로 알리지 않는다
       logger.warn('[obangki] 공유 취소/실패:', e)
@@ -276,12 +286,12 @@ export function ObangkiRitual({ status, play }: Props) {
                 {DRAW_ERROR_MSG[outcome?.error ?? ''] ?? '점괘를 여쭙지 못했습니다'}
               </p>
               <div className="flex gap-2">
-                {outcome?.error === 'INSUFFICIENT_BOKCHAE' ? (
+                {outcome?.error === 'NO_PASS' ? (
                   <Link
-                    href="/protected/store?tab=bokchae"
+                    href={PASS_STORE_HREF}
                     className="flex-1 rounded-lg border border-gold-500/35 bg-gold-500/[0.08] py-2.5 text-center font-serif text-[12px] font-bold text-gold-300"
                   >
-                    복채 채우기
+                    이용권 보기
                   </Link>
                 ) : (
                   // 무료 소진(NEEDS_PAYMENT)은 여기서 바로 결제하지 않고 작성 화면으로 돌린다 —
@@ -309,6 +319,8 @@ export function ObangkiRitual({ status, play }: Props) {
       <p className="mt-5 text-center font-sans text-[9.5px] leading-relaxed text-ink-primary/30">
         {OBANGKI_DISCLAIMER}
       </p>
+
+      <InsufficientPassModal {...passModal} onClose={closePassModal} />
     </div>
   )
 }
@@ -395,19 +407,19 @@ function ComposeStep({
         <p className="mt-2 font-sans text-[10px] text-gold-500/60">🔒 {OBANGKI_PRIVACY_NOTICE}</p>
       </div>
 
-      {/* ④ 복채를 올리고 청한다 — 무료분도 정성이라 같은 말로 연다 */}
+      {/* ④ 이용권을 올리고 청한다 — 무료분도 정성이라 같은 말로 연다 */}
       <button
         type="button"
         onClick={onStart}
         // 주 CTA — 의식을 성립시키는 버튼은 도장 반경 3px + 도장 그림자 (DESIGN.md "buttons 3px")
         className="flex w-full items-center justify-center gap-1.5 rounded-[3px] border border-gold-500/50 bg-gold-500/15 py-3 font-serif text-[13px] font-bold text-gold-200 shadow-dojang"
       >
-        {paidDraw && <Coins className="h-3.5 w-3.5" />}
-        {paidDraw ? `복채 ${cost}만냥을 올리고 청하기` : '상 앞에 나아가 청하기'}
+        {paidDraw && <Ticket className="h-3.5 w-3.5" />}
+        {paidDraw ? `${formatPassUnits(cost)}을 올리고 청하기` : '상 앞에 나아가 청하기'}
       </button>
       {paidDraw && (
         <p className="-mt-2 text-center font-sans text-[10px] text-ink-primary/40">
-          오늘 무료 점괘를 다 쓰셨습니다 · 이후 한 번에 {cost}만냥
+          오늘 무료 점괘를 다 쓰셨습니다 · 이후 한 번에 {formatPassUnits(cost)}
         </p>
       )}
     </div>
@@ -718,7 +730,9 @@ function SamgiScroll({
       )}
 
       <p className="text-center font-sans text-[10.5px] text-ink-primary/40">
-        {remainingFree > 0 ? `오늘 무료 점괘 ${remainingFree}회 남았습니다` : `다음 점괘부터는 복채 ${cost}만냥입니다`}
+        {remainingFree > 0
+          ? `오늘 무료 점괘 ${remainingFree}회 남았습니다`
+          : `다음 점괘부터는 한 번에 ${formatPassUnits(cost)}입니다`}
       </p>
 
       <div className="flex gap-2">

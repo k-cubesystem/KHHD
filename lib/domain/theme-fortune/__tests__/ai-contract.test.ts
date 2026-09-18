@@ -171,7 +171,7 @@ describe('서술 파싱', () => {
     expect(narration.pastEcho).toBe('')
   })
 
-  it('해석 불가·빈 결과는 던진다 — 액션이 그 신호로 복채를 돌려준다', () => {
+  it('해석 불가·빈 결과는 던진다 — 액션이 그 신호로 쓴 이용권을 돌려준다', () => {
     expect(() => parseThemeNarration('죄송합니다. 답변할 수 없습니다.', VERDICT)).toThrow()
     expect(() => parseThemeNarration('{ 이건 JSON 이 아니다 }', VERDICT)).toThrow()
     expect(() => parseThemeNarration(narrationJson({ headline: '' }), VERDICT)).toThrow()

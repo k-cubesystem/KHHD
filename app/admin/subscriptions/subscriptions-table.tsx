@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AdminSubscription, updateSubscriptionStatus, grantTalismans } from './actions'
+import { AdminSubscription, updateSubscriptionStatus, grantPassesToSubscriber } from './actions'
+import { PASS_VALID_DAYS } from '@/lib/domain/entitlement/pass'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -78,8 +79,11 @@ export function SubscriptionsTable({
   const router = useRouter()
   const [isGrantDialogOpen, setIsGrantDialogOpen] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
-  const [grantAmount, setGrantAmount] = useState('10')
+  const [grantAmount, setGrantAmount] = useState('1')
+  const [grantValidDays, setGrantValidDays] = useState(String(PASS_VALID_DAYS))
   const [grantReason, setGrantReason] = useState('')
+  const [grantKey, setGrantKey] = useState('')
+  const [granting, setGranting] = useState(false)
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-'
@@ -104,29 +108,39 @@ export function SubscriptionsTable({
     }
   }
 
-  const handleGrantTalismans = async () => {
+  const handleGrantPasses = async () => {
     if (!selectedUserId) return
 
-    const amount = parseInt(grantAmount)
-    if (isNaN(amount) || amount <= 0) {
-      toast.error('유효한 수량을 입력하세요.')
+    const quantity = parseInt(grantAmount)
+    if (isNaN(quantity) || quantity <= 0) {
+      toast.error('발급할 장수를 입력하세요.')
       return
     }
 
-    const result = await grantTalismans(selectedUserId, amount, grantReason || '관리자 수동 지급')
+    setGranting(true)
+    const result = await grantPassesToSubscriber(
+      selectedUserId,
+      quantity,
+      grantReason || '관리자 수동 발급',
+      parseInt(grantValidDays),
+      grantKey
+    )
+    setGranting(false)
     if (result.success) {
-      toast.success(`복채 ${amount}만냥을 지급했습니다.`)
+      toast.success(`이용권 ${quantity}장을 발급했어요.`)
       setIsGrantDialogOpen(false)
       setSelectedUserId(null)
-      setGrantAmount('10')
+      setGrantAmount('1')
+      setGrantValidDays(String(PASS_VALID_DAYS))
       setGrantReason('')
     } else {
-      toast.error(result.error || '복채 지급에 실패했습니다.')
+      toast.error(result.error || '이용권 발급에 실패했어요.')
     }
   }
 
   const openGrantDialog = (userId: string) => {
     setSelectedUserId(userId)
+    setGrantKey(crypto.randomUUID())
     setIsGrantDialogOpen(true)
   }
 
@@ -209,7 +223,7 @@ export function SubscriptionsTable({
                             className="text-xs hover:bg-surface cursor-pointer"
                           >
                             <Gift className="w-3.5 h-3.5 mr-2 text-gold-400" />
-                            복채 지급
+                            이용권 발급
                           </DropdownMenuItem>
                           {sub.status === 'ACTIVE' && (
                             <DropdownMenuItem
@@ -244,6 +258,9 @@ export function SubscriptionsTable({
                     <div>
                       <p className="text-[9px] text-ink-primary/30 mb-0.5">플랜</p>
                       <p className="text-xs text-ink-primary/70 font-medium truncate">{sub.plan?.name || '-'}</p>
+                      {sub.plan && (
+                        <p className="text-[9px] text-ink-primary/40 mt-0.5">월 이용권 {sub.plan.monthly_passes}장</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-[9px] text-ink-primary/30 mb-0.5">구독 시작</p>
@@ -294,19 +311,19 @@ export function SubscriptionsTable({
         </div>
       )}
 
-      {/* Grant Talismans Dialog */}
+      {/* 이용권 수동 발급 */}
       <Dialog open={isGrantDialogOpen} onOpenChange={setIsGrantDialogOpen}>
         <DialogContent className="bg-surface border-white/[0.08] text-ink-primary max-w-sm mx-auto">
           <DialogHeader>
-            <DialogTitle className="font-serif text-ink-primary">복채 수동 지급</DialogTitle>
+            <DialogTitle className="font-serif text-ink-primary">이용권 수동 발급</DialogTitle>
             <DialogDescription className="text-ink-primary/40 text-xs">
-              선택한 회원의 지갑에 복채를 넣는다. 감사 로그에 남는다.
+              선택한 회원에게 이용권을 발급한다. 멤버십 월 몫과 따로 쌓이고, 감사 로그에 남는다.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label htmlFor="amount" className="text-xs text-ink-primary/70 font-medium">
-                지급 복채 (만냥)
+                발급 장수
               </Label>
               <Input
                 id="amount"
@@ -319,8 +336,22 @@ export function SubscriptionsTable({
               />
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="valid-days" className="text-xs text-ink-primary/70 font-medium">
+                유효기간 (발급일로부터, 일)
+              </Label>
+              <Input
+                id="valid-days"
+                type="number"
+                min="1"
+                max="365"
+                value={grantValidDays}
+                onChange={(e) => setGrantValidDays(e.target.value)}
+                className="h-9 bg-surface/50 border-white/[0.12] text-ink-primary/85 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="reason" className="text-xs text-ink-primary/70 font-medium">
-                지급 사유 (선택)
+                발급 사유 (선택)
               </Label>
               <Input
                 id="reason"
@@ -340,10 +371,11 @@ export function SubscriptionsTable({
               취소
             </Button>
             <Button
-              onClick={handleGrantTalismans}
+              onClick={handleGrantPasses}
+              disabled={granting}
               className="h-9 text-xs bg-gradient-to-r from-gold-500 to-gold-600 text-ink-950 hover:from-gold-400 hover:to-gold-500 shadow-lg shadow-gold-500/20"
             >
-              지급하기
+              발급하기
             </Button>
           </DialogFooter>
         </DialogContent>

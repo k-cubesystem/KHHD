@@ -92,8 +92,8 @@ export function MembershipCancelForm({ overview }: { overview: MembershipCancelO
                 남은 기간까지 이용하고 해지 (권장)
               </p>
               <p className="text-xs font-light text-ink-light/60 leading-relaxed">
-                {day(overview.periodEnd)}까지 멤버십 혜택을 그대로 누리시고, 다음 결제부터 청구되지 않습니다. 환불은
-                없습니다.
+                {day(overview.periodEnd)}까지 멤버십 혜택을 그대로 누리시고, 다음 결제부터 청구되지 않습니다. 이번 달
+                이용권은 해지 후에도 기간 끝까지 쓸 수 있어요. 환불은 없습니다.
               </p>
             </div>
           </div>
@@ -121,7 +121,7 @@ export function MembershipCancelForm({ overview }: { overview: MembershipCancelO
               </p>
               <p className="text-xs font-light text-ink-light/60 leading-relaxed">
                 이용약관 제7조 제3항에 따라 이용하신 일수를 뺀 잔여 금액을 일할 계산해 환불합니다. 위약금은 받지
-                않습니다.
+                않습니다. 이번 달 멤버십 이용권도 바로 쓸 수 없게 됩니다.
               </p>
             </div>
           </div>
@@ -137,7 +137,7 @@ export function MembershipCancelForm({ overview }: { overview: MembershipCancelO
           <div className="flex justify-between text-ink-light/60">
             <span>
               이용분 공제 ({Math.round(refund.usageRatio * 100)}%)
-              {refund.creditUsageRatio > refund.dayUsageRatio ? ' · 복채 사용분 기준' : ' · 이용 일수 기준'}
+              {refund.creditUsageRatio > refund.dayUsageRatio ? ' · 이번 달 이용권 사용분 기준' : ' · 이용 일수 기준'}
             </span>
             <span className="tabular-nums">− {won(overview.price - refund.refundAmount)}</span>
           </div>
@@ -146,8 +146,8 @@ export function MembershipCancelForm({ overview }: { overview: MembershipCancelO
             <span className="tabular-nums">{won(refund.refundAmount)}</span>
           </div>
           <p className="text-[11px] text-ink-light/45 leading-relaxed pt-1">
-            이미 받으신 복채 {overview.grantedCredits}만냥은 회수하지 않습니다. 다만 이번 주기에 복채를 많이 쓰셨다면
-            그만큼 이용하신 것으로 보아 환불액에서 반영됩니다.
+            이번 주기에 멤버십 이용권을 날짜보다 많이 쓰셨다면 그만큼 이용하신 것으로 보아 환불액에 반영됩니다. 따로
+            구매하신 이용권은 그대로 남습니다.
           </p>
           {refundBlocked && (
             <p className="text-[11px] text-red-light leading-relaxed pt-1">

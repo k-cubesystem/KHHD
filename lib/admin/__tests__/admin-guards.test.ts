@@ -9,7 +9,7 @@
  * `updateNotificationSetting`, `app/admin/payments/actions.ts` 의 결제 내역 조회가
  * **권한 검사 0건**으로 열려 있었다.
  *
- * **② 흔적 없는 조작.** 복채 지급·가격 편집·알림 발송이 감사에 안 남았다
+ * **② 흔적 없는 조작.** 재화 지급·가격 편집·알림 발송이 감사에 안 남았다
  * (`admin_audit_log` 실 0행 / `logAdminAction` 은 회원 관리 4곳뿐).
  * 「누가 언제 무엇을 바꿨나」가 없으면 사고 뒤 되돌릴 근거가 없다.
  *
@@ -67,6 +67,20 @@ describe('🔴 어드민 서버액션은 반드시 권한 관문을 지난다', 
     expect(action).toContain("action: 'service_toggle'")
   })
 
+  it('🔴 Gemini 원가·호출 기록·RPM 변경 액션은 관리자만 부른다', () => {
+    const source = read('app/actions/admin/gemini-usage.ts')
+    const bodies = source
+      .split(/(?=export async function )/)
+      .filter((chunk) => chunk.startsWith('export async function'))
+    const unguarded = bodies
+      .filter((body) => !body.startsWith('export async function getUsdKrwRate('))
+      .filter((body) => !/^[\s\S]{0,700}?(isAdmin|requireAdmin)\(\)/.test(body))
+      .map((body) => body.slice(0, body.indexOf('(')))
+
+    expect(bodies.length).toBeGreaterThanOrEqual(9)
+    expect(unguarded).toEqual([])
+  })
+
   it('🔴 대량 발송 액션은 requireAdmin 으로 막혀 있다', () => {
     const source = read('app/admin/notifications/actions.ts')
 
@@ -78,13 +92,12 @@ describe('🔴 어드민 서버액션은 반드시 권한 관문을 지난다', 
 
 describe('🔴 돈·가격·발신 조작은 감사에 남는다', () => {
   const MUST_AUDIT: Array<{ file: string; action: string }> = [
-    { file: 'app/admin/subscriptions/actions.ts', action: 'talisman_grant' },
+    { file: 'lib/admin/pass-adjust.ts', action: 'pass_adjust' },
     { file: 'app/admin/subscriptions/actions.ts', action: 'subscription_status_change' },
     { file: 'app/admin/membership/plans/actions.ts', action: 'plan_update' },
     { file: 'app/admin/membership/plans/actions.ts', action: 'plan_toggle' },
     { file: 'app/admin/membership/plans/actions.ts', action: 'product_update' },
     { file: 'app/admin/notifications/actions.ts', action: 'notification_setting_change' },
-    { file: 'app/admin/users/actions.ts', action: 'balance_adjust' },
     { file: 'app/admin/users/actions.ts', action: 'role_change' },
     { file: 'app/admin/users/actions.ts', action: 'user_delete' },
     { file: 'app/admin/service-control/actions.ts', action: 'service_toggle' },
@@ -95,6 +108,50 @@ describe('🔴 돈·가격·발신 조작은 감사에 남는다', () => {
 
     expect(`${file}/logAdminAction: ${source.includes('logAdminAction')}`).toBe(`${file}/logAdminAction: true`)
     expect(`${file}/${action}: ${source.includes(`action: '${action}'`)}`).toBe(`${file}/${action}: true`)
+  })
+})
+
+describe('🔴 이용권 발급·회수는 관문 뒤 한 길로만', () => {
+  it.each([
+    { file: 'app/admin/users/actions.ts', fn: 'adjustUserPasses' },
+    { file: 'app/admin/subscriptions/actions.ts', fn: 'grantPassesToSubscriber' },
+  ])('$file 의 $fn 은 requireAdmin 을 지난 뒤에 조정한다', ({ file, fn }) => {
+    const source = read(file)
+
+    expect(source).toMatch(
+      new RegExp(`export async function ${fn}\\([\\s\\S]{0,400}requireAdmin\\(\\)[\\s\\S]{0,600}adjustPassesAsAdmin\\(`)
+    )
+  })
+
+  it('조정 함수는 공개 엔드포인트가 아니다 (server-only · use server 아님)', () => {
+    const source = read('lib/admin/pass-adjust.ts')
+
+    expect(source.startsWith("import 'server-only'")).toBe(true)
+    expect(source).not.toMatch(/^['"]use server['"]/m)
+    expect(source).toContain("rpc('ent_admin_adjust'")
+  })
+
+  it('🔴 관리자 발급은 요청 멱등키를 건다 (두 번 눌러도 한 번만)', () => {
+    const source = read('lib/admin/pass-adjust.ts')
+
+    expect(source).toMatch(/grantPasses\(\{[\s\S]{0,200}idempotencyKey: `ADMIN:\$\{userId\}:\$\{requestKey\}`/)
+    expect(source).toContain('REQUEST_KEY_PATTERN.test(requestKey)')
+  })
+
+  it('🔴 관리자 멤버십 부여는 upsert(onConflict: user_id) 를 쓰지 않는다 — 유니크가 없어 매번 실패했다', () => {
+    const source = read('app/admin/users/actions.ts')
+
+    expect(source).not.toMatch(/from\('subscriptions'\)\s*\.upsert\(/)
+    expect(source).toMatch(/export async function updateUserSubscription\([\s\S]{0,400}requireAdmin\(\)/)
+    expect(source).toContain('customer_key: `admin-${targetUserId}`')
+  })
+
+  it.each(adminActionFiles())('%s 가 폐지된 복채 쓰기 경로나 발급 함수를 직접 쓰지 않는다', (file) => {
+    const source = read(file)
+
+    expect(source).not.toMatch(/rpc\('(add|deduct)_wallet_balance'/)
+    expect(source).not.toMatch(/from\('wallets'\)\s*\.(update|insert|upsert)\(/)
+    expect(source).not.toMatch(/\bgrantPasses\b|\bent_grant\b/)
   })
 })
 
@@ -110,6 +167,12 @@ describe('🔴 감사 라벨은 단일 출처를 쓴다', () => {
 
   it('모르는 액션도 영문 코드를 그대로 노출하지 않는다', () => {
     expect(describeAuditAction('something_new').label).toBe('기타 조작')
+  })
+
+  it('폐지된 복채 조작의 옛 기록도 라벨이 남아 있다 (기타 조작으로 뭉개지지 않게)', () => {
+    expect(describeAuditAction('balance_adjust').label).not.toBe('기타 조작')
+    expect(describeAuditAction('talisman_grant').label).not.toBe('기타 조작')
+    expect(describeAuditAction('pass_adjust').label).toBe('이용권 조정')
   })
 
   it('감사 화면이 라벨 표를 다시 만들지 않는다', () => {

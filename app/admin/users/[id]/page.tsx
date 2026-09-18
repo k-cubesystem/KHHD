@@ -1,6 +1,7 @@
 import { getUserDetails } from '../actions'
 import { UserDetailClient } from './user-detail-client'
 import { notFound } from 'next/navigation'
+import { EMPTY_PASS_SUMMARY } from '@/lib/domain/entitlement/pass'
 
 export default async function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -13,8 +14,17 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
     notFound()
   }
 
-  const { profile, sajuRecords, familyMembers, payments, wallet, subscription, transactions, shrines, authCreatedAt } =
-    result
+  const {
+    profile,
+    sajuRecords,
+    familyMembers,
+    payments,
+    subscription,
+    passSummary,
+    passLedger,
+    shrines,
+    authCreatedAt,
+  } = result
 
   return (
     <UserDetailClient
@@ -22,9 +32,9 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
       sajuRecords={sajuRecords || []}
       familyMembers={familyMembers || []}
       payments={payments || []}
-      wallet={wallet}
       subscription={subscription}
-      transactions={transactions || []}
+      passSummary={passSummary ?? EMPTY_PASS_SUMMARY}
+      passLedger={passLedger || []}
       shrines={shrines || []}
       authCreatedAt={authCreatedAt}
     />

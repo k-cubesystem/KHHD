@@ -2,18 +2,19 @@
  * 결제 취소 셀프서비스 서버 액션의 «공개 엔드포인트» 계약.
  *
  * 못 박는 것:
- *  1. 인가 — 결제 조회에 반드시 `user_id = 본인` 이 걸린다(남의 결제 취소 차단).
+ *  1. 인가 — 결제·발급 이용권 조회에 반드시 `user_id = 본인` 이 걸린다(남의 결제 취소 차단).
  *  2. rate limit 이 토스 호출보다 먼저 끊는다.
  *  3. (b) 갈래는 손실 처리 동의 없이는 토스를 부르지 않는다.
- *  4. 회수는 `clawbackPaymentCredits` 단일 경로 + **전액 회수 강제**(수수료 때문에 복채가 남으면 안 된다).
- *  5. 멤버십 해지는 지갑을 건드리지 않고, 다음 결제를 두 겹으로 끊는다.
+ *  4. 회수는 `revokePaymentPasses` 단일 경로 + **전량 회수 강제**(수수료 때문에 이용권이 남으면 안 된다).
+ *  5. 멤버십 해지는 이용권을 건드리지 않고, 다음 결제를 두 겹으로 끊는다.
+ *     일할 환불의 이용 비율은 이번 달 창의 사용 장 수(subscription_usage)로 잰다.
  *  6. 손실 처리 상한 — 접수는 `open_charge_cancel_request` RPC 단일 경로(잠금 아래 판정),
  *     손실 0 취소는 상한과 무관, 마스터는 면제.
  */
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { rateLimit } from '@/lib/utils/rate-limit'
-import { clawbackPaymentCredits } from '@/lib/services/wallet-grant'
+import { revokePaymentPasses } from '@/lib/services/pass-revoke'
 import { requestTossCancel } from '@/lib/domain/payment/toss-cancel'
 
 jest.mock('@/lib/supabase/server', () => ({ createClient: jest.fn() }))
@@ -23,7 +24,7 @@ jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
 jest.mock('@/lib/utils/logger', () => ({
   logger: { log: jest.fn(), warn: jest.fn(), error: jest.fn(), info: jest.fn(), debug: jest.fn() },
 }))
-jest.mock('@/lib/services/wallet-grant', () => ({ clawbackPaymentCredits: jest.fn() }))
+jest.mock('@/lib/services/pass-revoke', () => ({ revokePaymentPasses: jest.fn() }))
 jest.mock('@/lib/domain/payment/toss-cancel', () => ({ requestTossCancel: jest.fn() }))
 
 import { getChargeCancelOverview, submitChargeCancel, submitMembershipCancel } from '../cancel-request'
@@ -32,7 +33,7 @@ import { SUPPORT_LABEL } from '@/lib/domain/support/contact'
 const mockCreateClient = createClient as jest.MockedFunction<typeof createClient>
 const mockCreateAdmin = createAdminClient as jest.MockedFunction<typeof createAdminClient>
 const mockRateLimit = rateLimit as jest.MockedFunction<typeof rateLimit>
-const mockClawback = clawbackPaymentCredits as jest.MockedFunction<typeof clawbackPaymentCredits>
+const mockRevoke = revokePaymentPasses as jest.MockedFunction<typeof revokePaymentPasses>
 const mockTossCancel = requestTossCancel as jest.MockedFunction<typeof requestTossCancel>
 
 const DAY = 86_400_000
@@ -123,23 +124,32 @@ function allowRate() {
   mockRateLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: Date.now() + 60_000 })
 }
 
+/** 이용권 10장(39,800원) 구매 결제. */
 const PAYMENT = {
   id: 'pay-1',
-  order_id: 'order-1',
+  order_id: 'PASS_order-1',
   payment_key: 'pk_live_1',
-  amount: 10_000,
+  amount: 39_800,
   cancelled_amount: 0,
-  credits_purchased: 20,
-  credits_remaining: 20,
+  credits_purchased: 10,
+  credits_remaining: 10,
   status: 'completed',
-  bokchae_type: 'charge',
+  bokchae_type: 'pass',
   created_at: new Date(Date.now() - DAY).toISOString(),
+}
+
+/** 그 결제로 발급된 이용권 행 — 쓰지 않은 장 수를 정한다. */
+function grantRow(unused: number) {
+  return { payment_id: 'pay-1', quantity: 10, consumed: 10 - unused, revoked: 0 }
 }
 
 function chargeAdmin(
   options: {
     payment?: unknown
-    balance?: number
+    /** 그 결제로 발급된 이용권 중 쓰지 않은 장 수 */
+    unused?: number
+    /** 발급 이용권 조회 오류 */
+    grantsError?: { message: string }
     /** 이동창 안의 손실 처리 이력 — 상한 사전 판정이 읽는다 */
     lossHistory?: unknown[]
     /** open_charge_cancel_request 응답 대역 */
@@ -149,7 +159,11 @@ function chargeAdmin(
   return makeAdmin(
     {
       payments: [{ data: options.payment === undefined ? PAYMENT : options.payment, error: null }],
-      wallets: [{ data: { balance: options.balance ?? 20 }, error: null }],
+      entitlement_grants: [
+        options.grantsError
+          ? { data: null, error: options.grantsError }
+          : { data: [grantRow(options.unused ?? 10)], error: null },
+      ],
       payment_cancel_requests: [
         // 1) 상한 사용량 조회(손실 취소일 때만) 2) 이후 결과 갱신(update)
         { data: options.lossHistory ?? [], error: null },
@@ -170,9 +184,9 @@ function tossOk() {
     ok: true,
     payment: {
       status: 'CANCELED',
-      totalAmount: 10_000,
+      totalAmount: 39_800,
       balanceAmount: 0,
-      cancels: [{ cancelAmount: 10_000, cancelStatus: 'DONE', transactionKey: 'tk-1' }],
+      cancels: [{ cancelAmount: 39_800, cancelStatus: 'DONE', transactionKey: 'tk-1' }],
     },
   })
 }
@@ -181,7 +195,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   allowRate()
   authAs('user-1')
-  mockClawback.mockResolvedValue({ applied: true, reason: 'OK', clawed: 20, shortfall: 0, userId: 'user-1' })
+  mockRevoke.mockResolvedValue({ applied: true, reason: 'OK', revoked: 10, shortfall: 0, userId: 'user-1' })
   tossOk()
 })
 
@@ -206,6 +220,21 @@ describe('submitChargeCancel — 인가·한도', () => {
       expect.arrayContaining([
         expect.objectContaining({ args: ['id', 'pay-1'] }),
         expect.objectContaining({ args: ['user_id', 'user-1'] }),
+      ])
+    )
+  })
+
+  it('발급 이용권 조회에도 본인 user_id 와 그 결제 id 를 건다', async () => {
+    const admin = chargeAdmin()
+    mockCreateAdmin.mockReturnValue(admin.client)
+
+    await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE' })
+
+    const grantFilters = admin.calls.filter((call) => call.table === 'entitlement_grants')
+    expect(grantFilters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ method: 'eq', args: ['user_id', 'user-1'] }),
+        expect.objectContaining({ method: 'in', args: ['payment_id', ['pay-1']] }),
       ])
     )
   })
@@ -242,38 +271,49 @@ describe('submitChargeCancel — 인가·한도', () => {
     expect(result).toEqual({ success: false, error: '취소 사유를 선택해주세요.' })
     expect(mockTossCancel).not.toHaveBeenCalled()
   })
-})
 
-describe('submitChargeCancel — 세 갈래 분기', () => {
-  it('(a) 전액 남아 있으면 바로 취소하고 전액 환불한다', async () => {
-    mockCreateAdmin.mockReturnValue(chargeAdmin({ balance: 50 }).client)
+  it('🔴 발급 이용권을 확인하지 못하면 판정을 추측하지 않고 접수하지 않는다', async () => {
+    const admin = chargeAdmin({ grantsError: { message: 'timeout' } })
+    mockCreateAdmin.mockReturnValue(admin.client)
 
     const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE' })
 
-    expect(result).toMatchObject({ success: true, refundAmount: 10_000, lossCredits: 0, clawedCredits: 20 })
+    expect(result.success).toBe(false)
+    expect(mockTossCancel).not.toHaveBeenCalled()
+    expect(admin.rpc).not.toHaveBeenCalled()
+  })
+})
+
+describe('submitChargeCancel — 세 갈래 분기', () => {
+  it('(a) 한 장도 안 썼으면 바로 취소하고 전액 환불한다', async () => {
+    mockCreateAdmin.mockReturnValue(chargeAdmin({ unused: 10 }).client)
+
+    const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE' })
+
+    expect(result).toMatchObject({ success: true, refundAmount: 39_800, lossCredits: 0, revokedPasses: 10 })
     expect(mockTossCancel).toHaveBeenCalledWith(
-      expect.objectContaining({ paymentKey: 'pk_live_1', cancelAmount: 10_000 })
+      expect.objectContaining({ paymentKey: 'pk_live_1', cancelAmount: 39_800 })
     )
   })
 
-  it('(b) 소진분이 있으면 손실 처리 동의 전에는 토스를 부르지 않는다', async () => {
-    mockCreateAdmin.mockReturnValue(chargeAdmin({ balance: 8 }).client)
+  it('(b) 쓴 장이 있으면 손실 처리 동의 전에는 토스를 부르지 않는다', async () => {
+    mockCreateAdmin.mockReturnValue(chargeAdmin({ unused: 4 }).client)
 
     const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'PRICE' })
 
     expect(result.success).toBe(false)
     expect(result.requiresLossAcknowledgement).toBe(true)
-    expect(result.error).toContain('12만냥')
+    expect(result.error).toContain('이용권 중 6장을 이미 사용')
     expect(mockTossCancel).not.toHaveBeenCalled()
   })
 
   it('(b) 손실 처리에 동의하면 진행하고 부족분을 기록한다', async () => {
-    mockClawback.mockResolvedValue({ applied: true, reason: 'OK', clawed: 8, shortfall: 12, userId: 'user-1' })
-    mockCreateAdmin.mockReturnValue(chargeAdmin({ balance: 8 }).client)
+    mockRevoke.mockResolvedValue({ applied: true, reason: 'OK', revoked: 4, shortfall: 6, userId: 'user-1' })
+    mockCreateAdmin.mockReturnValue(chargeAdmin({ unused: 4 }).client)
 
     const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'PRICE', acceptLoss: true })
 
-    expect(result).toMatchObject({ success: true, refundAmount: 10_000, lossCredits: 12, clawedCredits: 8 })
+    expect(result).toMatchObject({ success: true, refundAmount: 39_800, lossCredits: 6, revokedPasses: 4 })
   })
 
   it('(c) 이미 취소된 결제는 접수 자체를 막는다', async () => {
@@ -284,22 +324,31 @@ describe('submitChargeCancel — 세 갈래 분기', () => {
     expect(result).toEqual({ success: false, error: '이미 취소된 결제입니다.' })
     expect(mockTossCancel).not.toHaveBeenCalled()
   })
+
+  it('(c) 옛 복채 충전 결제는 셀프 취소 대상이 아니다', async () => {
+    mockCreateAdmin.mockReturnValue(chargeAdmin({ payment: { ...PAYMENT, bokchae_type: 'charge' } }).client)
+
+    const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE' })
+
+    expect(result).toEqual({ success: false, error: '이용권 구매 결제만 취소할 수 있습니다.' })
+    expect(mockTossCancel).not.toHaveBeenCalled()
+  })
 })
 
 describe('submitChargeCancel — 회수 경로', () => {
-  it('수수료로 부분 취소가 되더라도 복채는 전량 회수시킨다', async () => {
+  it('수수료로 부분 취소가 되더라도 이용권은 전량 회수시킨다', async () => {
     const admin = chargeAdmin({ payment: { ...PAYMENT, created_at: new Date(Date.now() - 30 * DAY).toISOString() } })
     mockCreateAdmin.mockReturnValue(admin.client)
 
     const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE' })
 
-    // 30일 경과 → 10% 수수료 → 토스에는 9,000원 부분 취소
-    expect(mockTossCancel).toHaveBeenCalledWith(expect.objectContaining({ cancelAmount: 9_000 }))
-    expect(result.refundAmount).toBe(9_000)
+    // 30일 경과 → 10% 수수료 → 토스에는 35,820원 부분 취소
+    expect(mockTossCancel).toHaveBeenCalledWith(expect.objectContaining({ cancelAmount: 35_820 }))
+    expect(result.refundAmount).toBe(35_820)
 
-    // 그러나 회수는 전액 취소 취급 — 10% 어치 복채가 지갑에 남으면 안 된다.
-    expect(mockClawback).toHaveBeenCalledWith(
-      expect.objectContaining({ orderId: 'order-1', tossStatus: 'CANCELED', balanceAmount: 0 })
+    // 그러나 회수는 전액 취소 취급 — 10% 어치 이용권이 남으면 안 된다.
+    expect(mockRevoke).toHaveBeenCalledWith(
+      expect.objectContaining({ orderId: 'PASS_order-1', tossStatus: 'CANCELED', balanceAmount: 0 })
     )
   })
 
@@ -308,14 +357,14 @@ describe('submitChargeCancel — 회수 경로', () => {
 
     await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE' })
 
-    expect(mockClawback).toHaveBeenCalledWith(
+    expect(mockRevoke).toHaveBeenCalledWith(
       expect.objectContaining({
-        cancels: [{ cancelAmount: 10_000, cancelStatus: 'DONE', transactionKey: 'tk-1' }],
+        cancels: [{ cancelAmount: 39_800, cancelStatus: 'DONE', transactionKey: 'tk-1' }],
       })
     )
   })
 
-  it('토스 취소가 실패하면 복채를 회수하지 않는다', async () => {
+  it('토스 취소가 실패하면 이용권을 회수하지 않는다', async () => {
     mockTossCancel.mockResolvedValue({
       ok: false,
       code: 'ALREADY_CANCELED_PAYMENT',
@@ -328,19 +377,20 @@ describe('submitChargeCancel — 회수 경로', () => {
     const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE' })
 
     expect(result).toEqual({ success: false, error: '이미 취소된 결제입니다.' })
-    expect(mockClawback).not.toHaveBeenCalled()
+    expect(mockRevoke).not.toHaveBeenCalled()
   })
 
-  it('지갑 테이블을 직접 쓰지 않는다 — 잔액 변경은 RPC 전용', async () => {
+  it('발급 표를 직접 쓰지 않는다 — 이용권 변경은 RPC 전용, 옛 지갑 표는 읽지도 않는다', async () => {
     const admin = chargeAdmin()
     mockCreateAdmin.mockReturnValue(admin.client)
 
     await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE' })
 
-    const walletWrites = admin.calls.filter(
-      (call) => call.table === 'wallets' && ['insert', 'update', 'delete'].includes(call.method)
+    const grantWrites = admin.calls.filter(
+      (call) => call.table === 'entitlement_grants' && ['insert', 'update', 'delete'].includes(call.method)
     )
-    expect(walletWrites).toHaveLength(0)
+    expect(grantWrites).toHaveLength(0)
+    expect(admin.calls.some((call) => call.table === 'wallets')).toBe(false)
   })
 
   it('오래 굳은 REQUESTED 요청을 실패로 확정해 영구 잠금을 막는다', async () => {
@@ -367,7 +417,7 @@ describe('submitChargeCancel — 회수 경로', () => {
     expect(admin.rpc).toHaveBeenCalledWith('open_charge_cancel_request', expect.any(Object))
   })
 
-  it('취소 요청 기록에 사유·메모가 남는다', async () => {
+  it('취소 요청 기록에 사유·메모·장 수가 남는다', async () => {
     const admin = chargeAdmin()
     mockCreateAdmin.mockReturnValue(admin.client)
 
@@ -379,18 +429,20 @@ describe('submitChargeCancel — 회수 경로', () => {
       p_reason_code: 'OTHER',
       p_reason_memo: 'b화면이 안 떠요/b',
       p_verdict: 'FULL_REFUNDABLE',
+      p_granted_credits: 10,
+      p_recoverable_credits: 10,
     })
   })
 })
 
 describe('submitChargeCancel — 손실 처리 상한', () => {
-  /** 손실이 나는 상황: 지급 20만냥 중 12만냥 소진(잔액 8) */
-  const SPENT = { balance: 8 }
+  /** 손실이 나는 상황: 발급 10장 중 6장 사용(4장 남음) */
+  const SPENT = { unused: 4 }
 
   it('상한 미만이면 그대로 통과한다', async () => {
     const admin = chargeAdmin({ ...SPENT, lossHistory: [lossHistory(30_000)] })
     mockCreateAdmin.mockReturnValue(admin.client)
-    mockClawback.mockResolvedValue({ applied: true, reason: 'OK', clawed: 8, shortfall: 12, userId: 'user-1' })
+    mockRevoke.mockResolvedValue({ applied: true, reason: 'OK', revoked: 4, shortfall: 6, userId: 'user-1' })
 
     const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'PRICE', acceptLoss: true })
 
@@ -408,7 +460,7 @@ describe('submitChargeCancel — 손실 처리 상한', () => {
     expect(result.lossCapBlocked).toBe(true)
     expect(result.error).toContain('1년 2회')
     expect(mockTossCancel).not.toHaveBeenCalled()
-    expect(mockClawback).not.toHaveBeenCalled()
+    expect(mockRevoke).not.toHaveBeenCalled()
     expect(admin.rpc).not.toHaveBeenCalled()
   })
 
@@ -441,8 +493,8 @@ describe('submitChargeCancel — 손실 처리 상한', () => {
     expect(statusFilter?.args[1]).toEqual(['REQUESTED', 'SUCCEEDED'])
   })
 
-  it('🔴 복채를 안 쓴 정상 취소는 상한과 무관하다 — 사용량 조회조차 하지 않는다', async () => {
-    const admin = chargeAdmin({ balance: 50, lossHistory: [lossHistory(300_000), lossHistory(300_000)] })
+  it('🔴 이용권을 안 쓴 정상 취소는 상한과 무관하다 — 사용량 조회조차 하지 않는다', async () => {
+    const admin = chargeAdmin({ unused: 10, lossHistory: [lossHistory(300_000), lossHistory(300_000)] })
     mockCreateAdmin.mockReturnValue(admin.client)
 
     const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE' })
@@ -458,7 +510,7 @@ describe('submitChargeCancel — 손실 처리 상한', () => {
     authAs('user-1', 'admin')
     const admin = chargeAdmin({ ...SPENT, lossHistory: [lossHistory(300_000), lossHistory(300_000)] })
     mockCreateAdmin.mockReturnValue(admin.client)
-    mockClawback.mockResolvedValue({ applied: true, reason: 'OK', clawed: 8, shortfall: 12, userId: 'user-1' })
+    mockRevoke.mockResolvedValue({ applied: true, reason: 'OK', revoked: 4, shortfall: 6, userId: 'user-1' })
 
     const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'PRICE', acceptLoss: true })
 
@@ -496,7 +548,7 @@ describe('submitChargeCancel — 손실 처리 상한', () => {
     expect(result.success).toBe(false)
     expect(result.lossCapBlocked).toBe(true)
     expect(mockTossCancel).not.toHaveBeenCalled()
-    expect(mockClawback).not.toHaveBeenCalled()
+    expect(mockRevoke).not.toHaveBeenCalled()
   })
 
   it('상한 판정은 2차 동의보다 «먼저» 나온다 — 동의까지 받고 거절하지 않는다', async () => {
@@ -526,7 +578,7 @@ describe('submitChargeCancel — 손실 처리 상한', () => {
   it('상한 수치는 RPC 로도 함께 넘긴다 — DB 가 최종 판정할 근거', async () => {
     const admin = chargeAdmin({ ...SPENT })
     mockCreateAdmin.mockReturnValue(admin.client)
-    mockClawback.mockResolvedValue({ applied: true, reason: 'OK', clawed: 8, shortfall: 12, userId: 'user-1' })
+    mockRevoke.mockResolvedValue({ applied: true, reason: 'OK', revoked: 4, shortfall: 6, userId: 'user-1' })
 
     await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'PRICE', acceptLoss: true })
 
@@ -534,34 +586,55 @@ describe('submitChargeCancel — 손실 처리 상한', () => {
       p_max_count: 2,
       p_max_amount: 100_000,
       p_window_days: 365,
-      p_loss_credits: 12,
+      p_loss_credits: 6,
     })
   })
 })
 
-describe('getChargeCancelOverview — 화면에 내려보내는 상한 상태', () => {
-  function overviewAdmin(options: { balance: number; lossHistory?: unknown[] }) {
+describe('getChargeCancelOverview — 화면에 내려보내는 상태', () => {
+  function overviewAdmin(options: { unused: number; lossHistory?: unknown[] }) {
     return makeAdmin({
       payments: [{ data: [PAYMENT], error: null }],
-      wallets: [{ data: { balance: options.balance }, error: null }],
+      entitlement_grants: [{ data: [grantRow(options.unused)], error: null }],
       payment_cancel_requests: [{ data: options.lossHistory ?? [], error: null }],
     })
   }
 
+  it('이용권 구매 결제만 보여준다 — 옛 복채 충전은 목록에 없다', async () => {
+    const admin = overviewAdmin({ unused: 10 })
+    mockCreateAdmin.mockReturnValue(admin.client)
+
+    await getChargeCancelOverview()
+
+    const kindFilter = admin.calls.find(
+      (call) => call.table === 'payments' && call.method === 'eq' && call.args[0] === 'bokchae_type'
+    )
+    expect(kindFilter?.args[1]).toBe('pass')
+  })
+
+  it('🔴 옛 지갑 잔액을 DTO 에 싣지 않는다', async () => {
+    mockCreateAdmin.mockReturnValue(overviewAdmin({ unused: 10 }).client)
+
+    const overview = await getChargeCancelOverview()
+
+    expect(overview).not.toHaveProperty('walletBalance')
+  })
+
   it('손실 취소 대상이 없으면 상한을 조회하지 않는다 — 정상 사용자에게 질의 0회', async () => {
-    const admin = overviewAdmin({ balance: 50 })
+    const admin = overviewAdmin({ unused: 10 })
     mockCreateAdmin.mockReturnValue(admin.client)
 
     const overview = await getChargeCancelOverview()
 
     expect(overview.items[0].plan.verdict).toBe('FULL_REFUNDABLE')
+    expect(overview.items[0].packLabel).toBe('이용권 10장')
     expect(overview.lossCap).toEqual({ available: true, nextAvailableAt: null })
     expect(admin.calls.some((call) => call.table === 'payment_cancel_requests')).toBe(false)
   })
 
   it('상한을 소진한 계정에는 손실 경로를 닫아 보여준다', async () => {
     const admin = overviewAdmin({
-      balance: 8,
+      unused: 4,
       lossHistory: [lossHistory(10_000, 300), lossHistory(10_000, 100)],
     })
     mockCreateAdmin.mockReturnValue(admin.client)
@@ -574,7 +647,7 @@ describe('getChargeCancelOverview — 화면에 내려보내는 상한 상태', 
   })
 
   it('🔴 상한 DTO 에 잔여 횟수·금액을 싣지 않는다 — 「아직 한 번 남았네」 유인 차단', async () => {
-    const admin = overviewAdmin({ balance: 8, lossHistory: [lossHistory(37_000, 10)] })
+    const admin = overviewAdmin({ unused: 4, lossHistory: [lossHistory(37_000, 10)] })
     mockCreateAdmin.mockReturnValue(admin.client)
 
     const overview = await getChargeCancelOverview()
@@ -590,7 +663,7 @@ describe('submitMembershipCancel', () => {
   const START = new Date(Date.now() - 4.5 * DAY).toISOString()
   const END = new Date(Date.now() + 25.5 * DAY).toISOString()
 
-  function membershipAdmin(overrides: { lastPayment?: unknown; balance?: number } = {}) {
+  function membershipAdmin(overrides: { lastPayment?: unknown; used?: number; usageError?: { message: string } } = {}) {
     return makeAdmin({
       subscriptions: [
         {
@@ -599,8 +672,10 @@ describe('submitMembershipCancel', () => {
             status: 'ACTIVE',
             current_period_start: START,
             current_period_end: END,
+            start_date: null,
+            end_date: null,
             next_billing_date: END,
-            plan: { name: '싱글 멤버십', tier: 'SINGLE', price: 9_900, talismans_per_period: 10 },
+            plan: { name: '싱글 멤버십', tier: 'SINGLE', price: 12_800, monthly_passes: 5 },
           },
           error: null,
         },
@@ -610,13 +685,17 @@ describe('submitMembershipCancel', () => {
         {
           data:
             overrides.lastPayment === undefined
-              ? { id: 'subpay-1', payment_key: 'pk_sub_1', amount: 9_900, cancelled_amount: 0 }
+              ? { id: 'subpay-1', payment_key: 'pk_sub_1', amount: 12_800, cancelled_amount: 0 }
               : overrides.lastPayment,
           error: null,
         },
         { data: null, error: null },
       ],
-      wallets: [{ data: { balance: overrides.balance ?? 10 }, error: null }],
+      subscription_usage: [
+        overrides.usageError
+          ? { data: null, error: overrides.usageError }
+          : { data: { used: overrides.used ?? 0 }, error: null },
+      ],
       payment_cancel_requests: [
         { data: { id: 'req-2' }, error: null },
         { data: null, error: null },
@@ -657,33 +736,58 @@ describe('submitMembershipCancel', () => {
   it('즉시 해지는 잔여기간 일할 금액을 부분 취소로 환불한다', async () => {
     mockTossCancel.mockResolvedValue({
       ok: true,
-      payment: { status: 'PARTIAL_CANCELED', totalAmount: 9_900, balanceAmount: 1_650, cancels: [] },
+      payment: { status: 'PARTIAL_CANCELED', totalAmount: 12_800, balanceAmount: 2_133, cancels: [] },
     })
     const admin = membershipAdmin()
     mockCreateAdmin.mockReturnValue(admin.client)
 
     const result = await submitMembershipCancel({ mode: 'IMMEDIATE_REFUND', reasonCode: 'PRICE' })
 
-    // 30일 중 5일 이용 · 복채 미사용 → 9,900 × 25/30 = 8,250
-    expect(result).toMatchObject({ success: true, refundAmount: 8_250 })
+    // 30일 중 5일 이용 · 이번 달 이용권 미사용 → 12,800 × 25/30 = 10,666.7 → 10,667
+    expect(result).toMatchObject({ success: true, refundAmount: 10_667 })
     expect(mockTossCancel).toHaveBeenCalledWith(
-      expect.objectContaining({ paymentKey: 'pk_sub_1', cancelAmount: 8_250 })
+      expect.objectContaining({ paymentKey: 'pk_sub_1', cancelAmount: 10_667 })
     )
 
     const update = admin.calls.find((call) => call.table === 'subscriptions' && call.method === 'update')
     expect(update?.args[0]).toHaveProperty('current_period_end')
   })
 
-  it('구독 복채는 회수하지 않는다 — 회수 RPC 를 부르지 않는다', async () => {
+  it('이번 달 사용량은 사용 경로와 같은 창(구독 시작일 앵커)의 행을 읽는다', async () => {
+    const admin = membershipAdmin()
+    mockCreateAdmin.mockReturnValue(admin.client)
+
+    await submitMembershipCancel({ mode: 'IMMEDIATE_REFUND', reasonCode: 'PRICE' })
+
+    const usageFilters = admin.calls.filter((call) => call.table === 'subscription_usage' && call.method === 'eq')
+    expect(usageFilters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ args: ['user_id', 'user-1'] }),
+        expect.objectContaining({ args: ['period_start', START] }),
+        expect.objectContaining({ args: ['scope', 'reading'] }),
+      ])
+    )
+  })
+
+  it('이번 달 이용권을 많이 썼으면 그 비율만큼 공제한다 — 기간보다 크면 이용권 비율이 이긴다', async () => {
+    mockCreateAdmin.mockReturnValue(membershipAdmin({ used: 4 }).client)
+
+    const result = await submitMembershipCancel({ mode: 'IMMEDIATE_REFUND', reasonCode: 'PRICE' })
+
+    // 4/5 = 80% 공제 → 12,800 × 0.2 = 2,560
+    expect(result).toMatchObject({ success: true, refundAmount: 2_560 })
+  })
+
+  it('멤버십은 지급한 것이 없으니 회수 RPC 를 부르지 않는다', async () => {
     mockCreateAdmin.mockReturnValue(membershipAdmin().client)
 
     await submitMembershipCancel({ mode: 'IMMEDIATE_REFUND', reasonCode: 'PRICE' })
 
-    expect(mockClawback).not.toHaveBeenCalled()
+    expect(mockRevoke).not.toHaveBeenCalled()
   })
 
-  it('지급 복채를 다 쓴 뒤 즉시 해지하면 환불 없이 해지만 된다', async () => {
-    const admin = membershipAdmin({ balance: 0 })
+  it('이번 달 이용권을 다 쓴 뒤 즉시 해지하면 환불 없이 해지만 된다', async () => {
+    const admin = membershipAdmin({ used: 5 })
     mockCreateAdmin.mockReturnValue(admin.client)
 
     const result = await submitMembershipCancel({ mode: 'IMMEDIATE_REFUND', reasonCode: 'PRICE' })
@@ -691,6 +795,25 @@ describe('submitMembershipCancel', () => {
     expect(result).toMatchObject({ success: true, refundAmount: 0 })
     // 환불액 0원이면 토스 취소 API 를 부르지 않는다(0원 취소는 오류가 된다).
     expect(mockTossCancel).not.toHaveBeenCalled()
+  })
+
+  it('🔴 사용량을 확인하지 못하면 즉시 해지(환불)를 막는다 — 환불액을 추측하지 않는다', async () => {
+    const admin = membershipAdmin({ usageError: { message: 'timeout' } })
+    mockCreateAdmin.mockReturnValue(admin.client)
+
+    const result = await submitMembershipCancel({ mode: 'IMMEDIATE_REFUND', reasonCode: 'PRICE' })
+
+    expect(result.success).toBe(false)
+    expect(mockTossCancel).not.toHaveBeenCalled()
+    expect(admin.calls.some((call) => call.table === 'subscriptions' && call.method === 'update')).toBe(false)
+  })
+
+  it('사용량 조회가 실패해도 기간 만료 해지는 된다 — 환불이 없으니 사용량이 필요 없다', async () => {
+    mockCreateAdmin.mockReturnValue(membershipAdmin({ usageError: { message: 'timeout' } }).client)
+
+    const result = await submitMembershipCancel({ mode: 'PERIOD_END', reasonCode: 'LOW_USAGE' })
+
+    expect(result).toMatchObject({ success: true, refundAmount: 0 })
   })
 
   it('환불 대상 결제가 없으면 즉시 해지를 막는다', async () => {

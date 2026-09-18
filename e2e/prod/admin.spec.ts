@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import path from 'path'
 
-// 어드민 콘솔 개선 검증 (배포 후 프로덕션) — 대시보드 지표·잔액 증감+사유·감사 로그.
+// 어드민 콘솔 개선 검증 (배포 후 프로덕션) — 대시보드 지표·이용권 내역·감사 로그.
 // 마스터 계정 필요: E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD (미설정 시 스킵).
 const SHOT = (n: string) => path.join(process.env.SHOT_DIR || 'test-results', `admin-${n}.png`)
 
@@ -25,7 +25,7 @@ test.describe('어드민 콘솔 개선', () => {
     // 1) 대시보드 — 새 지표 카드
     await page.goto('/admin')
     await expect(page.getByRole('heading', { name: '대시보드' })).toBeVisible({ timeout: 20_000 })
-    for (const label of ['총 회원수', '오늘 가입', '이번 달 매출', '활성 구독', 'MRR (월 반복매출)']) {
+    for (const label of ['총 회원', '오늘 가입', '이번 달 매출', '활성 구독', 'MRR']) {
       await expect(page.getByText(label, { exact: true })).toBeVisible({ timeout: 10_000 })
     }
     await page.screenshot({ path: SHOT('1-dashboard'), fullPage: true })
@@ -55,7 +55,7 @@ test.describe('어드민 콘솔 개선', () => {
     await expect(page.getByText('전 회원 알림함에도 발송')).toBeVisible({ timeout: 10_000 })
     console.log('[PASS] 공지 → 알림 발송 옵션 노출')
 
-    // 6) 회원 상세 — 복채 내역·신당 탭 (A4). 목록 첫 회원으로 진입
+    // 6) 회원 상세 — 이용권 내역·신당 탭 (A4). 목록 첫 회원으로 진입
     await page.goto('/admin/users')
     // 목록은 서버 조회 후 렌더 — 링크가 붙을 때까지 대기
     const firstUser = page.locator('a[href^="/admin/users/"]').first()
@@ -63,12 +63,13 @@ test.describe('어드민 콘솔 개선', () => {
     if (await firstUser.isVisible().catch(() => false)) {
       await firstUser.click()
       await expect(page.getByText('계정 정보').first()).toBeVisible({ timeout: 20_000 })
-      await expect(page.getByRole('tab', { name: /복채 내역/ })).toBeVisible({ timeout: 10_000 })
+      await expect(page.getByRole('tab', { name: /이용권 & 멤버십/ })).toBeVisible({ timeout: 10_000 })
+      await expect(page.getByRole('tab', { name: /이용권 내역/ })).toBeVisible()
       await expect(page.getByRole('tab', { name: /신당/ })).toBeVisible()
       await page.getByRole('tab', { name: /신당/ }).click()
       await expect(page.getByText('신당 현황')).toBeVisible({ timeout: 10_000 })
       await page.screenshot({ path: SHOT('3-user-shrines'), fullPage: false })
-      console.log('[PASS] 회원 상세 복채내역·신당 탭')
+      console.log('[PASS] 회원 상세 이용권 내역·신당 탭')
     } else {
       console.log('[SKIP] 회원 목록 비어 상세 검증 생략')
     }

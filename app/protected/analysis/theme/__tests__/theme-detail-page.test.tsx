@@ -25,6 +25,12 @@ jest.mock('@/app/actions/theme-fortune/analyze', () => ({ analyzeThemeFortune: j
 jest.mock('sonner', () => ({ toast: { error: jest.fn(), success: jest.fn() } }))
 jest.mock('@/components/studio/share-save-buttons', () => ({ ShareSaveButtons: () => null }))
 jest.mock('@/components/membership/membership-nudge-modal', () => ({ MembershipNudgeModal: () => null }))
+jest.mock('@/hooks/use-passes', () => ({
+  usePassSummary: () => ({ data: undefined }),
+  useRefreshPasses: () => mockRefreshPasses,
+}))
+
+const mockRefreshPasses = jest.fn()
 
 const mockTargets = getDestinyTargets as jest.MockedFunction<typeof getDestinyTargets>
 const mockAnalyze = analyzeThemeFortune as jest.MockedFunction<typeof analyzeThemeFortune>
@@ -121,7 +127,7 @@ describe('상세 — 누르기 전에 밝히는 것', () => {
     expect(container.querySelector(`img[src="${theme.thumbnail}"]`)).not.toBeNull()
   })
 
-  it('🔴 복채가 단일 소스에서 나온 문자열로 찍힌다', async () => {
+  it('🔴 이용권 장 수가 단일 소스에서 나온 문자열로 찍힌다', async () => {
     const theme = themeById(READING_THEME)
     if (!theme) throw new Error('테마가 없다')
     await renderDetail(READING_THEME)
@@ -292,20 +298,29 @@ describe('상세 — 결과 골격 9섹션 (마스터 §4-2)', () => {
     expect(screen.getByText('3일 전 풀이')).not.toBeNull()
   })
 
-  it('🔴 재분석은 복채가 다시 나간다고 밝히고 두 번 눌러야 돈다', async () => {
+  it('🔴 재분석은 이용권이 다시 쓰인다고 밝히고 두 번 눌러야 돈다', async () => {
     const theme = themeById(READING_THEME)
     if (!theme) throw new Error('테마가 없다')
     await renderResult()
     expect(mockAnalyze).toHaveBeenCalledTimes(1)
 
     fireEvent.click(screen.getByRole('button', { name: '다시 풀기' }))
-    expect(screen.getByText(new RegExp(`다시 풀면 ${themeReadingCostLabel(theme)}가 새로 나갑니다`))).not.toBeNull()
+    expect(screen.getByText(new RegExp(`다시 풀면 ${themeReadingCostLabel(theme)}이 새로 쓰입니다`))).not.toBeNull()
     expect(mockAnalyze).toHaveBeenCalledTimes(1)
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: '다시 풀기' }))
     })
     expect(mockAnalyze).toHaveBeenLastCalledWith({ themeId: READING_THEME, targetId: SELF.id, force: true })
+  })
+
+  it('새로 푼 풀이는 이용권 요약을 다시 읽고, 저장본은 다시 읽지 않는다', async () => {
+    await renderResult()
+    expect(mockRefreshPasses).toHaveBeenCalledTimes(1)
+
+    mockRefreshPasses.mockClear()
+    await renderResult({}, true)
+    expect(mockRefreshPasses).not.toHaveBeenCalled()
   })
 
   it('🔴 「자리보다 다른 데 있는 결」이면 결론 대신 상담을 앞에 세운다', async () => {
@@ -423,9 +438,30 @@ describe('개운 처방 — 유료는 전량, 무료는 맛보기 (CEO 지시 20
   })
 })
 
+describe('상세 — 이용권이 모자랄 때', () => {
+  it('🔴 서버가 NO_PASS 를 돌려주면 이용권 안내를 열고 오류 토스트를 띄우지 않는다', async () => {
+    const { toast } = jest.requireMock('sonner') as { toast: { error: jest.Mock } }
+    mockAnalyze.mockResolvedValue({
+      success: false,
+      error: '이용권이 부족해요.',
+      errorType: 'NO_PASS',
+      requiredUnits: 1,
+    })
+    await renderDetail(READING_THEME)
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /풀이 보기/ }))
+    })
+
+    expect(screen.getByText('이용권이 부족해요')).not.toBeNull()
+    expect(screen.getByRole('link', { name: /이용권 구매하기/ }).getAttribute('href')).toBe('/protected/store?tab=pass')
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+})
+
 describe('상세 — 판정이 없는 테마', () => {
   it('출하했지만 판정이 없으면 「준비 중」으로 닫고 버튼을 내주지 않는다', async () => {
-    // 카드가 복채를 적고 링크가 여기로 오는데 화면이 열리면, 돈은 받고 결과가 없는 자리가 된다.
+    // 카드가 이용권 장 수를 적고 링크가 여기로 오는데 화면이 열리면, 값은 받고 결과가 없는 자리가 된다.
     // 예시는 관상 테마 — 관상 3종은 사주 골격으로 판정할 수 없어(입력=FACE 판정, 관상 세트
     // §5-6) 별도 파생층이 설 때까지 판정 없이 남는 유일한 출하 갈래다.
     await renderDetail('first-impression')

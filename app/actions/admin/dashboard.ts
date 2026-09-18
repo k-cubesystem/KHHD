@@ -393,47 +393,6 @@ export async function sendGlobalNotification(title: string, message: string) {
   return { success: true, count: users.length }
 }
 
-// 8. 빠른 액션: 쿠폰 일괄 발급
-export async function issueCouponToAll(couponCode: string, talismanAmount: number, expiryDays: number = 30) {
-  if (!(await checkAdminPermission())) {
-    return { success: false, error: '권한 없음' }
-  }
-
-  const supabase = createAdminClient()
-
-  const { data: users } = await supabase.from('profiles').select('id')
-  if (!users) return { success: false, error: '사용자 조회 실패' }
-
-  // 쿠폰 일괄 생성
-  const expiresAt = new Date()
-  expiresAt.setDate(expiresAt.getDate() + expiryDays)
-
-  const coupons = users.map((u) => ({
-    user_id: u.id,
-    code: couponCode,
-    talisman_amount: talismanAmount,
-    is_used: false,
-    expires_at: expiresAt.toISOString(),
-  }))
-
-  const { error } = await supabase.from('coupons').insert(coupons)
-
-  if (error) {
-    logger.error(error)
-    return { success: false, error: error.message }
-  }
-
-  // 활동 로그 기록
-  await supabase.from('activity_logs').insert({
-    activity_type: 'admin_action',
-    activity_category: 'coupon',
-    description: `전체 쿠폰 발급: ${couponCode} (부적 ${talismanAmount}장)`,
-    metadata: { code: couponCode, amount: talismanAmount, recipient_count: users.length },
-  })
-
-  return { success: true, count: users.length }
-}
-
 // 9. 빠른 액션: 이벤트 생성
 export async function createEvent(eventData: {
   title: string

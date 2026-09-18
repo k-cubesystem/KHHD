@@ -11,6 +11,7 @@ import {
   type DisclaimerTone,
 } from '../ServiceDisclaimer'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { BANNED_PASS_TERMS } from '@/lib/domain/entitlement/pass'
 
 /**
  * AI기본법 §31② 회귀 방지.
@@ -45,9 +46,9 @@ describe('AI 고지 문언 — 법정 취지', () => {
     expect(AI_DISCLOSURE_MARK).toContain(AI_DISCLOSURE_TERM)
   })
 
-  // 표시광고법 금지어(CLAUDE.md 복채 시스템 §문구 규율)가 고지에 섞여 들어오지 못하게.
+  // 표시광고법·토스 심사 금지어(CLAUDE.md 이용권 시스템 §문구 규율)가 고지에 섞여 들어오지 못하게.
   it.each(TONES)('«%s» 문안에 앱 금지어가 없다', (tone) => {
-    for (const banned of ['매일', '무제한', '평생', '모두 이용', '정액']) {
+    for (const banned of [...BANNED_PASS_TERMS, '매일', '평생', '모두 이용', '정액']) {
       expect(AI_DISCLOSURE_TEXT[tone]).not.toContain(banned)
     }
   })

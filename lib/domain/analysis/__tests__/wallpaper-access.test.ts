@@ -2,10 +2,10 @@
  * 복 배경화면 **접근 모델**(2026-08-22 확장) — 다섯 경로의 OR.
  *
  * 이 테스트가 지키는 것은 넷이다.
- * ① **공짜가 새지 않는가** — 아무 자격 없는 사람에게 열리는 건 흙 한 장뿐이다.
- * ② **산 것이 사라지지 않는가** — 구매·광고 해금은 멤버십·여정과 무관하게 그 장을 연다.
- * ③ **여정 서사가 살아 있는가** — 사주 1회 → 오행 5장, 완주 → 이달의 복. 과금이 이걸 지우지 않는다.
- * ④ **값이 흔들리지 않는가** — 가격은 도메인 상수에서만 온다(서버가 이 값으로 차감한다).
+ * ① **잠긴 장이 새지 않는가** — 자격 없는 사람에게는 잠긴 장이 사유와 함께 잠겨 있다.
+ * ② **연 것이 사라지지 않는가** — 예전 소장·광고 해금은 멤버십·여정과 무관하게 그 장을 연다.
+ * ③ **여정 서사가 살아 있는가** — 사주 1회 → 오행 5장, 완주 → 이달의 복.
+ * ④ **값을 받는 길이 없는가** — 2026-09-18 구매 경로 폐지. 도메인에 가격이 남아 있지 않다.
  */
 import {
   FREE_WALLPAPER_ELEMENT,
@@ -13,8 +13,6 @@ import {
   WALLPAPER_ACCESS_LABEL,
   WALLPAPER_ELEMENT_ORDER,
   WALLPAPER_LOCK_REASON,
-  WALLPAPER_PRICE_ELEMENT,
-  WALLPAPER_PRICE_MONTHLY,
   WALLPAPER_SET,
   buildWallpaperDisplaySet,
   findWallpaperById,
@@ -27,10 +25,10 @@ import {
   resolveWallpaperAccess,
   wallpaperDownloadHref,
   wallpaperPath,
-  wallpaperPrice,
   type WallpaperAccess,
   type WallpaperItem,
 } from '../wallpaper'
+import * as wallpaperDomain from '../wallpaper'
 
 /** 아무 자격도 없는 사람 — 기본선. */
 const NOBODY: WallpaperAccess = { hasSaju: false, journeyComplete: false, isMember: false, unlocks: [] }
@@ -49,9 +47,8 @@ const FREE = itemById(`element-${FREE_WALLPAPER_ELEMENT}`)
 const MONTHLY = itemById(MONTHLY_WALLPAPER_ID)
 
 /**
- * 🔴 2026-08-24 부터 배포된 여섯 장은 **전부 무료**다. 그래도 잠금·구매·광고 기계장치는
- * 앞으로 나올 **프리미엄 세트**가 그대로 쓰므로, 여기서는 «잠긴 장» 표본을 손으로 세워
- * 그 기계를 계속 지킨다 — 세트를 다시 유료로 되돌리지 않고도 회귀를 잡는다.
+ * 🔴 2026-08-24 부터 배포된 여섯 장은 **전부 무료**다. 그래도 잠금·광고 기계장치는
+ * 프리미엄 세트가 그대로 쓰므로, 여기서는 «잠긴 장» 표본을 손으로 세워 그 기계를 계속 지킨다.
  */
 const PAID_ELEMENT: WallpaperItem = {
   id: 'premium-water',
@@ -98,7 +95,7 @@ describe('접근 판정 — 다섯 경로가 각자 독립으로 문을 연다',
     }
   })
 
-  it('③ 구매한 장은 그 장만 열린다 (다른 장에 번지지 않는다)', () => {
+  it('③ 예전에 소장한 장은 그 장만 열린다 (다른 장에 번지지 않는다)', () => {
     const bought = withUnlocks([{ wallpaperId: PAID_ELEMENT.id, source: 'purchase' }])
 
     expect(resolveWallpaperAccess(PAID_ELEMENT, bought)).toEqual({ unlocked: true, via: 'purchase', reason: null })
@@ -141,13 +138,13 @@ describe('접근 판정 — 다섯 경로가 각자 독립으로 문을 연다',
       unlocks: [{ wallpaperId: PAID_ELEMENT.id, source: 'purchase' }],
     }
 
-    // 멤버십이 끝나도 산 장은 남는다 — 화면이 「멤버십」이라 적으면 해지 뒤 사라질 것처럼 읽힌다.
+    // 멤버십이 끝나도 연 장은 남는다 — 화면이 「멤버십」이라 적으면 해지 뒤 사라질 것처럼 읽힌다.
     expect(resolveWallpaperAccess(PAID_ELEMENT, both).via).toBe('purchase')
-    // 사지 않은 장은 멤버십이 먼저 잡는다(여정 보너스보다 앞).
+    // 연 기록이 없는 장은 멤버십이 먼저 잡는다(여정 보너스보다 앞).
     expect(resolveWallpaperAccess(PAID_OTHER, both).via).toBe('member')
   })
 
-  it('멤버십이 끝나도 (isMember=false) 산 장은 그대로 열려 있다', () => {
+  it('멤버십이 끝나도 (isMember=false) 예전에 소장한 장은 그대로 열려 있다', () => {
     const expired = withUnlocks([{ wallpaperId: PAID_MONTHLY.id, source: 'purchase' }])
 
     expect(resolveWallpaperAccess(PAID_MONTHLY, expired)).toEqual({ unlocked: true, via: 'purchase', reason: null })
@@ -181,24 +178,28 @@ describe('접근 판정 — 다섯 경로가 각자 독립으로 문을 연다',
   })
 })
 
-describe('값(복채) — 가격은 도메인에서만 온다', () => {
-  it('오행 한 장 1만냥 · 이달의 복 2만냥(한정판)', () => {
-    expect(WALLPAPER_PRICE_ELEMENT).toBe(1)
-    expect(WALLPAPER_PRICE_MONTHLY).toBe(2)
-  })
-
-  it('오행 다섯 장은 전부 같은 값이다', () => {
-    for (const element of WALLPAPER_ELEMENT_ORDER) {
-      expect(wallpaperPrice(itemById(`element-${element}`))).toBe(WALLPAPER_PRICE_ELEMENT)
+describe('값 — 배경화면은 값을 받지 않는다 (2026-09-18)', () => {
+  it('도메인에 가격·팩이 남아 있지 않다 — 구매 경로를 되살리는 손잡이가 없다', () => {
+    for (const name of [
+      'wallpaperPrice',
+      'WALLPAPER_PRICE_ELEMENT',
+      'WALLPAPER_PRICE_MONTHLY',
+      'PREMIUM_PRICE_SINGLE',
+      'WALLPAPER_PACKS',
+    ]) {
+      expect([name, name in wallpaperDomain]).toEqual([name, false])
     }
   })
 
-  it('이달의 복만 한정판 가격을 받는다', () => {
-    expect(wallpaperPrice(MONTHLY)).toBe(WALLPAPER_PRICE_MONTHLY)
+  it('무료 세트 — 오행 다섯 장과 이달의 복은 자격 없이 열린다', () => {
+    for (const element of WALLPAPER_ELEMENT_ORDER) {
+      expect(resolveWallpaperAccess(itemById(`element-${element}`), NOBODY).via).toBe('free')
+    }
+    expect(resolveWallpaperAccess(MONTHLY, NOBODY).via).toBe('free')
   })
 
-  it('무료 장에도 값이 있다 — 잠기지 않을 뿐, 0원 결제 경로가 생기지 않는다', () => {
-    expect(wallpaperPrice(FREE)).toBe(WALLPAPER_PRICE_ELEMENT)
+  it('예전 소장 기록은 그대로 연다 — 근거 문구가 «소장 완료»로 남는다', () => {
+    expect(WALLPAPER_ACCESS_LABEL.purchase).toBe('소장 완료')
   })
 })
 

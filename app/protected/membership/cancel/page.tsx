@@ -47,7 +47,8 @@ export default async function MembershipCancelPage() {
       ) : (
         <>
           <p className="text-sm text-ink-light/70 font-light leading-relaxed px-1 mb-6">
-            해지하시면 다음 결제부터 청구되지 않습니다. 이미 받으신 복채는 회수하지 않으니 그대로 쓰셔도 됩니다.
+            해지하시면 다음 결제부터 청구되지 않습니다. 따로 구매하신 이용권은 해지와 상관없이 유효기간까지 그대로
+            남습니다.
           </p>
           <MembershipCancelForm overview={overview} />
           <p className="text-[11px] text-ink-light/35 font-light leading-relaxed mt-8 px-1">

@@ -1,24 +1,20 @@
 /**
- * 「채운(彩運)」 프리미엄 17장 — 세트 불변식 · 접근 · 값 · 팩 · 표시.
+ * 「채운(彩運)」 프리미엄 17장 — 세트 불변식 · 접근 · 표시.
  *
  * 이 테스트가 지키는 것:
  * ① 세트가 Storage·썸네일과 1:1 이라는 가정(17장 · id 유일 · 과별 구성)
- * ② 프리미엄은 멤버십/구매/용신 선물로만 열린다 — 여정 보너스(사주·완주)가 새지 않는다
- * ③ 🔴 값 회귀 — element 가 null 인 프리미엄 장이 «이달의 복 2만냥»으로 오판되지 않는다
+ * ② 프리미엄은 멤버십·광고 해금·용신 선물로만 열린다 — 여정 보너스(사주·완주)가 새지 않는다
+ * ③ 예전 소장 기록은 그 장만 연다(구매 경로는 2026-09-18 폐지)
  * ④ 잠긴 장의 원본 주소가 표시 세트에 실리지 않는다(서명 URL 이 유일한 통로)
  */
 import {
   PREMIUM_CATEGORY_ORDER,
-  PREMIUM_PRICE_SINGLE,
   PREMIUM_WALLPAPER_SET,
   WALLPAPER_LOCK_REASON,
-  WALLPAPER_PACKS,
   buildPremiumDisplaySet,
   findPremiumWallpaperById,
-  findWallpaperPack,
   premiumThumbPath,
   resolveWallpaperAccess,
-  wallpaperPrice,
   type WallpaperAccess,
 } from '../wallpaper'
 
@@ -59,15 +55,7 @@ describe('세트 불변식 — 17장이 Storage·썸네일과 1:1', () => {
   })
 })
 
-describe('값 — 프리미엄 낱장은 균일가다', () => {
-  it('🔴 element 가 null 이어도 이달의 복(2만냥)이 아니라 프리미엄 가격을 받는다', () => {
-    for (const item of PREMIUM_WALLPAPER_SET) {
-      expect(wallpaperPrice(item)).toBe(PREMIUM_PRICE_SINGLE)
-    }
-  })
-})
-
-describe('접근 — 멤버십·구매·용신 선물로만 열린다', () => {
+describe('접근 — 멤버십·광고 해금·용신 선물로만 열린다', () => {
   it('자격이 없으면 17장 전부 잠기고 멤버십 사유가 붙는다', () => {
     for (const item of PREMIUM_WALLPAPER_SET) {
       expect(resolveWallpaperAccess(item, NOBODY)).toEqual({
@@ -105,7 +93,29 @@ describe('접근 — 멤버십·구매·용신 선물로만 열린다', () => {
     expect(resolveWallpaperAccess(GI_WATER, { ...NOBODY, myElement: 'water' }).unlocked).toBe(false)
   })
 
-  it('구매한 장은 그 장만 열리고 «소유가 먼저»로 적힌다', () => {
+  it('광고로 연 장은 그 장만 열린다 — 하루 1장 해금이 다른 장에 번지지 않는다', () => {
+    const adOpened: WallpaperAccess = { ...NOBODY, unlocks: [{ wallpaperId: 'jae-koi', source: 'ad' }] }
+
+    expect(resolveWallpaperAccess(JAE_KOI, adOpened)).toEqual({ unlocked: true, via: 'ad', reason: null })
+    for (const item of PREMIUM_WALLPAPER_SET.filter((w) => w.id !== 'jae-koi')) {
+      expect(resolveWallpaperAccess(item, adOpened).unlocked).toBe(false)
+    }
+  })
+
+  it('확정된 용신 선물 행은 그 장을 연다 — 용신이 바뀌어도 두 번째 선물이 생기지 않는다', () => {
+    const gifted: WallpaperAccess = {
+      ...NOBODY,
+      hasSaju: true,
+      unlocks: [{ wallpaperId: 'gi-water', source: 'saju' }],
+      myElement: null,
+    }
+
+    expect(resolveWallpaperAccess(GI_WATER, gifted)).toEqual({ unlocked: true, via: 'saju', reason: null })
+    const giFire = PREMIUM_WALLPAPER_SET.find((w) => w.id === 'gi-fire')!
+    expect(resolveWallpaperAccess(giFire, gifted).unlocked).toBe(false)
+  })
+
+  it('예전에 소장한 장은 그 장만 열리고 «소유가 먼저»로 적힌다', () => {
     const bought: WallpaperAccess = {
       ...NOBODY,
       isMember: true,
@@ -114,30 +124,6 @@ describe('접근 — 멤버십·구매·용신 선물로만 열린다', () => {
 
     expect(resolveWallpaperAccess(JAE_KOI, bought).via).toBe('purchase')
     expect(resolveWallpaperAccess(GI_WATER, bought).via).toBe('member')
-  })
-})
-
-describe('팩 — 멤버십 다음의 세트 구매 경로', () => {
-  it('기운 5장 3만냥 · 복 12장 3만냥 · 전체 17장 5만냥', () => {
-    expect(findWallpaperPack('pack-gi')).toMatchObject({ price: 3 })
-    expect(findWallpaperPack('pack-gi')?.itemIds).toHaveLength(5)
-    expect(findWallpaperPack('pack-bok')).toMatchObject({ price: 3 })
-    expect(findWallpaperPack('pack-bok')?.itemIds).toHaveLength(12)
-    expect(findWallpaperPack('pack-all')).toMatchObject({ price: 5 })
-    expect(findWallpaperPack('pack-all')?.itemIds).toHaveLength(17)
-    expect(findWallpaperPack('없는-팩')).toBeNull()
-  })
-
-  it('팩 구성은 세트 id 의 부분집합이고, 기운+복 두 팩이 전체를 겹침 없이 덮는다', () => {
-    const setIds = new Set(PREMIUM_WALLPAPER_SET.map((w) => w.id))
-    for (const pack of WALLPAPER_PACKS) {
-      for (const id of pack.itemIds) expect(setIds.has(id)).toBe(true)
-      expect(new Set(pack.itemIds).size).toBe(pack.itemIds.length)
-    }
-    const gi = findWallpaperPack('pack-gi')!.itemIds
-    const bok = findWallpaperPack('pack-bok')!.itemIds
-    expect(gi.length + bok.length).toBe(17)
-    expect(gi.some((id) => bok.includes(id))).toBe(false)
   })
 })
 

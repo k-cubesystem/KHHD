@@ -504,7 +504,9 @@ EXCEPTION
 END;
 $$;
 
--- 9-5. 관리자 조정 — 양수는 발급, 음수는 보유 이용권 회수(기한이 가장 먼 것부터).
+-- 9-5. 관리자 조정 — 양수는 발급, 음수는 보유 이용권 회수.
+-- 회수 순서: 관리자가 준 것 → 기한이 가까운 것 → 기한 없는 이전 보유분(마지막). 이용자에게 덜 불리한 순서.
+-- 이미 만료된 발급분은 회수 대상이 아니다(쓸 수 없는 장을 깎아 «회수했다»고 기록하지 않는다).
 CREATE OR REPLACE FUNCTION public.ent_admin_adjust(
   p_user_id uuid,
   p_delta integer,
@@ -542,8 +544,9 @@ BEGIN
   FOR r IN
     SELECT id, (quantity - consumed - revoked) AS avail
       FROM public.entitlement_grants
-     WHERE user_id = p_user_id AND consumed + revoked < quantity
-     ORDER BY expires_at DESC NULLS FIRST, issued_at DESC
+     WHERE user_id = p_user_id AND scope = 'reading' AND consumed + revoked < quantity
+       AND (expires_at IS NULL OR expires_at > now())
+     ORDER BY (source = 'admin') DESC, expires_at ASC NULLS LAST, issued_at ASC
      FOR UPDATE
   LOOP
     EXIT WHEN v_need <= 0;

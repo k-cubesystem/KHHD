@@ -42,6 +42,8 @@ import {
   toEpisodeAccess,
   validateEpisode,
 } from '../episode'
+import { JINMAEK_SLOTS } from '../jinmaek'
+import { findBannedPassTerms } from '@/lib/domain/entitlement/pass'
 
 const read = (rel: string): string => readFileSync(path.join(process.cwd(), rel), 'utf8')
 const MIGRATION = read('supabase/migrations/20260801_webtoon.sql')
@@ -264,10 +266,10 @@ describe('서버 액션 계약', () => {
 describe('자격 — 접수는 누구나, 제작은 멤버십만 (CEO 2026-08-01 재확정)', () => {
   it('★ 접수에 값이 없다 — 그려질 수 없는 사람에게 값을 받는 구조를 없앴다', () => {
     expect(STORY_SUBMIT_COST).toBe(0)
-    expect(STORY_FREE_NOTICE).toContain('복채가 들지 않습니다')
+    expect(STORY_FREE_NOTICE).toContain('이용권이 들지 않습니다')
     // 과금 경로가 액션에서 통째로 사라졌는지
     const submit = ACTIONS.slice(ACTIONS.indexOf('export async function submitStory'))
-    for (const gone of ['spendBokchae', 'refundBokchae', 'confirmPaid', 'NEEDS_PAYMENT']) {
+    for (const gone of ['chargeFeature', 'consumePass', 'confirmPaid', 'NEEDS_PAYMENT']) {
       expect(submit).not.toContain(gone)
     }
   })
@@ -497,5 +499,18 @@ describe('운영 화면 — 권한은 RLS 가 지고, 사연만 예외다', () =
     expect(ADMIN_ACTIONS).toContain('EPISODE_PAGE_MAX')
     expect(ADMIN_EPISODES_UI).toContain('EPISODE_PAGE_MAX')
     expect(EPISODE_PAGE_MAX).toBeGreaterThan(0)
+  })
+})
+
+describe('독자가 읽는 문구 — 이용권 전환 금지어가 없다', () => {
+  it('사연 접수 고지와 간이 진맥 도입부에 금지어가 섞이지 않는다', () => {
+    const notices = [
+      STORY_FREE_NOTICE,
+      STORY_MEMBER_ONLY_NOTICE,
+      STORY_NO_EXTRA_COST_NOTICE,
+      STORY_REPLY_NOTICE,
+      ...Object.values(JINMAEK_SLOTS).map((slot) => slot.hook),
+    ]
+    for (const text of notices) expect(findBannedPassTerms(text)).toEqual([])
   })
 })

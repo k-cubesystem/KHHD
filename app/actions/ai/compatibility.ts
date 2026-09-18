@@ -13,18 +13,15 @@ import { generateAIContent } from '@/lib/services/ai-client'
 import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
-import { addBokPoints } from '@/lib/services/bok-grant'
 import { logger } from '@/lib/utils/logger'
 import { chargeFeature } from '@/lib/services/feature-charge'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 
 /**
  * 궁합 분석 서버 액션 v2
  * 양쪽 모두 saju-engine을 거쳐 8개 카테고리 분석
  */
 export async function analyzeCompatibilityAction(targetId1: string, targetId2: string, relationship: string = 'lover') {
-  if (isEdgeEnabled('ai-analysis')) {
-    return invokeEdgeSafe('ai-analysis', { action: 'analyzeCompatibility', targetId1, targetId2, relationship })
-  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -34,9 +31,8 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
     return { success: false, error: '인증되지 않은 사용자입니다.' }
   }
 
-  // AI 가 실패하면 차감을 되돌린다. 차감 전 단계에서 나가면 null 이라 아무 일도 없다.
+  // AI 가 실패하면 쓴 이용권을 되돌린다. 사용 전 단계에서 나가면 null 이라 아무 일도 없다.
   let refundOnFailure: (() => Promise<void>) | null = null
-  let chargedRemaining: number | undefined
 
   try {
     // 1. 대상 정보 조회
@@ -54,7 +50,7 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
       return { success: true, data: recentAnalysis, cached: true }
     }
 
-    // 2.5 복채 차감 — 🔴 **여기가 과금의 유일한 지점이다.**
+    // 2.5 이용권 사용 — 🔴 **여기가 과금의 유일한 지점이다.**
     //
     // 2026-09-01 까지는 화면(compatibility-client)이 차감한 뒤 이 액션을 불렀다. 이 액션은
     // 'use server' export = 공개 엔드포인트이므로, 브라우저에서 직접 부르면 차감 없이 풀이가 나왔다.
@@ -67,7 +63,18 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
     })
     if (!charge.ok) return charge.failure
     refundOnFailure = charge.refundOnFailure
-    chargedRemaining = charge.remainingBalance
+
+    // 🔴 엣지 분기는 과금 «뒤»다 — 엣지 사본에는 이용권 코드가 없다(cheonjiin.ts 와 같은 규율).
+    if (isEdgeEnabled('ai-analysis')) {
+      const edge = await invokeEdgeSafe('ai-analysis', {
+        action: 'analyzeCompatibility',
+        targetId1,
+        targetId2,
+        relationship,
+      })
+      if (!edge?.success) await refundOnFailure?.()
+      return edge
+    }
 
     // 3. 양쪽 모두 사주 컨텍스트 생성 (병렬)
     const [ctx1, ctx2] = await Promise.all([
@@ -134,13 +141,10 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
       },
       summary: `${target1.name}님과 ${target2.name}님의 궁합 - ${finalResult.overallAssessment}`,
       model_used: MODEL_PRO,
-      talisman_cost: 2,
+      talisman_cost: FEATURE_COST.compatibility.display,
     })
 
-    await addBokPoints(40, 'COMPATIBILITY', undefined, '궁합 분석 완료').catch(() => {})
-
-    // remainingBalance 는 «이번 호출에서 실제로 차감했을 때»만 실린다 — 캐시 적중은 undefined.
-    return { success: true, data: finalResult, cached: false, remainingBalance: chargedRemaining }
+    return { success: true, data: finalResult, cached: false }
   } catch (error: unknown) {
     logger.error('[CompatibilityAnalysis] Error:', error)
     await refundOnFailure?.()

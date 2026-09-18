@@ -241,15 +241,11 @@ export function isObangkiMatter(value: unknown): value is ObangkiMatter {
 
 // ─── 정책 상수 ────────────────────────────────────────────────
 
-/** 하루(KST) 무료 뽑기. 이후는 복채. */
-export const OBANGKI_DAILY_FREE = 3
-
 /**
- * 무료 소진 후 1회 값 — **wallets.balance 단위(1 = 1만냥)**.
- * shaman-chat 의 PURCHASE_COST 와 같은 단위다. 차감은 lib/services/bokchae.ts 의
- * spendBokchae 만 쓴다(공개 액션에서 지갑을 직접 만지지 않는다).
+ * 하루(KST) 무료 뽑기. 이후는 한 번에 이용권 — 장 수의 정본은 FEATURE_COST.obangkiDraw 다
+ * (서버 chargeFeature 가 costKey 로 다시 읽는다. 여기 숫자를 두면 표시와 사용이 갈라진다).
  */
-export const OBANGKI_EXTRA_COST = 1
+export const OBANGKI_DAILY_FREE = 3
 
 /**
  * 아뢰는 말 한 줄의 길이 상한(자). 원문은 저장되지 않으므로 **화면**이 지키는 값이다.
@@ -431,7 +427,7 @@ export function verdictLine(color: ObangkiColor): string {
 
 // ─── 하루 판정 ────────────────────────────────────────────────
 //
-// KST 경계는 액막이와 같은 규약(kstDayKey). 무료분만 세고, 복채로 뽑은 것도 같은 로그에 남는다 —
+// KST 경계는 액막이와 같은 규약(kstDayKey). 무료분만 세고, 이용권으로 뽑은 것도 같은 로그에 남는다 —
 // 그래서 "남은 무료"는 오늘 총 횟수에서 빼는 것이 아니라 **무료 상한과 총 횟수의 차**다.
 
 /** 같은 KST 하루에 속한 뽑기 수. */
@@ -449,7 +445,7 @@ export function remainingFreeDraws(drawnAtMs: readonly number[], epochMs: number
   return Math.max(0, Math.min(OBANGKI_DAILY_FREE, OBANGKI_DAILY_FREE - used))
 }
 
-/** 이번 뽑기가 복채를 무는가. */
+/** 이번 뽑기가 이용권을 쓰는가. */
 export function isPaidDraw(todayCount: number): boolean {
   const n = Number.isFinite(todayCount) ? Math.max(0, Math.floor(todayCount)) : 0
   return n >= OBANGKI_DAILY_FREE

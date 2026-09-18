@@ -21,8 +21,8 @@ export default async function SajuResultPage({ searchParams }: SajuResultPagePro
     redirect('/protected/analysis/cheonjiin')
   }
 
-  // 🔴 명식 확인은 **차감보다 먼저**. 생년월일이 없으면 풀이가 아예 성립하지 않는데,
-  //    예전에는 로딩 화면이 돌고 복채를 먼저 빼려다 실패해 「복채를 충전하세요」가 떴다.
+  // 🔴 명식 확인은 **이용권 사용보다 먼저**. 생년월일이 없으면 풀이가 아예 성립하지 않는데,
+  //    예전에는 로딩 화면이 돌고 값을 먼저 빼려다 실패해 엉뚱한 결제 안내가 떴다.
   if (!target.birth_date) {
     return <MissingBirthChart targetName={target.name} isSelf={target.target_type === 'self'} />
   }

@@ -3,6 +3,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTargets, type DestinyTarget } from '@/app/actions/user/destiny'
 import { getUserTierLimits } from '@/app/actions/payment/membership'
+import { getPassSummary } from '@/lib/services/entitlement'
+import type { PassSummary } from '@/lib/domain/entitlement/pass'
+import { TIER_LABEL, isMembershipTier } from '@/lib/domain/payment/membership-tiers'
 
 /**
  * 상단 바 「내 명식 바로보기」(태극 팝업)가 쓰는 요약 한 벌.
@@ -14,8 +17,8 @@ import { getUserTierLimits } from '@/app/actions/payment/membership'
 export interface ManseSummary {
   /** 드롭다운에 세울 사람들(본인 먼저). 만세력·궁합과 같은 출처(v_destiny_targets). */
   targets: DestinyTarget[]
-  /** 복채 잔액(만냥). */
-  balance: number
+  /** 이용권 — 멤버십 이번 달 몫과 보유 이용권을 따로 든다(한 숫자로 합치지 않는다). */
+  passes: PassSummary
   /** 멤버십 등급 표시명 — 없으면 '무료 회원'. */
   planName: string
   isSubscribed: boolean
@@ -31,10 +34,10 @@ export async function getManseSummary(): Promise<ManseSummary | null> {
   } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [targets, tierLimits, { data: wallet }, { data: shrine }] = await Promise.all([
+  const [targets, tierLimits, passes, { data: shrine }] = await Promise.all([
     getDestinyTargets(),
     getUserTierLimits(),
-    supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle(),
+    getPassSummary(user.id),
     // 좌정 신위 — 본인 신당의 主神. 테이블은 `shrines`(신당) + `shrine_deities`(신위 카탈로그)다.
     // 🔴 2026-08-25 신당 단일화로 가족별 신당이 사라졌지만 컬럼은 남아 있어, 본인 신당은
     //    `family_member_id is null` 로 계속 집는다(listDeities 와 같은 계보).
@@ -46,12 +49,12 @@ export async function getManseSummary(): Promise<ManseSummary | null> {
       .maybeSingle(),
   ])
 
-  // 신위는 부가 정보 — 실패해도 팝업의 본체(명식·복채·등급)는 성립한다.
+  // 신위는 부가 정보 — 실패해도 팝업의 본체(명식·이용권·등급)는 성립한다.
   const deity = toDeity(shrine)
 
   return {
     targets,
-    balance: typeof wallet?.balance === 'number' ? wallet.balance : 0,
+    passes,
     planName: planNameOf(tierLimits),
     isSubscribed: Boolean(tierLimits?.is_subscribed),
     deityName: deity?.name ?? null,
@@ -59,20 +62,13 @@ export async function getManseSummary(): Promise<ManseSummary | null> {
   }
 }
 
-/** 등급 표시명 — 화면에 숫자·주기를 쓰지 않는다(표시광고법 규율, CLAUDE.md). */
+/** 등급 표시명 — 화면에 숫자·주기를 쓰지 않는다(표시광고법 규율, CLAUDE.md). 등급 이름은 membership-tiers 가 정본. */
 function planNameOf(limits: Awaited<ReturnType<typeof getUserTierLimits>>): string {
-  if (!limits) return '무료 회원'
-  if (!limits.is_subscribed) return '무료 회원'
-  const tier = typeof limits.tier === 'string' ? limits.tier : ''
-  return TIER_LABEL[tier] ?? '멤버십 회원'
-}
-
-const TIER_LABEL: Record<string, string> = {
-  SINGLE: '싱글 멤버십',
-  FAMILY: '패밀리 멤버십',
-  BUSINESS: '비즈니스 멤버십',
-  TESTER: '테스터',
-  UNLIMITED: '마스터',
+  if (!limits?.is_subscribed) return '무료 회원'
+  if (isMembershipTier(limits.tier)) return `${TIER_LABEL[limits.tier]} 멤버십`
+  if (limits.tier === 'MASTER') return '관리자'
+  if (limits.tier === 'TESTER') return '테스터'
+  return '멤버십 회원'
 }
 
 /** 조인 결과는 배열로 올 수도 단건으로 올 수도 있다 — 양쪽을 흡수한다(타입 가드). */

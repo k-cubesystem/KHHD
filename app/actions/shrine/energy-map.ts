@@ -40,9 +40,6 @@ function toMapCatalogItem(r: MapCatalogRow): CatalogItem {
     layer: isLayer(r.placement_layer) ? r.placement_layer : 'floor',
     size: 'md',
     behavior: {},
-    priceBok: 0,
-    priceKrw: 0,
-    priceBokchae: 0,
     unlockEffect: null,
     // 기운 지도는 오행·세기만 본다 — 갈래·전거는 이 계산에 쓰이지 않는다
     matters: [],

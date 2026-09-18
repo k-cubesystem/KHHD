@@ -49,11 +49,6 @@ export async function saveProfile(data: SaveProfileData) {
     return { success: false, error: profileError.message || '프로필 저장 실패' }
   }
 
-  // wallet 없으면 생성 (신규 유저 보장)
-  await adminClient
-    .from('wallets')
-    .upsert({ user_id: user.id, balance: 0 }, { onConflict: 'user_id', ignoreDuplicates: true })
-
   return { success: true }
 }
 

@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { ArrowLeft, Users } from 'lucide-react'
 import { getOrCreateReferralCode, getReferralStats } from '@/app/actions/user/referral'
 import { createClient } from '@/lib/supabase/server'
+import { REFERRAL_PASSES, REFERRAL_VALID_DAYS } from '@/lib/domain/entitlement/pass'
 import ReferralClient from './ReferralClient'
 
 export const metadata: Metadata = {
   title: '친구 초대 | 해화당',
-  description: '친구를 초대하고 함께 복채를 받아가세요!',
+  description: '친구를 초대하고 함께 이용권을 받아 보세요.',
 }
 
 export default async function ReferralPage() {
@@ -52,7 +53,9 @@ export default async function ReferralPage() {
           <h1 className="text-2xl font-serif font-bold text-ink-light">친구 초대</h1>
         </div>
         <p className="text-sm text-ink-light/50">
-          친구와 함께 가입하면 각각 <span className="text-primary font-bold">5만냥</span>을 드립니다
+          친구가 초대 링크로 가입하면 두 분께 각각{' '}
+          <span className="text-primary font-bold">이용권 {REFERRAL_PASSES}장</span>을 드려요 (유효기간{' '}
+          {REFERRAL_VALID_DAYS}일)
         </p>
       </header>
 
@@ -62,7 +65,6 @@ export default async function ReferralPage() {
           referralCode={codeResult.code}
           referralLink={codeResult.referralLink}
           totalReferrals={statsResult.totalReferrals ?? 0}
-          totalEarned={statsResult.totalEarned ?? 0}
           recentReferrals={statsResult.recentReferrals ?? []}
         />
       </section>

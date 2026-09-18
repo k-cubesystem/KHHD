@@ -11,12 +11,10 @@ import { DestinyTarget } from '@/app/actions/user/destiny'
 import { TargetSelect, toTargetOption } from '@/components/destiny/target-select'
 import { toast } from 'sonner'
 import { analyzeCompatibilityAction } from '@/app/actions/ai/compatibility'
-import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
-import { getWalletBalance } from '@/app/actions/payment/wallet'
-import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
-import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
-import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
-import { PaywallModal } from '@/components/shared/paywall-modal'
+import { formatFeatureCost } from '@/lib/domain/payment/feature-costs'
+import { useInsufficientPass } from '@/hooks/use-insufficient-pass'
+import { useRefreshPasses } from '@/hooks/use-passes'
+import { InsufficientPassModal } from '@/components/payment/insufficient-pass-modal'
 import { CompatibilityResult } from './compatibility-result'
 import { CompatibilityLoading } from './compatibility-loading'
 import { RELATIONSHIP_TYPES, RELATIONSHIP_CATEGORIES, CATEGORY_LABELS } from '@/lib/constants/relationship-types'
@@ -35,8 +33,6 @@ interface CompatibilityClientProps {
   targets: DestinyTarget[]
   fixedTargetId?: string
 }
-
-const COMPATIBILITY_COST = FEATURE_COST.compatibility.display // 단일 소스 — 표시 = 실차감(2만냥)
 
 // 가족 등록 관계값(한글) → 궁합 관계 셀렉트 값 추정 규칙 (§7 자동 프리셋)
 const RELATION_TYPE_RULES: Array<{ match: (rt: string) => boolean; value: string }> = [
@@ -77,12 +73,8 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [result, setResult] = useState<any>(null)
-  const { checkQuota, paywallProps } = useAnalysisQuota()
-  const { bokchaeModal, closeBokchaeModal, handleDeductResult } = useInsufficientBokchae()
-  const [walletBalance, setWalletBalance] = useState<number | null>(null)
-  useEffect(() => {
-    getWalletBalance().then(setWalletBalance)
-  }, [])
+  const { passModal, closePassModal, handleChargeResult } = useInsufficientPass()
+  const refreshPasses = useRefreshPasses()
 
   // 관계 자동 프리셋(§7): 두 대상이 정해지고 사용자가 수동으로 안 바꿨을 때만 추정값 적용. 수동 변경 항상 가능.
   useEffect(() => {
@@ -126,18 +118,15 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
       return
     }
 
-    // 🔴 명식 확인은 **차감보다 먼저**. 생년월일이 없으면 궁합은 성립하지 않는데, 예전에는
-    //    차감이 먼저 일어나 실패 문구가 「복채」를 가리켰다(실제 원인은 명식 부재).
+    // 🔴 명식 확인은 **이용권 사용보다 먼저**. 생년월일이 없으면 궁합은 성립하지 않는데, 예전에는
+    //    값을 먼저 빼서 실패 문구가 결제를 가리켰다(실제 원인은 명식 부재).
     const noChart = [person1, person2].find((p) => !p.birth_date)
     if (noChart) {
       toast.error(`${noChart.name} 님의 생년월일이 없습니다. 명식을 먼저 채워 주세요.`)
       return
     }
 
-    const canProceed = await checkQuota()
-    if (!canProceed) return
-
-    // 🔴 여기서 차감하지 않는다. 복채는 서버 액션 안에서, 캐시 확인 뒤에 빠진다.
+    // 🔴 여기서 이용권을 쓰지 않는다. 이용권은 서버 액션 안에서, 캐시 확인 뒤에 쓰인다.
     //    화면이 차감하던 종전 구조에서는 액션을 브라우저에서 직접 부르면 공짜였다.
     //    실패 시 되돌리는 것도 액션이 한다 — 화면이 환급을 부르면 그 자체가 어뷰즈 경로가 된다.
     setIsAnalyzing(true)
@@ -146,15 +135,11 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
       const response = await analyzeCompatibilityAction(person1.id, person2.id, relationship)
 
       if (response.success) {
-        if (response.remainingBalance !== undefined) setWalletBalance(response.remainingBalance)
+        void refreshPasses()
         setResult(response.data)
         toast.success('궁합 분석이 완료되었습니다!')
       } else {
-        const handled = handleDeductResult(response, {
-          currentBalance: walletBalance ?? 0,
-          requiredAmount: COMPATIBILITY_COST,
-          featureLabel: '궁합 분석',
-        })
+        const handled = handleChargeResult(response, { featureLabel: '궁합 분석' })
         if (!handled) toast.error(response.error || '분석 중 오류가 발생했습니다.')
       }
     } catch {
@@ -188,8 +173,7 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
       animate="animate"
       className="min-h-screen bg-background relative overflow-hidden py-12 px-4 pb-24"
     >
-      <PaywallModal {...paywallProps} />
-      <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
+      <InsufficientPassModal {...passModal} onClose={closePassModal} />
       {/* Hanji Texture */}
       <div className="absolute inset-0 z-[1] pointer-events-none opacity-[0.03] mix-blend-multiply bg-[url('/texture/hanji_noise.png')] bg-repeat" />
 
@@ -378,7 +362,7 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
                 className="w-full bg-gradient-to-r from-gold-500 to-gold-300 hover:from-[#C5A028] hover:to-[#E5D6B4] text-black font-semibold"
               >
                 <Heart className="w-5 h-5 mr-2" />
-                궁합 분석하기
+                궁합 분석하기 · {formatFeatureCost('compatibility')}
               </Button>
               {(!person1 || !person2) && (
                 <p className="text-xs text-center text-muted-foreground mt-2">

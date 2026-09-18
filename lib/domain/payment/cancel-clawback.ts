@@ -1,8 +1,8 @@
 /**
- * 결제 취소 → 지급 복채 회수량 계산 (순수 함수 · 테스트 가능).
+ * 결제 취소 → 발급 이용권 회수량 계산 (순수 함수 · 테스트 가능).
  *
  * 정본 대조는 payments 원장으로 한다:
- *   credits_purchased(지급 총량) ↔ credits_remaining(아직 회수되지 않은 지급분)
+ *   credits_purchased(발급 장 수) ↔ credits_remaining(아직 회수되지 않은 발급분)
  *
  * 회수 목표는 **누적 취소 금액 비율**로 잡고, 이미 회수된 만큼을 뺀 **증분**만 회수한다.
  * → 웹훅 재전송·부분 취소 다중 발생이 모두 같은 식으로 수렴한다(멱등).
@@ -32,9 +32,9 @@ export interface CancelClawbackInput {
   cancels?: readonly TossCancelRecord[] | null
   /** payments.amount — DB 정본 결제 금액(원) */
   paidAmount: number
-  /** payments.credits_purchased — 실제 지갑에 지급된 복채 총량 */
+  /** payments.credits_purchased — 그 결제로 발급된 이용권 장 수 */
   creditsGranted: number
-  /** payments.credits_remaining — 아직 회수되지 않은 지급 복채 */
+  /** payments.credits_remaining — 아직 회수되지 않은 발급분 */
   creditsRemaining: number
 }
 
@@ -43,9 +43,9 @@ export interface CancelClawbackPlan {
   cancelledAmount: number
   /** 전액 취소 여부 */
   fullyCancelled: boolean
-  /** 누적 회수 목표 복채 */
+  /** 누적 회수 목표 장 수 */
   targetClawed: number
-  /** 이번에 회수할 복채(증분). 0 이면 할 일 없음 */
+  /** 이번에 회수할 장 수(증분). 0 이면 할 일 없음 */
   delta: number
   /** 멱등키 꼬리 — 확정된 마지막 취소 거래 키(없으면 누적 금액으로 대체) */
   idempotencySuffix: string
@@ -113,7 +113,7 @@ export function computeCancelClawback(input: CancelClawbackInput): CancelClawbac
     return { cancelledAmount: 0, fullyCancelled: false, targetClawed: 0, delta: 0, idempotencySuffix: 'amt0' }
   }
 
-  // 전액 취소는 비율 반올림을 거치지 않고 지급 전량을 쓸어 담는다(잔여 누수 방지).
+  // 전액 취소는 비율 반올림을 거치지 않고 발급 전량을 쓸어 담는다(잔여 누수 방지).
   const targetClawed =
     fullyCancelled || paidAmount <= 0
       ? creditsGranted

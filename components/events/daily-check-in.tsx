@@ -3,31 +3,20 @@
 import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { CalendarCheck, Gift, Sparkles, Check, Flame, Crown, ChevronLeft, ChevronRight, Coins } from 'lucide-react'
-import { recordDailyAttendance } from '@/app/actions/payment/daily-check'
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { CalendarCheck, Sparkles, Check, Flame, Crown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { recordDailyAttendance } from '@/app/actions/payment/attendance'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useKstToday, parseKstDateString } from '@/hooks/use-kst-today'
+import { logger } from '@/lib/utils/logger'
 
-/* ─────────────────────────────────────────
-   Types
-───────────────────────────────────────── */
 interface DailyCheckInProps {
   canCheckIn: boolean
   checkedDates?: string[]
-  weekCount?: number
-  totalBokchae?: number
   consecutiveStreak?: number
-  /** @deprecated — kept for backwards compat, ignored */
-  initialChecked?: boolean
-  /** @deprecated — kept for backwards compat, ignored */
-  initialConsecutiveDays?: number
 }
 
-/* ─────────────────────────────────────────
-   Confetti Particles
-───────────────────────────────────────── */
 function RewardParticles() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
@@ -53,9 +42,6 @@ function RewardParticles() {
   )
 }
 
-/* ─────────────────────────────────────────
-   Gold Stamp
-───────────────────────────────────────── */
 function GoldStamp() {
   return (
     <motion.div
@@ -72,9 +58,6 @@ function GoldStamp() {
   )
 }
 
-/* ─────────────────────────────────────────
-   Monthly Calendar
-───────────────────────────────────────── */
 function MonthlyCalendar({
   year,
   month,
@@ -101,24 +84,29 @@ function MonthlyCalendar({
   while (cells.length % 7 !== 0) cells.push(null)
 
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-7 mb-1">
+    <div className="w-full" role="grid" aria-label="출석 달력">
+      <div className="grid grid-cols-7 mb-1" role="row">
         {dayLabels.map((d) => (
-          <div key={d} className="text-center text-[9px] font-medium text-ink-light/40 py-0.5">
+          <div key={d} role="columnheader" className="text-center text-[9px] font-medium text-ink-light/40 py-0.5">
             {d}
           </div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-y-1 relative">
         {cells.map((day, idx) => {
-          if (!day) return <div key={`e-${idx}`} />
+          if (!day) return <div key={`e-${idx}`} role="gridcell" />
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
           const isChecked = checkedSet.has(dateStr)
           const isToday = dateStr === todayStr
           const isFuture = dateStr > todayStr
 
           return (
-            <div key={dateStr} className="flex flex-col items-center gap-0.5 relative">
+            <div
+              key={dateStr}
+              role="gridcell"
+              aria-label={`${month + 1}월 ${day}일${isChecked ? ' 출석 완료' : ''}${isToday ? ' 오늘' : ''}`}
+              className="flex flex-col items-center gap-0.5 relative"
+            >
               <div
                 className={cn(
                   'w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-medium relative',
@@ -156,55 +144,20 @@ function MonthlyCalendar({
   )
 }
 
-/* ─────────────────────────────────────────
-   Weekly Bonus Progress Bar
-───────────────────────────────────────── */
-function WeeklyStreakBar({ weekCount }: { weekCount: number }) {
-  const isComplete = weekCount >= 7
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-ink-light/50">이번 주 ({weekCount}/7일)</span>
-        <span className={cn('text-[10px] font-bold', isComplete ? 'text-gold-500 bok-badge' : 'text-gold-500/70')}>
-          {isComplete ? '주간 보너스 달성!' : `${7 - weekCount}일 남음 → +3만냥`}
-        </span>
-      </div>
-      <div className="flex gap-0.5">
-        {Array.from({ length: 7 }).map((_, i) => {
-          const filled = i < weekCount
-          return (
-            <div
-              key={i}
-              className={cn('h-2 flex-1 rounded-sm overflow-hidden relative', filled ? 'bg-gold-500' : 'bg-white/10')}
-              style={{ transformOrigin: 'left' }}
-            >
-              {filled && (
-                <div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent anim-bar-shimmer"
-                  style={{ animation: `bar-shimmer 2.5s ease-in-out ${2 + i * 0.3}s infinite` }}
-                />
-              )}
-              {i === 6 && !filled && (
-                <div className="absolute inset-0 flex items-center justify-end pr-0.5">
-                  <Gift className="w-2 h-2 text-gold-500/40" />
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
+/** 정성 적립이 실패하면(누적 0) 출석만 알린다 — 쌓이지 않은 정성을 쌓였다고 말하지 않는다. */
+function checkInMessage(devotionGained: boolean, devotionTotalDays: number): string {
+  if (devotionGained) return `출석했어요. 신당 정성이 하루 쌓였어요 (누적 ${devotionTotalDays}일)`
+  if (devotionTotalDays > 0) return '출석했어요. 오늘 정성은 이미 쌓여 있어요'
+  return '출석했어요.'
 }
 
-/* ─────────────────────────────────────────
-   Main Component
-───────────────────────────────────────── */
+/**
+ * 일일 출석 — 출석하면 신당 정성(기원)이 하루 쌓인다. 재화 지급은 없다(2026-09-18 복채 폐지).
+ * 정성은 기도와 같은 날이면 하루로 센다(서버 KST 멱등) — 그래서 «+1일»은 실제로 쌓였을 때만 띄운다.
+ */
 export function DailyCheckIn({
   canCheckIn: initialCanCheckIn,
   checkedDates: initialCheckedDates = [],
-  weekCount: initialWeekCount = 0,
-  totalBokchae: initialTotalBokchae = 0,
   consecutiveStreak: initialStreak = 0,
 }: DailyCheckInProps) {
   // 자정에 스스로 갱신되는 KST 날짜. 밤새 열어둔 세션도 날짜가 따라 넘어간다.
@@ -214,17 +167,18 @@ export function DailyCheckIn({
   const [open, setOpen] = useState(false)
   const [canCheckIn, setCanCheckIn] = useState(initialCanCheckIn)
   const [checkedDates, setCheckedDates] = useState<string[]>(initialCheckedDates)
-  const [weekCount, setWeekCount] = useState(initialWeekCount)
-  const [totalBokchae, setTotalBokchae] = useState(initialTotalBokchae)
   const [streak, setStreak] = useState(initialStreak)
   const [isLoading, setIsLoading] = useState(false)
   const [showStamp, setShowStamp] = useState(false)
-  const [showParticles, setShowParticles] = useState(false)
-  const [lastReward, setLastReward] = useState<{ reward: number; isWeeklyBonus: boolean } | null>(null)
+  const [showDevotion, setShowDevotion] = useState(false)
   // 보고 있는 달은 절대 연·월이 아니라 '이번 달로부터의 오프셋'이다(자정에 시야가 따라 넘어간다).
   const [monthOffset, setMonthOffset] = useState(0)
 
   const checkedSet = useMemo(() => new Set(checkedDates), [checkedDates])
+  const monthCount = useMemo(
+    () => checkedDates.filter((d) => d.startsWith(todayStr.slice(0, 7))).length,
+    [checkedDates, todayStr]
+  )
 
   const viewDate = useMemo(() => new Date(todayYear, todayMonth + monthOffset, 1), [todayYear, todayMonth, monthOffset])
   const viewYear = viewDate.getFullYear()
@@ -235,38 +189,45 @@ export function DailyCheckIn({
   const canGoPrev = monthOffset > -3
   const canGoNext = monthOffset < 0
 
+  const markCheckedToday = useCallback(() => {
+    setCanCheckIn(false)
+    setCheckedDates((prev) => (prev.includes(todayStr) ? prev : [...prev, todayStr]))
+  }, [todayStr])
+
   const handleCheckIn = useCallback(async () => {
     if (!canCheckIn || isLoading) return
     setIsLoading(true)
-    const result = await recordDailyAttendance()
+    const result = await recordDailyAttendance().catch((error: unknown) => {
+      logger.error('[DailyCheckIn] 출석 요청 실패:', error)
+      return null
+    })
     setIsLoading(false)
 
-    if (result.success) {
-      setCanCheckIn(false)
-      setCheckedDates((prev) => [...prev, todayStr])
-      setWeekCount((prev) => prev + 1)
-      setTotalBokchae((prev) => prev + (result.reward || 0))
-      setStreak((prev) => prev + 1)
-      setLastReward({ reward: result.reward || 1, isWeeklyBonus: result.isWeeklyBonus || false })
-
-      setMonthOffset(0)
-
-      setShowStamp(true)
-      setTimeout(() => {
-        setShowStamp(false)
-        setShowParticles(true)
-      }, 700)
-
-      toast.success(result.message || `출석 체크 완료! 복채 ${result.reward}만냥 지급!`, { duration: 5000 })
-      setTimeout(() => setShowParticles(false), 3500)
-    } else {
-      toast.error(result.error || '출석 체크에 실패했습니다.')
+    if (!result) {
+      toast.error('출석을 기록하지 못했어요. 잠시 후 다시 시도해 주세요.')
+      return
     }
-  }, [canCheckIn, isLoading, todayStr])
+    if (!result.success) {
+      if (result.alreadyChecked) markCheckedToday()
+      toast.error(result.error)
+      return
+    }
+
+    markCheckedToday()
+    setStreak((prev) => prev + 1)
+    setMonthOffset(0)
+    setShowStamp(true)
+    setTimeout(() => {
+      setShowStamp(false)
+      setShowDevotion(result.devotionGained)
+    }, 700)
+
+    toast.success(checkInMessage(result.devotionGained, result.devotionTotalDays), { duration: 5000 })
+    setTimeout(() => setShowDevotion(false), 3500)
+  }, [canCheckIn, isLoading, markCheckedToday])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {/* ── 작은 배너 (트리거) ── */}
       <DialogTrigger asChild>
         <button
           type="button"
@@ -299,15 +260,13 @@ export function DailyCheckIn({
               )}
             </div>
             <p className="text-[11px] text-ink-light/50 mt-0.5 truncate">
-              {canCheckIn
-                ? `오늘의 복채가 기다려요 · 이번 주 ${weekCount}/7`
-                : `오늘 출석 완료 · 이번 주 ${weekCount}/7`}
+              {canCheckIn ? '출석하면 신당에 정성이 하루 쌓여요' : `오늘 출석 완료 · 이달 ${monthCount}일`}
             </p>
           </div>
 
           {canCheckIn ? (
             <span className="shrink-0 text-[11px] font-bold text-black bg-gradient-to-r from-[#8B6914] via-gold-500 to-[#8B6914] px-2.5 py-1.5 rounded-full">
-              +1만냥
+              출석하기
             </span>
           ) : (
             <ChevronRight className="w-4 h-4 text-ink-light/40 shrink-0" />
@@ -315,13 +274,10 @@ export function DailyCheckIn({
         </button>
       </DialogTrigger>
 
-      {/* ── 팝업: 달력 ── */}
       <DialogContent className="max-w-sm p-0 gap-0 overflow-hidden">
         <div className="hanji-card border-0 p-4 space-y-4 relative">
-          {/* Particles */}
-          <AnimatePresence>{showParticles && lastReward && <RewardParticles />}</AnimatePresence>
+          <AnimatePresence>{showDevotion && <RewardParticles />}</AnimatePresence>
 
-          {/* Header */}
           <div className="flex items-center justify-between pr-6">
             <div className="flex items-center gap-2">
               <div
@@ -333,7 +289,6 @@ export function DailyCheckIn({
               <DialogTitle className="text-sm font-bold text-ink-light tracking-wide">일일 출석 체크</DialogTitle>
             </div>
 
-            {/* Streak badge — one-shot fade-in */}
             {streak >= 2 && (
               <div
                 key={streak}
@@ -352,7 +307,6 @@ export function DailyCheckIn({
             )}
           </div>
 
-          {/* Streak Hero Number */}
           {streak >= 1 && (
             <motion.div
               key={streak}
@@ -376,7 +330,6 @@ export function DailyCheckIn({
             </motion.div>
           )}
 
-          {/* Monthly Calendar */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <button
@@ -417,10 +370,6 @@ export function DailyCheckIn({
             />
           </div>
 
-          {/* Weekly Bonus Bar */}
-          <WeeklyStreakBar weekCount={weekCount} />
-
-          {/* Check-in Button */}
           <div className="relative">
             <motion.div whileTap={canCheckIn && !isLoading ? { scale: 0.96 } : {}}>
               <Button
@@ -452,8 +401,8 @@ export function DailyCheckIn({
                     </>
                   ) : canCheckIn ? (
                     <>
-                      <Gift className="w-4 h-4" />
-                      오늘 출석 체크하기 (+1만냥)
+                      <CalendarCheck className="w-4 h-4" />
+                      오늘 출석 체크하기
                     </>
                   ) : (
                     <>
@@ -465,9 +414,8 @@ export function DailyCheckIn({
               </Button>
             </motion.div>
 
-            {/* Reward float */}
             <AnimatePresence>
-              {showParticles && lastReward && (
+              {showDevotion && (
                 <motion.div
                   initial={{ scale: 0, y: 0, opacity: 0 }}
                   animate={{ scale: 1, y: -60, opacity: 1 }}
@@ -475,20 +423,10 @@ export function DailyCheckIn({
                   transition={{ type: 'spring', stiffness: 180, damping: 14 }}
                   className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none z-10"
                 >
-                  <div
-                    className={cn(
-                      'px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl border',
-                      lastReward.isWeeklyBonus
-                        ? 'bg-gradient-to-r from-[#8B6914] to-gold-500 text-black border-gold-500/50'
-                        : 'bg-gradient-to-r from-[#1A1200] to-[#2A1F00] text-gold-500 border-gold-500/40'
-                    )}
-                  >
+                  <div className="px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl border bg-gradient-to-r from-[#1A1200] to-[#2A1F00] text-gold-500 border-gold-500/40">
                     <div className="flex items-center gap-2">
-                      <Coins className="w-5 h-5" />
-                      <div>
-                        <p className="text-base font-black">+{lastReward.reward}만냥</p>
-                        {lastReward.isWeeklyBonus && <p className="text-[9px] opacity-80">주간 보너스 포함!</p>}
-                      </div>
+                      <Flame className="w-5 h-5" />
+                      <p className="text-base font-black">정성 +1일</p>
                     </div>
                   </div>
                 </motion.div>
@@ -496,10 +434,11 @@ export function DailyCheckIn({
             </AnimatePresence>
           </div>
 
-          {/* Info Footer */}
           <div className="flex items-center justify-between pt-1 border-t border-white/5">
-            <p className="text-[9px] text-ink-light/35">매일 1만냥 · 7일 개근 시 +3만냥 보너스</p>
-            <p className="text-[9px] font-bold text-gold-500/60">이달 {totalBokchae}만냥</p>
+            <DialogDescription className="text-[9px] text-ink-light/35">
+              출석하면 신당 정성이 하루 쌓여요 · 기도와 같은 날은 하루로 셉니다
+            </DialogDescription>
+            <p className="text-[9px] font-bold text-gold-500/60 shrink-0">이달 {monthCount}일</p>
           </div>
         </div>
       </DialogContent>

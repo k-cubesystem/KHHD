@@ -11,15 +11,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, Suspense } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { analyzePalmReading, type PalmAnalysisResult, type PalmReadingGoal } from '@/app/actions/ai/image'
-import { getWalletBalance } from '@/app/actions/payment/wallet'
-import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { FEATURE_COST, formatFeatureCost } from '@/lib/domain/payment/feature-costs'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { GOLD_500 } from '@/lib/config/design-tokens'
 import { toast } from 'sonner'
 import {
   ArrowRight,
-  Coins,
   Hand,
   TrendingUp,
   Activity,
@@ -32,10 +30,10 @@ import {
   Layers,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
-import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
-import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
-import { PaywallModal } from '@/components/shared/paywall-modal'
+import { InsufficientPassModal } from '@/components/payment/insufficient-pass-modal'
+import { useInsufficientPass } from '@/hooks/use-insufficient-pass'
+import { useRefreshPasses } from '@/hooks/use-passes'
+import { StudioPassBanner } from '@/components/studio/studio-pass-banner'
 import { ReadingResultHero } from '@/components/studio/reading-result-hero'
 import { RemedyPanel } from '@/components/analysis/RemedyPanel'
 import { SajuSynergyCard } from '@/components/studio/saju-synergy-card'
@@ -54,7 +52,7 @@ const PALM_GOAL_OPTIONS: { value: PalmReadingGoal; label: string; desc: string; 
 
 type StepType = 'upload' | 'analyzing' | 'result'
 
-const PALM_COST = FEATURE_COST.palm.display // 단일 소스 — 표시 = 실차감
+const PALM_COST = FEATURE_COST.palm.display // 기록에 남기는 장 수 — 단일 소스
 
 function PalmAnalysisPageContent() {
   const router = useRouter()
@@ -67,12 +65,10 @@ function PalmAnalysisPageContent() {
   const [imageBase64, setImageBase64] = useState<string>('')
   const [analysisResult, setAnalysisResult] = useState<PalmAnalysisResult | null>(null)
   const [loading, setLoading] = useState(false)
-  const [balance, setBalance] = useState<number | null>(null)
-  const { bokchaeModal, closeBokchaeModal, handleDeductResult } = useInsufficientBokchae()
-  const { checkQuota, paywallProps } = useAnalysisQuota()
+  const { passModal, closePassModal, handleChargeResult } = useInsufficientPass()
+  const refreshPasses = useRefreshPasses()
 
   useEffect(() => {
-    getWalletBalance().then(setBalance)
     if (!targetId) return
     const loadMember = async () => {
       const members = await getFamilyWithMissions()
@@ -90,15 +86,12 @@ function PalmAnalysisPageContent() {
       return
     }
 
-    const canProceed = await checkQuota()
-    if (!canProceed) return
-
     setLoading(true)
     setStep('analyzing')
     GA.analysisStart(`palm:${selectedGoal}`)
 
     try {
-      // 🔴 여기서 차감하지 않는다. 복채는 서버 액션 안에서 빠진다 — 화면이 차감하던 종전 구조에서는
+      // 🔴 여기서 이용권을 쓰지 않는다. 이용권은 서버 액션 안에서 쓰인다 — 화면이 차감하던 종전 구조에서는
       //    액션을 브라우저에서 직접 부르면 공짜였다. 실패 시 되돌리는 것도 액션이 한다
       //    (화면이 환급을 부르면 그 자체가 「결과 받고 환급」 어뷰즈 경로가 된다).
       const result = await analyzePalmReading(
@@ -111,17 +104,13 @@ function PalmAnalysisPageContent() {
       if (!result.success) {
         setLoading(false)
         setStep('upload')
-        const handled = handleDeductResult(result, {
-          currentBalance: balance ?? 0,
-          requiredAmount: PALM_COST,
-          featureLabel: '손금 분석',
-        })
+        const handled = handleChargeResult(result, { featureLabel: '손금 분석' })
         if (!handled) toast.error(result.error || '분석 중 오류가 발생했습니다.')
         return
       }
 
       setAnalysisResult(result)
-      void getWalletBalance().then(setBalance)
+      void refreshPasses()
 
       if (targetId) {
         await saveAnalysisSession({
@@ -156,8 +145,7 @@ function PalmAnalysisPageContent() {
 
   return (
     <StudioAnalysisLayout category="HAND" targetMember={targetMember}>
-      <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
-      <PaywallModal {...paywallProps} />
+      <InsufficientPassModal {...passModal} onClose={closePassModal} />
       <AnimatePresence mode="wait">
         {step === 'upload' && (
           <motion.div
@@ -202,24 +190,12 @@ function PalmAnalysisPageContent() {
               </div>
             </div>
 
-            {/* 복채 잔액 + 비용 배너 */}
-            <div className="relative overflow-hidden rounded-2xl border border-gold-500/30 bg-gradient-to-br from-[#001A0F]/80 to-[#0A192F]/80 p-4 backdrop-blur-sm">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.12),transparent_60%)]" />
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-gold-500" />
-                  <span className="text-xs text-white/50 font-sans">보유 복채</span>
-                  <span className="text-sm font-bold text-gold-500 font-serif">
-                    {balance !== null ? `${balance}만냥` : '—'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-gold-500/10 border border-gold-500/20 rounded-full px-3 py-1">
-                  <span className="text-xs text-gold-500 font-medium">손금 분석</span>
-                  <span className="text-xs text-white/50">·</span>
-                  <span className="text-sm font-bold text-gold-500 font-serif">{PALM_COST}만냥</span>
-                </div>
-              </div>
-            </div>
+            {/* 이용권 + 비용 배너 */}
+            <StudioPassBanner
+              featureLabel="손금 분석"
+              costKey="palm"
+              toneClassName="from-[#001A0F]/80 to-[#0A192F]/80"
+            />
 
             {/* 목적 선택 */}
             <Card className="card-glass-manse p-5 border-white/5">
@@ -290,7 +266,7 @@ function PalmAnalysisPageContent() {
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    손금 분석 시작 · {PALM_COST}만냥
+                    손금 분석 시작 · {formatFeatureCost('palm')}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

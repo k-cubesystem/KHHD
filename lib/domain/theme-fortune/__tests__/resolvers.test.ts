@@ -14,7 +14,7 @@ const RESOLVER_DIR = join(process.cwd(), 'lib/domain/theme-fortune/resolvers')
 
 describe('레지스트리 — 카피 표와 계산 표가 어긋나지 않는다', () => {
   it('🔴 `reading: true` 인 테마는 예외 없이 판정이 등록돼 있다', () => {
-    // 어긋나면 카드는 복채를 적고 링크는 풀이로 가는데, 그 화면이 「준비 중」으로 닫힌다.
+    // 어긋나면 카드는 이용권 장 수를 적고 링크는 풀이로 가는데, 그 화면이 「준비 중」으로 닫힌다.
     const declared = THEME_FORTUNES.filter(hasThemeReading).map((theme) => theme.id)
 
     expect([...declared].sort()).toEqual([...resolvedThemeIds()].sort())

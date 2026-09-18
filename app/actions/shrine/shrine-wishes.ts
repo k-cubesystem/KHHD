@@ -2,11 +2,14 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { addBokPoints } from '@/lib/services/bok-grant'
 import { accrueDevotion } from '@/lib/services/devotion'
 import { logger } from '@/lib/utils/logger'
-import { PRAYER_MAX_SAVED,
-  PRAYER_PRUNE_SINCE, PRAYER_PAGE_SIZE, type FamilyPrayer } from '@/lib/domain/shrine/family-prayer'
+import {
+  PRAYER_MAX_SAVED,
+  PRAYER_PRUNE_SINCE,
+  PRAYER_PAGE_SIZE,
+  type FamilyPrayer,
+} from '@/lib/domain/shrine/family-prayer'
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
@@ -66,17 +69,6 @@ export async function addWish(input: {
   })
 
   if (error) return { success: false, error: error.message }
-
-  // 복 포인트 적립 (로그인 유저만)
-  if (user) {
-    if (isOwner) {
-      // 내 신당 소원: +10 (일일 1회 제한은 미션 시스템에서 처리)
-      await addBokPoints(10, 'SHRINE_WISH_OWN', undefined, '신당 기원')
-    } else {
-      // 타인 신당 방문 기원: +5
-      await addBokPoints(5, 'SHRINE_WISH_VISIT', undefined, '신당 방문 기원')
-    }
-  }
 
   // 방문자 카운트 증가 (비오너만)
   if (!isOwner) {
@@ -299,11 +291,7 @@ async function prunePrayers(supabase: SupabaseClient, shrineId: string): Promise
     //  ① 백일기도 이전의 구 소원은 대상이 아니다 — is_owner_wish 는 v3 표식이 아니라
     //     2026-06-21 부터 붙던 플래그라, 없으면 기도와 무관한 기록까지 쓸어 갔다.
     //  ② 액자에 걸린 편은 지우지 않는다 — 지우면 벽이 조용히 최신 편으로 되돌아간다.
-    const { data: shrine } = await supabase
-      .from('shrines')
-      .select('featured_wish_id')
-      .eq('id', shrineId)
-      .maybeSingle()
+    const { data: shrine } = await supabase.from('shrines').select('featured_wish_id').eq('id', shrineId).maybeSingle()
     const featuredId = (shrine?.featured_wish_id as string | null) ?? null
 
     const { data, error } = await supabase

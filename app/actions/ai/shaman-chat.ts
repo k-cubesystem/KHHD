@@ -4,7 +4,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { toGeminiHistory } from '@/lib/domain/chat/history'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
@@ -19,13 +18,15 @@ import { getSceneData } from '@/app/actions/shrine/scene'
 import { computeEnergy, indexCatalog, ELEMENTS, EL_KO } from '@/lib/domain/shrine/energy'
 import { awardDeityBondForUser } from '@/lib/services/deity-bond'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
-import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
+import { chargeFeature } from '@/lib/services/feature-charge'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { SHAMAN_QUESTIONS_PER_PASS, formatPassUnits, type PassErrorType } from '@/lib/domain/entitlement/pass'
 import { bondProgress, BOND_LEVEL_NAMES, type BondLevel } from '@/lib/domain/shrine/deities'
 import { PAST_SESSIONS_PAGE_SIZE } from '@/lib/domain/chat/constants'
 import {
+  MASTER_QUESTION_ALLOWANCE,
   MEMBER_WEEKLY_QUESTIONS,
   ONBOARDING_FREE_QUESTIONS,
-  PURCHASE_COST_BOKCHAE,
   PURCHASE_QUESTIONS,
   chatUsageDateKey,
   memberWeekWindow,
@@ -34,12 +35,11 @@ import {
 } from '@/lib/domain/chat/entitlements'
 import { getActiveMembership } from '@/lib/auth/subscription'
 import { getUserRole } from '@/lib/supabase/helpers'
-import { hasUnlimitedAccess, UNLIMITED_BALANCE } from '@/lib/auth/privileges'
+import { hasUnlimitedAccess } from '@/lib/auth/privileges'
 
 // --- Constants ---
 
-// 가격·수량·소비기한은 lib/domain/chat/entitlements.ts 가 정본이다(화면 문구도 같은 값을 읽는다).
-const PURCHASE_COST = PURCHASE_COST_BOKCHAE // 1만냥 (wallets.balance 단위: 1 = 1만냥)
+// 수량·소비기한은 lib/domain/chat/entitlements.ts, 쓰는 장 수는 FEATURE_COST.shamanQuestions 가 정본이다.
 const CHAT_HISTORY_WINDOW = 8 // Gemini에 전달할 최근 메시지 수 (슬라이딩 윈도우)
 const MEMORY_EXTRACT_INTERVAL = 6 // 메시지 N개마다 기억 추출 (2msg/턴 → 3턴마다)
 
@@ -236,7 +236,6 @@ export interface ShamanChatResponse {
  */
 export interface ShamanQuestionStatus {
   success: boolean
-  walletBalance: number
   isMember: boolean
   onboardingCredits: number
   memberWeeklyUsed: number
@@ -261,7 +260,6 @@ export interface ShamanQuestionStatus {
 
 /**
  * 속풀이 질문권 현황 조회 — 주머니 넷의 합.
- * - walletBalance: 현재 보유 복채 (냥)
  * - onboardingCredits: 명식 입력 완료 맛보기 잔여(평생 1회)
  * - memberWeeklyRemaining: 멤버십 주간분 잔여(구독 주기 기준 7일 창). 비회원은 0
  * - adCredits: 광고 리워드 질문권(유효분)
@@ -272,7 +270,6 @@ export async function getShamanQuestionStatus(): Promise<ShamanQuestionStatus> {
   const defaultResult: ShamanQuestionStatus = {
     success: false,
     memberWeekStartIso: null,
-    walletBalance: 0,
     isMember: false,
     onboardingCredits: 0,
     memberWeeklyUsed: 0,
@@ -293,9 +290,8 @@ export async function getShamanQuestionStatus(): Promise<ShamanQuestionStatus> {
 
     const nowMs = Date.now()
 
-    // 병렬 조회: 지갑 + 멤버십(주간 창 앵커 포함) + 질문권 행 + 명식 보유 + 광고 질문권
-    const [walletBalance, membership, creditsResult, profileResult, adLedgerResult] = await Promise.all([
-      getWalletBalance(), // admin=999, tester=100, 일반=실제 잔액
+    // 병렬 조회: 멤버십(주간 창 앵커 포함) + 질문권 행 + 명식 보유 + 광고 질문권
+    const [membership, creditsResult, profileResult, adLedgerResult] = await Promise.all([
       getActiveMembership(user.id),
       supabase
         .from('shaman_question_credits')
@@ -337,22 +333,21 @@ export async function getShamanQuestionStatus(): Promise<ShamanQuestionStatus> {
       else if (typeof granted === 'number') onboardingCredits += granted
     }
 
-    // 마스터: 상한 자체를 개방 (잔액만 무한이고 질문은 막히던 비대칭 해소)
+    // 마스터: 상한 자체를 개방 (풀이는 통과인데 질문만 막히던 비대칭 해소)
     const role = await getUserRole(supabase, user.id)
     if (hasUnlimitedAccess(role)) {
       return {
         success: true,
         memberWeekStartIso: null, // 마스터는 상한 자체가 없다
-        walletBalance,
         isMember: true,
         onboardingCredits,
         memberWeeklyUsed: 0,
-        memberWeeklyTotal: UNLIMITED_BALANCE,
-        memberWeeklyRemaining: UNLIMITED_BALANCE,
+        memberWeeklyTotal: MASTER_QUESTION_ALLOWANCE,
+        memberWeeklyRemaining: MASTER_QUESTION_ALLOWANCE,
         adCredits,
         purchasedCredits,
         purchasedExpiresAt,
-        totalRemaining: UNLIMITED_BALANCE,
+        totalRemaining: MASTER_QUESTION_ALLOWANCE,
       }
     }
 
@@ -376,7 +371,6 @@ export async function getShamanQuestionStatus(): Promise<ShamanQuestionStatus> {
     return {
       success: true,
       memberWeekStartIso,
-      walletBalance,
       isMember: Boolean(membership),
       onboardingCredits,
       memberWeeklyUsed,
@@ -399,14 +393,30 @@ export async function getShamanQuestionStatus(): Promise<ShamanQuestionStatus> {
 }
 
 /**
- * 질문권 구매: 1만냥 → +20회
+ * 질문권 열기: 이용권(FEATURE_COST.shamanQuestions) → 질문 SHAMAN_QUESTIONS_PER_PASS 문(PURCHASE_EXPIRE_DAYS 일).
+ *
+ * 관리자·검수는 chargeFeature 가 역할로 통과시킨다(hasPassBypass) — 여기서 role 을 따로 보지 않는다.
+ * 🔴 이용권을 쓴 «뒤»에 질문을 연다. 여는 데 실패하면 쓴 이용권을 되돌린다.
  */
 export async function purchaseShamanQuestions(): Promise<{
   success: boolean
   error?: string
+  errorType?: PassErrorType
+  requiredUnits?: number
   newPurchasedCredits?: number
-  remainingBalance?: number
 }> {
+  let refundOnFailure: (() => Promise<void>) | null = null
+  const failed = async (): Promise<{ success: false; error: string }> => {
+    const refunded = refundOnFailure !== null
+    await refundOnFailure?.()
+    return {
+      success: false,
+      error: refunded
+        ? '질문을 여는 중 문제가 생겼어요. 쓴 이용권은 돌려드렸어요.'
+        : '질문을 여는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+    }
+  }
+
   try {
     const supabase = await createClient()
     const {
@@ -414,53 +424,30 @@ export async function purchaseShamanQuestions(): Promise<{
     } = await supabase.auth.getUser()
     if (!user) return { success: false, error: '로그인이 필요합니다.' }
 
-    const adminClient = createAdminClient()
+    const charge = await chargeFeature({
+      userId: user.id,
+      featureKey: 'SHAMAN_QUESTIONS',
+      costKey: 'shamanQuestions',
+      label: `속풀이 질문 ${SHAMAN_QUESTIONS_PER_PASS}문`,
+    })
+    if (!charge.ok) return charge.failure
+    refundOnFailure = charge.refundOnFailure
 
-    // 0. role 확인 (admin은 실제 복채 차감 없이 질문권 지급)
-    const { data: profileData } = await adminClient.from('profiles').select('role').eq('id', user.id).maybeSingle()
-
-    const isPrivileged = profileData?.role === 'admin'
-    let finalBalance: number = isPrivileged ? 999 : 0
-
-    if (!isPrivileged) {
-      // 1. 복채 차감 — 원자 RPC(deduct_wallet_balance) 경유. read-then-write 레이스 제거.
-      const res = await spendBokchae(
-        PURCHASE_COST,
-        `속풀이 질문권 ${PURCHASE_QUESTIONS}회 구매(${PURCHASE_COST_BOKCHAE}만냥)`,
-        'SHAMAN_QUESTIONS'
-      )
-      if (!res.success) {
-        if (res.error === 'INSUFFICIENT_BOKCHAE') {
-          return {
-            success: false,
-            error: `복채가 부족합니다. (질문권 ${PURCHASE_QUESTIONS}회 = ${PURCHASE_COST_BOKCHAE}만냥)`,
-          }
-        }
-        return { success: false, error: '복채 차감 중 오류가 발생했습니다.' }
-      }
-      finalBalance = res.balance ?? 0
-    }
-
-    // 2. 질문권 적립 — 원자 RPC (증분 UPSERT)
-    const { data: newCredits, error: creditError } = await adminClient.rpc('add_shaman_credits', {
+    // 질문권 증분 — 원자 RPC (증분 UPSERT)
+    const { data: newCredits, error: creditError } = await createAdminClient().rpc('add_shaman_credits', {
       p_user_id: user.id,
-      p_amount: PURCHASE_QUESTIONS,
+      p_amount: SHAMAN_QUESTIONS_PER_PASS,
     })
     if (creditError || typeof newCredits !== 'number' || newCredits < 0) {
       logger.error('[purchaseShamanQuestions] credit grant failed:', creditError)
-      // 차감됐는데 지급 실패 → 환불
-      if (!isPrivileged) await refundBokchae(user.id, PURCHASE_COST, '신당 질문권 구매 취소 환불')
-      return { success: false, error: '질문권 지급 중 오류가 발생했습니다.' }
+      return failed()
     }
 
-    return {
-      success: true,
-      newPurchasedCredits: newCredits,
-      remainingBalance: finalBalance,
-    }
+    return { success: true, newPurchasedCredits: newCredits }
   } catch (error) {
+    // 이용권을 쓴 뒤의 예외도 되돌린다 — 질문이 안 열렸는데 이용권만 사라지면 안 된다.
     logger.error('[purchaseShamanQuestions] Error:', error)
-    return { success: false, error: '질문권 구매 중 오류가 발생했습니다.' }
+    return failed()
   }
 }
 
@@ -468,7 +455,7 @@ export async function purchaseShamanQuestions(): Promise<{
  * 신당 채팅 메시지 전송
  * - 질문권 없으면 에러 반환 (noCredits: true)
  * - 소비 순서: 일일 무료 → 구매 질문권
- * - 메시지당 별도 복채 차감 없음 (질문권 기반)
+ * - 메시지당 이용권을 쓰지 않는다 (질문권 기반)
  */
 export async function sendShamanChatMessage(
   message: string,
@@ -514,7 +501,7 @@ export async function sendShamanChatMessage(
     if (status.totalRemaining <= 0) {
       return {
         success: false,
-        error: `질문 횟수가 모두 소진되었습니다. 복채 ${PURCHASE_COST_BOKCHAE}만냥으로 질문권 ${PURCHASE_QUESTIONS}회를 충전하거나, 광고를 보고 받으실 수 있습니다.`,
+        error: `질문 횟수를 모두 썼어요. ${formatPassUnits(FEATURE_COST.shamanQuestions.display)}으로 질문 ${PURCHASE_QUESTIONS}문을 열거나, 광고를 보고 받을 수 있어요.`,
         noCredits: true,
       }
     }
@@ -751,7 +738,7 @@ export async function sendShamanChatMessage(
     if (handRecord) suggestions.push('손금에서 가장 주목해야 할 부분이 있나요?')
     suggestions.push('올해 가장 조심해야 할 것은?', '이번 달 주요 운세 흐름은?', '저에게 맞는 개운법을 알려주세요')
 
-    // 서버 기준 잔여(차감 반영). 마스터(UNLIMITED_BALANCE)는 감산 없이 그대로 내려간다.
+    // 서버 기준 잔여(차감 반영). 마스터(MASTER_QUESTION_ALLOWANCE)는 감산 없이 그대로 내려간다.
     const dec = (bucket: typeof consumedFrom, value: number) =>
       consumedFrom === bucket ? Math.max(0, value - 1) : value
     const remainingOnboarding = dec('onboarding', status.onboardingCredits)
@@ -919,7 +906,7 @@ export interface ChatOpening {
 /**
  * 선문안(先問安) — 채팅 입장 시 신위가 먼저 건네는 오프닝을 조립한다.
  *
- * AI 호출 없음(결정론) · 질문 횟수/복채 미차감 — 사용자 발화 없이 소비되는 경로이기 때문이다.
+ * AI 호출 없음(결정론) · 질문 횟수/이용권 미사용 — 사용자 발화 없이 소비되는 경로이기 때문이다.
  *
  * DB에 저장하지 않는다(휘발성). 저장하면 재입장마다 인사가 히스토리에 쌓이고,
  * "이미 메시지가 있으니 건너뛴다" 조건에 걸려 두 번째 방문부터는 아예 말을 걸지 못한다.

@@ -21,15 +21,13 @@ import {
   type FengshuiSubjectType,
 } from '@/app/actions/ai/image'
 import { getSlotSpec, isWithinUploadBudget } from '@/lib/domain/analysis/fengshui-slots'
-import { getWalletBalance } from '@/app/actions/payment/wallet'
-import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { FEATURE_COST, formatFeatureCost } from '@/lib/domain/payment/feature-costs'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { GOLD_500 } from '@/lib/config/design-tokens'
 import { toast } from 'sonner'
 import {
   ArrowRight,
-  Coins,
   Compass,
   Zap,
   ShoppingBag,
@@ -43,10 +41,10 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
-import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
-import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
-import { PaywallModal } from '@/components/shared/paywall-modal'
+import { InsufficientPassModal } from '@/components/payment/insufficient-pass-modal'
+import { useInsufficientPass } from '@/hooks/use-insufficient-pass'
+import { useRefreshPasses } from '@/hooks/use-passes'
+import { StudioPassBanner } from '@/components/studio/studio-pass-banner'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { JourneyCard } from '@/components/analysis/journey-card'
 import { ScoreRing } from '@/components/studio/score-ring'
@@ -54,7 +52,7 @@ import { DetailAnalysisAccordion } from '@/components/studio/detail-analysis-acc
 
 type StepType = 'upload' | 'analyzing' | 'result'
 
-const FENGSHUI_COST = FEATURE_COST.fengshui.display // 단일 소스 — 표시 = 실차감
+const FENGSHUI_COST = FEATURE_COST.fengshui.display // 기록에 남기는 장 수 — 단일 소스
 
 // 분석 대상 3택 — 시스템이 "무엇을 찍을지"를 정해준다(A-1)
 const SUBJECT_TYPES: { value: FengshuiSubjectType; label: string; icon: typeof Home }[] = [
@@ -109,15 +107,13 @@ function FengShuiAnalysisPageContent() {
   const [analyzedLabel, setAnalyzedLabel] = useState<string>('')
   const [analysisResult, setAnalysisResult] = useState<InteriorAnalysisResult | null>(null)
   const [loading, setLoading] = useState(false)
-  const [balance, setBalance] = useState<number | null>(null)
 
   const slotSpec = getSlotSpec(subjectType)
   const filledSlotCount = Object.keys(slotImages).length
-  const { bokchaeModal, closeBokchaeModal, handleDeductResult } = useInsufficientBokchae()
-  const { checkQuota, paywallProps } = useAnalysisQuota()
+  const { passModal, closePassModal, handleChargeResult } = useInsufficientPass()
+  const refreshPasses = useRefreshPasses()
 
   useEffect(() => {
-    getWalletBalance().then(setBalance)
     if (!targetId) return
     const loadMember = async () => {
       const members = await getFamilyWithMissions()
@@ -143,9 +139,6 @@ function FengShuiAnalysisPageContent() {
       return
     }
 
-    const canProceed = await checkQuota()
-    if (!canProceed) return
-
     // 대표/표시 라벨 — 대표 슬롯 라벨(roomType 하위호환) + 여러 장이면 "외 N곳".
     const primaryImageLabel = orderedImages[0]!.label
     const extraCount = orderedImages.length - 1
@@ -170,7 +163,7 @@ function FengShuiAnalysisPageContent() {
     setStep('analyzing')
 
     try {
-      // 🔴 여기서 차감하지 않는다. 복채는 서버 액션 안에서 빠진다 — 화면이 차감하던 종전 구조에서는
+      // 🔴 여기서 이용권을 쓰지 않는다. 이용권은 서버 액션 안에서 쓰인다 — 화면이 차감하던 종전 구조에서는
       //    액션을 브라우저에서 직접 부르면 공짜였다. 실패 시 되돌리는 것도 액션이 한다
       //    (화면이 환급을 부르면 그 자체가 「결과 받고 환급」 어뷰즈 경로가 된다).
       // roomType 자리에 대표 슬롯 라벨을 넣어 프롬프트 문맥을 맞춘다(하위호환)
@@ -189,17 +182,13 @@ function FengShuiAnalysisPageContent() {
       if (!result.success) {
         setLoading(false)
         setStep('upload')
-        const handled = handleDeductResult(result, {
-          currentBalance: balance ?? 0,
-          requiredAmount: FENGSHUI_COST,
-          featureLabel: '풍수 분석',
-        })
+        const handled = handleChargeResult(result, { featureLabel: '풍수 분석' })
         if (!handled) toast.error(result.error || '분석 중 오류가 발생했습니다.')
         return
       }
 
       setAnalysisResult(result)
-      void getWalletBalance().then(setBalance)
+      void refreshPasses()
 
       if (targetId) {
         await saveAnalysisSession({
@@ -238,8 +227,7 @@ function FengShuiAnalysisPageContent() {
 
   return (
     <StudioAnalysisLayout category="FENGSHUI" targetMember={targetMember}>
-      <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
-      <PaywallModal {...paywallProps} />
+      <InsufficientPassModal {...passModal} onClose={closePassModal} />
       <AnimatePresence mode="wait">
         {step === 'upload' && (
           <motion.div
@@ -284,24 +272,12 @@ function FengShuiAnalysisPageContent() {
               </div>
             </div>
 
-            {/* 복채 잔액 + 비용 배너 */}
-            <div className="relative overflow-hidden rounded-2xl border border-gold-500/30 bg-gradient-to-br from-[#000D1A]/80 to-[#0A0A1F]/80 p-4 backdrop-blur-sm">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.12),transparent_60%)]" />
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-gold-500" />
-                  <span className="text-xs text-white/50 font-sans">보유 복채</span>
-                  <span className="text-sm font-bold text-gold-500 font-serif">
-                    {balance !== null ? `${balance}만냥` : '—'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-gold-500/10 border border-gold-500/20 rounded-full px-3 py-1">
-                  <span className="text-xs text-gold-500 font-medium">풍수 분석</span>
-                  <span className="text-xs text-white/50">·</span>
-                  <span className="text-sm font-bold text-gold-500 font-serif">{FENGSHUI_COST}만냥</span>
-                </div>
-              </div>
-            </div>
+            {/* 이용권 + 비용 배너 */}
+            <StudioPassBanner
+              featureLabel="풍수 분석"
+              costKey="fengshui"
+              toneClassName="from-[#000D1A]/80 to-[#0A0A1F]/80"
+            />
 
             {/* 분석 대상 선택 (A-1) — 무엇을 찍을지 시스템이 정해준다 */}
             <Card className="card-glass-manse p-5 border-white/5">
@@ -455,7 +431,7 @@ function FengShuiAnalysisPageContent() {
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    풍수 분석 시작 · {FENGSHUI_COST}만냥
+                    풍수 분석 시작 · {formatFeatureCost('fengshui')}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

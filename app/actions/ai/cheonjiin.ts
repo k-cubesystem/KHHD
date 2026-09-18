@@ -13,7 +13,6 @@ import { generateAIContent } from '@/lib/services/ai-client'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
-import { addBokPoints } from '@/lib/services/bok-grant'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { chargeFeature } from '@/lib/services/feature-charge'
 
@@ -70,16 +69,6 @@ export async function analyzeCheonjiinAction(
   skipCache: boolean = false,
   forceRefresh: boolean = false // alias for skipCache; pass true to bypass 24h cache
 ) {
-  if (isEdgeEnabled('ai-analysis')) {
-    return invokeEdgeSafe('ai-analysis', {
-      action: 'analyzeCheonjiin',
-      targetId,
-      additionalData,
-      checkOnly,
-      skipCache,
-      forceRefresh,
-    })
-  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -89,9 +78,8 @@ export async function analyzeCheonjiinAction(
     return { success: false, error: '인증되지 않은 사용자입니다.' }
   }
 
-  // AI 가 실패하면 차감을 되돌린다. 차감 전 단계에서 나가면 null 이라 아무 일도 없다.
+  // AI 가 실패하면 쓴 이용권을 되돌린다. 사용 전 단계에서 나가면 null 이라 아무 일도 없다.
   let refundOnFailure: (() => Promise<void>) | null = null
-  let chargedRemaining: number | undefined
 
   try {
     // 1. 대상 정보 조회 + 주소 병렬 조회
@@ -139,7 +127,7 @@ export async function analyzeCheonjiinAction(
       return { success: true, cached: false }
     }
 
-    // 2.5 복채 차감 — 🔴 **여기가 과금의 유일한 지점이다.**
+    // 2.5 이용권 사용 — 🔴 **여기가 과금의 유일한 지점이다.**
     //
     // 2026-09-01 까지는 화면(saju-result-client)이 차감한 뒤 이 액션을 불렀다. 이 액션은
     // 'use server' export = 공개 엔드포인트이므로, 브라우저에서 직접 부르면 차감 없이
@@ -150,7 +138,21 @@ export async function analyzeCheonjiinAction(
     const charge = await chargeFeature({ userId: user.id, featureKey: 'SAJU', costKey: 'saju', label: '사주 풀이' })
     if (!charge.ok) return charge.failure
     refundOnFailure = charge.refundOnFailure
-    chargedRemaining = charge.remainingBalance
+
+    // 🔴 엣지 분기는 과금 «뒤»다. 엣지 사본(supabase/functions/ai-analysis)에는 이용권 코드가 없어,
+    //    분기가 앞에 있으면 플래그를 켜는 순간 유료 풀이가 인증·과금 없이 나간다(image.ts 와 같은 규율).
+    if (isEdgeEnabled('ai-analysis')) {
+      const edge = await invokeEdgeSafe('ai-analysis', {
+        action: 'analyzeCheonjiin',
+        targetId,
+        additionalData,
+        checkOnly,
+        skipCache,
+        forceRefresh,
+      })
+      if (!edge?.success) await refundOnFailure?.()
+      return edge
+    }
 
     // 3. 나이 계산
     // 명식·오행·대운 데이터는 아래 해화지기 마스터 엔진 프롬프트에서 단일 공급한다
@@ -231,11 +233,7 @@ export async function analyzeCheonjiinAction(
 
     // 운세 기록은 saveAnalysisHistory 내부에서 자동 처리됨 (recordFortuneEntry 호출)
 
-    // 복 포인트 적립 (분석 완료)
-    await addBokPoints(30, 'ANALYSIS', targetId, `${target.name}님 사주 분석`).catch(() => {})
-
-    // remainingBalance 는 «이번 호출에서 실제로 차감했을 때»만 실린다 — 캐시 적중은 undefined.
-    return { success: true, data: result, cached: false, remainingBalance: chargedRemaining }
+    return { success: true, data: result, cached: false }
   } catch (error: unknown) {
     logger.error('[CheonjiinAnalysis] Error:', error)
     await refundOnFailure?.()
@@ -374,7 +372,7 @@ async function analyzeCheonjiinWithAI(
     summary: (data.summary as string) || '청담해화당 통합분석 결과',
     score: 0,
     model_used: getModelConfig('cheonjiin').model,
-    // 기록되는 차감량은 실차감과 같아야 한다 — 3 은 옛 값이고 실차감은 FEATURE_COST.saju.display(2) 다.
+    // 기록되는 장 수는 실사용과 같아야 한다 — 숫자를 여기 박지 않고 FEATURE_COST 에서 읽는다.
     talisman_cost: FEATURE_COST.saju.display,
   })
 

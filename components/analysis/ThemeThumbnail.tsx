@@ -32,7 +32,7 @@ interface ThemeThumbnailProps {
   readonly theme: ThemeFortune
   /** 첫 화면에 이미 보이는 자리만 즉시 받는다. 나머지는 스크롤할 때. */
   readonly eager?: boolean
-  /** 복채 배지를 그림 위 우하단에 얹는다(유튜브의 재생시간 자리). 표기는 실차감과 같은 경로다. */
+  /** 이용권 배지를 그림 위 우하단에 얹는다(유튜브의 재생시간 자리). 표기는 실사용과 같은 경로다. */
   readonly showCost?: boolean
   /** 크기·모서리는 부르는 쪽이 정한다 — 이 컴포넌트는 «무엇을 그리는가»만 안다. */
   readonly className?: string

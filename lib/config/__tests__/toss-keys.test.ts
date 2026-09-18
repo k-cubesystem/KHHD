@@ -2,14 +2,14 @@
  * 토스 키 배선 회귀선 — **상점(MID)이 둘인데 키를 한 쌍만 쓰면 결제가 거절된다** (2026-08-17).
  *
  * ## 무엇을 지키나
- * · 일반결제 `khaehwjxqe`     — 복채 충전 승인 · 충전 취소
+ * · 일반결제 `khaehwjxqe`     — 이용권 구매 승인 · 구매 취소
  * · 정기결제 `bill_khaehqj1a` — 빌링키 발급 · 정기 청구 · 멤버십 취소
  *
  * 한 키로 다른 상점의 결제를 부르면 토스가 거절하고, 사용자는 «결제가 안 된다»·«환불이 안 된다»
  * 만 본다. 어느 파일이 어느 키를 쓰는지는 **눈으로 확인할 수 없으므로** 테스트가 붙든다.
  *
  * 🔴 웹훅은 특히 조용하다 — 한쪽 상점 웹훅이 전량 401 로 떨어져도 화면에는 아무 일도 안 생기고,
- *    취소 통지를 못 받아 **복채 회수가 안 걸린다**. 돈이 새는 자리라 여기서 함께 막는다.
+ *    취소 통지를 못 받아 **이용권 회수가 안 걸린다**. 돈이 새는 자리라 여기서 함께 막는다.
  */
 import fs from 'fs'
 import path from 'path'
@@ -44,7 +44,7 @@ describe('🔴 토스 시크릿 키 — 상점별로 갈라 쓴다', () => {
 
   it('일반결제 경로는 일반 키를, 정기결제 경로는 빌링 키를 쓴다', () => {
     const expectations: Array<{ file: string; uses: string; not: string }> = [
-      // 복채 충전 승인 — 일반결제 상점
+      // 이용권 구매 승인 — 일반결제 상점
       { file: 'app/actions/payment/payment.ts', uses: 'tossGeneralSecretKey', not: 'tossBillingSecretKey' },
       // 빌링키 발급 + 첫 청구 — 정기결제 상점
       { file: 'app/actions/payment/subscription.ts', uses: 'tossBillingSecretKey', not: 'tossGeneralSecretKey' },
@@ -59,14 +59,14 @@ describe('🔴 토스 시크릿 키 — 상점별로 갈라 쓴다', () => {
     }
   })
 
-  it('취소는 결제가 일어난 상점의 키로 부른다 (충전=일반 · 멤버십=빌링)', () => {
+  it('취소는 결제가 일어난 상점의 키로 부른다 (이용권=일반 · 멤버십=빌링)', () => {
     const source = read('app/actions/payment/cancel-request.ts')
 
     // 두 키가 **모두** 쓰여야 한다 — 하나만 있으면 한쪽 취소가 통째로 실패한다.
     expect(source).toContain('tossGeneralSecretKey')
     expect(source).toContain('tossBillingSecretKey')
 
-    // 충전 취소(payment.payment_key)는 일반 키 바로 옆에 온다.
+    // 이용권 구매 취소(payment.payment_key)는 일반 키 바로 옆에 온다.
     expect(source).toMatch(/secretKey: tossGeneralSecretKey,\s*\n\s*paymentKey: payment\.payment_key/)
     // 멤버십 취소(lastPayment.payment_key)는 빌링 키 바로 옆에 온다.
     expect(source).toMatch(/secretKey: tossBillingSecretKey,\s*\n\s*paymentKey: lastPayment\.payment_key/)
@@ -105,7 +105,6 @@ describe('🔴 클라이언트 SDK — 용도를 반드시 밝힌다', () => {
     const billingScreens = [
       'app/protected/membership/checkout/page.tsx',
       'components/membership/membership-card.tsx',
-      'components/membership/pricing-card.tsx',
       'components/membership/subscription-actions.tsx',
       // payment-widget.tsx 는 2026-08-20에 삭제됐다 — 상점(store)이 이미 파는 것을
       // 죽은 zen 팔레트(흰 위 흰 글씨)로 한 번 더 그리던 사본이었다.
@@ -118,11 +117,11 @@ describe('🔴 클라이언트 SDK — 용도를 반드시 밝힌다', () => {
     }
   })
 
-  it('복채 충전(requestPayment)은 general SDK 로 연다', () => {
+  it('이용권 구매(requestPayment)는 general SDK 로 연다', () => {
     // 2026-09-01: 결제창을 여는 자리가 상점 카드에서 **주문 확인 화면**으로 옮겨졌다.
     // 상품 카드는 이제 결제창을 열 수 없다(동의 없는 결제 경로 제거) — 그건
     // purchase-consent-gate.test.ts 가 따로 잠근다. 불변식은 그대로고 지점만 옮긴다.
-    const source = read('app/protected/store/checkout/bokchae-checkout-client.tsx')
+    const source = read('app/protected/store/checkout/pass-checkout-client.tsx')
 
     expect(source).toContain('requestPayment')
     expect(source).toContain("getTossPaymentsSDK('general')")

@@ -59,7 +59,7 @@ export interface MasterPromptResult {
  * @param userContext 사용자 프로필 텍스트
  * @param additionalContext 추가 컨텍스트 (궁합 상대방 정보 등)
  * @param outputFormatGuide JSON 출력 형식 지시문 (JSON 파싱이 필요한 경우)
- * @param proseTier 서술 등급. 'premium' 은 **복채를 받는 장문 풀이 전용**이다 —
+ * @param proseTier 서술 등급. 'premium' 은 **이용권을 쓰는 장문 풀이 전용**이다 —
  *        무료 경로(상담·오늘의 운세·신탁)는 출력이 짧아 문장 공예가 드러나지 않고,
  *        매출이 0인데 사용량만 는다(모델 선정 보고서 §5·§7).
  */

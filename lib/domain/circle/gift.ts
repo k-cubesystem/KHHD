@@ -1,12 +1,14 @@
 /**
- * 기운 선물 — 상대에게 필요한 오행의 신당 살림을 복채로 사서 «놓아 준다»(PRD-energy-circle §3-5, P2).
+ * 기운 선물 — 상대에게 필요한 오행의 신당 살림을 «놓아 준다»(PRD-energy-circle §3-5, P2).
  *
- * 순수 규칙만 둔다. 차감·지급·알림은 액션(`app/actions/circle/gift.ts`)이 하고, 여기 규칙을 읽는다.
+ * 순수 규칙만 둔다. 지급·기록·알림은 액션(`app/actions/circle/gift.ts`)이 하고, 여기 규칙을 읽는다.
  *
- * 🔴 받는 쪽은 재화를 얻지 않는다 — 살림 «한 점»이 보관함에 들어갈 뿐 복채는 0 이다(선물 파밍 차단).
- * 🔴 멱등 키는 «보낸 이·받는 이·품목·분(分)» — 같은 분 안의 재요청은 새 차감이 아니라 같은 선물이다.
+ * 2026-09-18 이용권 전환: 선물은 **무료**다(신물이 무료가 됐다). 값을 받지 않으므로 막이는 둘뿐이다 —
+ * 하루 상한(GIFT_DAILY_LIMIT)과 보상 전용 품목 거절.
+ * 🔴 받는 쪽은 재화를 얻지 않는다 — 살림 «한 점»이 보관함에 들어갈 뿐이다(선물 파밍 차단).
+ * 🔴 멱등 키는 «보낸 이·받는 이·품목·분(分)» — 같은 분 안의 재요청은 새 선물이 아니라 같은 선물이다.
  */
-import { BAEKIL_ITEM_NAME } from '@/lib/domain/ritual/baekil'
+import { isRewardOnlyItem } from '@/lib/domain/shrine/shop-sections'
 import type { Element } from '@/lib/domain/shrine/types'
 
 /** 하루에 보낼 수 있는 선물 수 — 대량 발송·파밍 차단(ARCH §7). */
@@ -23,7 +25,6 @@ export interface GiftableItem {
   name: string
   element: Element | null
   isActive: boolean
-  priceBokchae: number
 }
 
 export type GiftRefusal = 'INACTIVE' | 'NO_ELEMENT' | 'REWARD_ONLY'
@@ -31,7 +32,7 @@ export type GiftRefusal = 'INACTIVE' | 'NO_ELEMENT' | 'REWARD_ONLY'
 /** 선물할 수 있는 품목인가 — 보상 전용·오행 없음·비활성은 안 된다. */
 export function giftRefusal(item: GiftableItem): GiftRefusal | null {
   if (!item.isActive) return 'INACTIVE'
-  if (item.name === BAEKIL_ITEM_NAME) return 'REWARD_ONLY'
+  if (isRewardOnlyItem(item.name)) return 'REWARD_ONLY'
   if (!item.element) return 'NO_ELEMENT'
   return null
 }

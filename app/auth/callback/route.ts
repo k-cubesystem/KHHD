@@ -1,8 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { EmailOtpType } from '@supabase/supabase-js'
-import { grantSignupBonus } from '@/lib/services/wallet-grant'
-import { processReferralBonus } from '@/app/actions/user/referral'
+import { grantOnboardingPasses, grantReferralPasses } from '@/lib/services/signup-grant'
 import { logger } from '@/lib/utils/logger'
 import { rateLimitByIp } from '@/lib/utils/rate-limit'
 import { safeNextPath } from '@/lib/auth/next-path'
@@ -10,6 +9,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 /** 이메일 OTP 검증 브루트포스 방어(S-1) — IP당 시간당 10회. PKCE 코드 교환(정상 로그인)은 제외한다. */
 const OTP_RATE_LIMIT = { interval: 60 * 60 * 1000, uniqueTokenPerInterval: 10 }
+
+/** 계정이 이만큼 안에 생겼으면 «방금 가입»으로 본다 — Supabase 는 신규 가입 플래그를 따로 주지 않는다. */
+const FRESH_SIGNUP_MS = 5 * 60 * 1000
+/** PKCE 이메일 인증은 가입보다 늦게 눌린다 — 인증 링크가 살아 있는 동안만 가입 인증으로 친다. */
+const CONFIRM_LINK_MS = 24 * 60 * 60 * 1000
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -32,13 +36,10 @@ export async function GET(request: NextRequest) {
   }
 
   // CRITICAL: Create response FIRST, then inject cookies into it
-  // signup 타입이면 welcome 파라미터 추가 (토스트 알림용)
-  const isSignup = type === 'signup'
   // ?next= 로 돌아갈 곳을 지정할 수 있다(가족 초대 링크 등). 오픈 리다이렉트는 safeNextPath 가 막는다.
   const nextPath = safeNextPath(requestUrl.searchParams.get('next'))
-  const defaultUrl = isSignup ? `${requestUrl.origin}/protected/analysis?welcome=1` : `${requestUrl.origin}/protected`
-  const redirectUrl = nextPath ? `${requestUrl.origin}${nextPath}` : defaultUrl
-  const redirectResponse = NextResponse.redirect(redirectUrl)
+  const redirectResponse = NextResponse.redirect(`${requestUrl.origin}${nextPath ?? '/protected'}`)
+  let welcomed = false
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -79,21 +80,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${requestUrl.origin}/auth/login?error=${encodeURIComponent(verifyError.message)}`)
     }
 
-    // 회원가입 인증 완료 시 50만냥 지급 + 추천 보너스
+    // 회원가입 인증 완료 — 가입 맛보기 이용권 + 친구 추천 이용권
     if (type === 'signup' && verifyData?.user?.id) {
-      await grantSignupBonus(verifyData.user.id).catch((e) => logger.error('[SignupBonus Error]', e))
+      welcomed = await grantSignupGifts(request, redirectResponse, verifyData.user.id)
       // 유입 귀속 — 이 브라우저의 방문자 쿠키(hhd_vid)를 가입자에 연결(utm_tracking.converted)
       await attributeSignupFromCookies(request, verifyData.user.id, 'email')
-
-      // 추천 코드 쿠키 확인 및 보너스 처리
-      const referralCode = request.cookies.get('referral_code')?.value
-      if (referralCode) {
-        await processReferralBonus(verifyData.user.id, referralCode).catch((e) =>
-          logger.error('[ReferralBonus Error]', e)
-        )
-        // 추천 보너스 지급 후 쿠키 삭제 (redirectResponse에 Set-Cookie 추가)
-        redirectResponse.cookies.set('referral_code', '', { maxAge: 0, path: '/' })
-      }
     }
   } else if (code) {
     // OAuth / Magic Link (PKCE 코드 교환)
@@ -114,14 +105,60 @@ export async function GET(request: NextRequest) {
     // OAuth 첫 로그인 = 신규 가입. Supabase 는 별도 플래그를 안 주므로 created_at 이 «방금»이면 신규로 본다.
     // (마케팅 감사: 카카오·구글 가입이 계측에서 통째로 빠져 있던 구멍 — 여기서 메운다)
     const u = data.session.user
-    const createdMs = Date.parse(u.created_at ?? '')
-    if (Number.isFinite(createdMs) && Date.now() - createdMs < 5 * 60 * 1000) {
+    const now = Date.now()
+    const isNewAccount = isWithin(u.created_at, FRESH_SIGNUP_MS, now)
+    if (isNewAccount) {
       const provider = typeof u.app_metadata?.provider === 'string' ? u.app_metadata.provider : 'oauth'
       await attributeSignupFromCookies(request, u.id, provider)
     }
+    // 가입 선물도 이 길로 가입한 사람(카카오·구글, PKCE 이메일 인증)에게 똑같이 — 화면이 «가입하면 1회 무료»를 약속한다.
+    const justConfirmed =
+      isWithin(u.email_confirmed_at, FRESH_SIGNUP_MS, now) && isWithin(u.created_at, CONFIRM_LINK_MS, now)
+    if (isNewAccount || justConfirmed) {
+      welcomed = await grantSignupGifts(request, redirectResponse, u.id)
+    }
+  }
+
+  // 환영 안내(가입 선물 토스트)는 선물이 실제로 발급됐을 때만 — 받지 못한 이용권을 «드렸어요»라고 말하지 않는다.
+  // (Supabase 이메일 인증은 PKCE 로 돌아와 type 이 없다 — type 으로 가입을 가리면 안내가 한 번도 뜨지 않았다.)
+  if (welcomed && !nextPath) {
+    redirectResponse.headers.set('location', `${requestUrl.origin}/protected/analysis?welcome=1`)
   }
 
   return redirectResponse
+}
+
+function isWithin(iso: string | null | undefined, windowMs: number, nowMs: number): boolean {
+  const at = Date.parse(iso ?? '')
+  return Number.isFinite(at) && nowMs - at < windowMs
+}
+
+/**
+ * 가입 선물 — 맛보기 이용권(평생 한 번) + 추천 코드 쿠키가 있으면 친구 추천 이용권.
+ * 두 발급 모두 멱등이라 콜백이 두 번 돌아도 한 번만 받는다. 실패해도 가입 흐름은 막지 않는다.
+ * 돌려주는 값 = 맛보기 이용권이 이번에 새로 발급됐는가(환영 안내를 띄울지).
+ */
+async function grantSignupGifts(request: NextRequest, response: NextResponse, userId: string): Promise<boolean> {
+  const onboarding = await grantOnboardingPasses(userId).catch((e: unknown) => {
+    logger.error(new Error('[Callback] 가입 맛보기 이용권 발급 실패'), {
+      userId,
+      cause: e instanceof Error ? e.message : String(e),
+    })
+    return null
+  })
+
+  const referralCode = request.cookies.get('referral_code')?.value
+  if (referralCode) {
+    await grantReferralPasses(userId, referralCode).catch((e: unknown) =>
+      logger.error(new Error('[Callback] 친구 추천 이용권 처리 실패'), {
+        userId,
+        cause: e instanceof Error ? e.message : String(e),
+      })
+    )
+    response.cookies.set('referral_code', '', { maxAge: 0, path: '/' })
+  }
+
+  return onboarding?.granted === true
 }
 
 /**

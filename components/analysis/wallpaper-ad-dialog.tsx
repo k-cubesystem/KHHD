@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Loader2, Crown, Store, Check } from 'lucide-react'
 import { membershipBenefitLines } from '@/lib/domain/payment/membership-benefits'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { PASS_VALID_DAYS } from '@/lib/domain/entitlement/pass'
 
 /** 보상까지의 시청 시간(초). 서버는 이 값을 검증하지 못한다 — 방어선은 하루 1장 상한이다. */
 export const WALLPAPER_AD_SECONDS = 15
@@ -28,7 +30,12 @@ const SLIDES = [
     key: 'store',
     icon: Store,
     title: '해화당 상점',
-    lines: ['복채 충전 — 풀이·소장에 쓰는 단일 통화', '신당 — 신위 모시기·테마 꾸미기', '신물 — 향로·초롱·복부적'],
+    // 🔴 숫자는 단일 출처에서 읽는다 — 풀이 한 번의 장 수(FEATURE_COST)·유효기간(PASS_VALID_DAYS).
+    lines: [
+      `이용권 — 풀이 한 번에 ${FEATURE_COST.saju.display}장 · 유효기간 ${PASS_VALID_DAYS}일`,
+      '신당 — 신위 모시기·테마 꾸미기',
+      '신물 — 향로·초롱·복부적을 받아 신당에 두기',
+    ],
   },
 ] as const
 

@@ -4,8 +4,14 @@ import { buildCircleEnergy, type CircleMemberEnergy } from '@/lib/domain/circle/
 import { WORK_NOTICE } from '@/lib/domain/circle/circle'
 import { allElementNeeds } from '@/lib/domain/circle/element-lore'
 import type { Element } from '@/lib/domain/shrine/types'
+import { findBannedPassTerms } from '@/lib/domain/entitlement/pass'
+import { tierUpsellLine } from '@/lib/domain/payment/membership-tiers'
 
 jest.mock('@/lib/analytics/ga4', () => ({ trackEvent: jest.fn(), GA: {} }))
+jest.mock('@/hooks/use-passes', () => ({
+  usePassSummary: () => ({ data: undefined }),
+  useRefreshPasses: () => jest.fn(),
+}))
 jest.mock('@/app/actions/circle/narrative', () => ({ generateNarrative: jest.fn() }))
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn(), message: jest.fn() } }))
 
@@ -54,7 +60,7 @@ function payloadOf(kind: 'work' | 'friends' | 'custom', name: string) {
   return { circle: { id: 'c1', name, kind }, energy: buildCircleEnergy(kind, ENTRIES) }
 }
 
-describe('CircleEnergyMapView v3 — 한 사람씩, 서로의 오행은 복채 AI', () => {
+describe('CircleEnergyMapView v3 — 한 사람씩, 서로의 오행은 유료 AI(이용권)', () => {
   it('🔴 «기운 한 장» 인쇄 문은 가족·팀 그룹 어느 지도에도 없다(CEO 2026-09-14 — 인쇄 기능 전체 제거)', () => {
     const family = {
       circle: { id: 'family', name: '우리 가족', kind: 'family' as const },
@@ -114,5 +120,32 @@ describe('CircleEnergyMapView v3 — 한 사람씩, 서로의 오행은 복채 A
     expect(screen.getByText(/이 많고,/)).toBeInTheDocument()
     expect(screen.getByText('AI 풀이 — 둘·셋·넷 함께 보기')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /나·지영 함께 보기/ })).toBeInTheDocument()
+  })
+
+  it('🔴 지도 어디에도 문구 금지어가 없다 (잔액형 재화로 읽히지 않게)', () => {
+    const { container } = render(<CircleEnergyMapView payload={payloadOf('work', '마케팅팀')} needs={NEEDS} />)
+    expect(findBannedPassTerms(container.textContent ?? '')).toEqual([])
+  })
+})
+
+describe('CircleEnergyMapView — 함께 보기 등급 안내(서버가 읽은 등급으로 미리)', () => {
+  it('🔴 패밀리 등급이면 함께 보기 단추 대신 비즈니스 멤버십 안내가 선다', () => {
+    render(<CircleEnergyMapView payload={payloadOf('custom', '등산 모임')} needs={NEEDS} tier="FAMILY" />)
+    expect(screen.getByText(tierUpsellLine('togetherView'))).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /멤버십 보기/ }).getAttribute('href')).toBe(
+      '/protected/store?tab=membership'
+    )
+    expect(screen.queryByRole('button', { name: /나·지영 함께 보기/ })).toBeNull()
+  })
+
+  it('비즈니스·관리자는 단추가 그대로 선다', () => {
+    for (const tier of ['BUSINESS', 'MASTER']) {
+      const { unmount } = render(
+        <CircleEnergyMapView payload={payloadOf('custom', '등산 모임')} needs={NEEDS} tier={tier} />
+      )
+      expect(screen.getByRole('button', { name: /나·지영 함께 보기/ })).toBeEnabled()
+      expect(screen.queryByText(tierUpsellLine('togetherView'))).toBeNull()
+      unmount()
+    }
   })
 })

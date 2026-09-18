@@ -4,39 +4,28 @@ import { useEffect, useState, useTransition } from 'react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import Link from 'next/link'
-import { Lock, Download, ChevronRight, Coins, Play, Loader2, Crown, Sparkles } from 'lucide-react'
+import { Lock, Download, ChevronRight, Play, Loader2, Crown, Sparkles } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { IconBokjumeoni } from '@/components/icons/traditional-icons'
-import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
-import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
 import { WallpaperAdDialog } from '@/components/analysis/wallpaper-ad-dialog'
 import {
   PREMIUM_CATEGORY_META,
   PREMIUM_CATEGORY_ORDER,
   WALLPAPER_ACCESS_LABEL,
-  WALLPAPER_PACKS,
   buildPremiumDisplaySet,
   buildWallpaperDisplaySet,
   isMyElement,
   orderWallpapersByElement,
   resolveWallpaperAccess,
-  wallpaperPrice,
   type PremiumDisplayItem,
   type WallpaperAccess,
   type WallpaperDisplayItem,
-  type WallpaperPack,
 } from '@/lib/domain/analysis/wallpaper'
-import {
-  getWallpaperStatus,
-  purchaseWallpaper,
-  purchaseWallpaperPack,
-  unlockWallpaperByAd,
-  type WallpaperStatus,
-} from '@/app/actions/analysis/wallpaper'
+import { getWallpaperStatus, unlockWallpaperByAd, type WallpaperStatus } from '@/app/actions/analysis/wallpaper'
 import { GA } from '@/lib/analytics/ga4'
 
 const CARD_TITLE = '복 배경화면'
-const CARD_SUBTITLE = '매일 보는 잠금화면에 복을 담아드립니다'
+const CARD_SUBTITLE = '늘 보는 잠금화면에 복을 담아드립니다'
 
 /** 멤버십이면 여섯 장이 전부 열린다 — 시트 맨 위 한 줄. */
 const MEMBER_BANNER = '멤버십 회원 — 모든 배경화면이 열려 있습니다'
@@ -50,9 +39,11 @@ const UNLOCK_ERROR_COPY: Record<string, string> = {
   NOT_FOUND: '없는 배경화면입니다.',
   ALREADY_UNLOCKED: '이미 열려 있는 배경화면입니다.',
   AD_LIMIT: '오늘은 이미 한 장을 여셨습니다. 내일 다시 열 수 있습니다.',
-  PAYMENT_FAILED: '결제에 실패했습니다. 잠시 후 다시 시도해주세요.',
-  GRANT_FAILED: '열기에 실패했습니다. 복채는 돌려드렸습니다.',
+  GRANT_FAILED: '열기에 실패했습니다. 잠시 후 다시 시도해주세요.',
 }
+
+/** 광고 해금 버튼 문구 — 무료 세트·「채운」 두 그리드가 같은 말을 쓴다. */
+const AD_UNLOCK_LABEL = '광고 보고 오늘 1장 열기'
 
 /**
  * 복 배경화면 카드 — 허브 인기테마 섹션 맨 아래에 앉는다.
@@ -200,7 +191,7 @@ function WallpaperSheet({
 }
 
 /**
- * 여섯 장 그리드 — 시트 본문. 열림(받기) · 잠김(소장·광고)으로 선다.
+ * 여섯 장 그리드 — 시트 본문. 열림(받기) · 잠김(광고)으로 선다. 값을 받는 길은 없다.
  *
  * 해금 결과는 **낙관적으로** 반영한다(서버가 성공을 돌려준 뒤 그 자리에서 상태를 얹는다) —
  * 시트를 닫았다 열지 않아도 방금 연 장이 바로 열린 모습으로 바뀐다.
@@ -208,10 +199,9 @@ function WallpaperSheet({
 export function WallpaperGrid({ status }: { status: WallpaperStatus }) {
   const [access, setAccess] = useState<WallpaperStatus>(status)
   const [pendingId, setPendingId] = useState<string | null>(null)
-  const [adTarget, setAdTarget] = useState<WallpaperDisplayItem | null>(null)
+  const [adTarget, setAdTarget] = useState<Pick<WallpaperDisplayItem, 'id' | 'title'> | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [, startTransition] = useTransition()
-  const { bokchaeModal, showBokchaeModal, closeBokchaeModal } = useInsufficientBokchae()
 
   const display = buildWallpaperDisplaySet(access.monthly)
 
@@ -221,80 +211,18 @@ export function WallpaperGrid({ status }: { status: WallpaperStatus }) {
     })
   }
 
-  const applyUnlock = (wallpaperId: string, source: 'purchase' | 'ad', newBalance?: number) => {
+  const applyAdUnlock = (wallpaperId: string) => {
     setAccess((prev) => ({
       ...prev,
-      unlocks: [...prev.unlocks, { wallpaperId, source }],
-      adUsedToday: source === 'ad' ? true : prev.adUsedToday,
-      balance: typeof newBalance === 'number' ? newBalance : prev.balance,
+      unlocks: [...prev.unlocks, { wallpaperId, source: 'ad' }],
+      adUsedToday: true,
     }))
     celebrate()
-    // 프리미엄 원본은 서명 URL 로만 나간다 — 방금 산 장의 URL 은 서버 재조회로만 온다.
+    // 프리미엄 원본은 서명 URL 로만 나간다 — 방금 연 장의 URL 은 서버 재조회로만 온다.
     // 낙관 갱신(위)이 «열림» 표시를 먼저 세우고, 재조회가 「받기」 링크를 잇는다.
     void getWallpaperStatus().then((s) => {
       if (s) setAccess(s)
     })
-  }
-
-  const onPack = async (pack: WallpaperPack) => {
-    setErrorMsg(null)
-    setPendingId(pack.id)
-    try {
-      const res = await purchaseWallpaperPack(pack.id)
-      if (res.success) {
-        GA.wallpaperPurchase(pack.id)
-        setAccess((prev) => ({
-          ...prev,
-          unlocks: [
-            ...prev.unlocks,
-            ...pack.itemIds
-              .filter((id) => !prev.unlocks.some((u) => u.wallpaperId === id))
-              .map((id) => ({ wallpaperId: id, source: 'purchase' as const })),
-          ],
-          balance: typeof res.newBalance === 'number' ? res.newBalance : prev.balance,
-        }))
-        celebrate()
-        void getWallpaperStatus().then((s) => {
-          if (s) setAccess(s)
-        })
-        return
-      }
-      if (res.error === 'INSUFFICIENT_BOKCHAE') {
-        showBokchaeModal({
-          currentBalance: res.balance ?? access.balance,
-          requiredAmount: res.price ?? pack.price,
-          featureLabel: pack.title,
-        })
-        return
-      }
-      setErrorMsg(UNLOCK_ERROR_COPY[res.error ?? ''] ?? '소장에 실패했습니다. 잠시 후 다시 시도해주세요.')
-    } finally {
-      setPendingId(null)
-    }
-  }
-
-  const onPurchase = async (item: Pick<WallpaperDisplayItem, 'id' | 'title' | 'subtitle' | 'lock' | 'element'>) => {
-    setErrorMsg(null)
-    setPendingId(item.id)
-    try {
-      const res = await purchaseWallpaper(item.id)
-      if (res.success) {
-        GA.wallpaperPurchase(item.id)
-        applyUnlock(item.id, 'purchase', res.newBalance)
-        return
-      }
-      if (res.error === 'INSUFFICIENT_BOKCHAE') {
-        showBokchaeModal({
-          currentBalance: res.balance ?? access.balance,
-          requiredAmount: res.price ?? wallpaperPrice(item),
-          featureLabel: `${item.title} 배경화면`,
-        })
-        return
-      }
-      setErrorMsg(UNLOCK_ERROR_COPY[res.error ?? ''] ?? '소장에 실패했습니다. 잠시 후 다시 시도해주세요.')
-    } finally {
-      setPendingId(null)
-    }
   }
 
   const onAdReward = async () => {
@@ -307,7 +235,7 @@ export function WallpaperGrid({ status }: { status: WallpaperStatus }) {
       if (res.success) {
         GA.wallpaperAdUnlock(item.id)
         setAdTarget(null)
-        applyUnlock(item.id, 'ad')
+        applyAdUnlock(item.id)
         return
       }
       setAdTarget(null)
@@ -317,7 +245,7 @@ export function WallpaperGrid({ status }: { status: WallpaperStatus }) {
     }
   }
 
-  const openAd = (item: WallpaperDisplayItem) => {
+  const openAd = (item: Pick<WallpaperDisplayItem, 'id' | 'title'>) => {
     GA.wallpaperAdView(item.id)
     setErrorMsg(null)
     setAdTarget(item)
@@ -345,13 +273,12 @@ export function WallpaperGrid({ status }: { status: WallpaperStatus }) {
             item={item}
             access={access}
             pending={pendingId === item.id}
-            onPurchase={() => onPurchase(item)}
             onAd={() => openAd(item)}
           />
         ))}
       </div>
 
-      <PremiumSection access={access} pendingId={pendingId} onPurchase={(item) => onPurchase(item)} onPack={onPack} />
+      <PremiumSection access={access} pendingId={pendingId} onAd={openAd} />
 
       <WallpaperAdDialog
         open={adTarget !== null}
@@ -360,8 +287,6 @@ export function WallpaperGrid({ status }: { status: WallpaperStatus }) {
         pending={pendingId !== null}
         targetTitle={adTarget?.title ?? ''}
       />
-
-      <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
     </>
   )
 }
@@ -370,18 +295,15 @@ function SheetTile({
   item,
   access,
   pending,
-  onPurchase,
   onAd,
 }: {
   item: WallpaperDisplayItem
   access: WallpaperStatus
   pending: boolean
-  onPurchase: () => void
   onAd: () => void
 }) {
   const { unlocked, via, reason } = resolveWallpaperAccess(item, access)
   const mine = isMyElement(item, access.element)
-  const price = wallpaperPrice(item)
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -438,61 +360,59 @@ function SheetTile({
           )
         : null}
 
-      {!unlocked && (
-        <div className="flex flex-col gap-1">
-          <button
-            type="button"
-            onClick={onPurchase}
-            disabled={pending}
-            className="flex h-8 items-center justify-center gap-1 rounded-lg border border-gold-500/45 bg-gold-500/10 font-serif text-[11px] font-bold text-gold-500 transition-colors hover:bg-gold-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Coins className="h-3 w-3" />}
-            {price}만냥으로 소장
-          </button>
-
-          {!access.adUsedToday && (
-            <button
-              type="button"
-              onClick={onAd}
-              disabled={pending}
-              className="flex h-8 items-center justify-center gap-1 rounded-lg border border-white/15 font-serif text-[10px] text-ink-light/70 transition-colors hover:border-white/30 hover:text-ink-light disabled:cursor-not-allowed disabled:opacity-50"
-              style={{ wordBreak: 'keep-all' }}
-            >
-              <Play className="h-2.5 w-2.5" />
-              광고 보고 오늘 1장 열기
-            </button>
-          )}
-        </div>
-      )}
+      {!unlocked && <AdUnlockButton adUsedToday={access.adUsedToday} pending={pending} onAd={onAd} />}
     </div>
   )
 }
 
-/** onPurchase 가 받는 최소 모양 — SheetTile 의 display 형과 프리미엄 형이 함께 통과한다. */
-type PurchasableItem = Pick<WallpaperDisplayItem, 'id' | 'title' | 'subtitle' | 'lock' | 'element'>
+/**
+ * 잠긴 장의 유일한 손잡이 — 광고 보고 하루 1장. 오늘 이미 썼으면 버튼 대신 내일을 알린다
+ * (눌러서야 «오늘은 끝»을 아는 버튼을 세우지 않는다). 상한 강제는 서버가 한다.
+ */
+function AdUnlockButton({ adUsedToday, pending, onAd }: { adUsedToday: boolean; pending: boolean; onAd: () => void }) {
+  if (adUsedToday) {
+    return (
+      <p className="px-0.5 text-center text-[10px] font-light text-ink-light/45" style={{ wordBreak: 'keep-all' }}>
+        오늘 광고 한 장을 여셨어요 · 내일 다시
+      </p>
+    )
+  }
+  return (
+    <button
+      type="button"
+      onClick={onAd}
+      disabled={pending}
+      className="flex h-8 items-center justify-center gap-1 rounded-lg border border-white/15 font-serif text-[10px] text-ink-light/70 transition-colors hover:border-white/30 hover:text-ink-light disabled:cursor-not-allowed disabled:opacity-50"
+      style={{ wordBreak: 'keep-all' }}
+    >
+      {pending ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Play className="h-2.5 w-2.5" />}
+      {AD_UNLOCK_LABEL}
+    </button>
+  )
+}
 
 /**
  * 「채운(彩運)」 — 프리미엄 17장 섹션. 무료 여섯 장 아래에 선다.
  *
- * 유도 순서는 CEO 확정(2026-08-25)을 그대로 편다: ①멤버십(전 장 열림)이 제1 ②팩(세트 소장)이
- * 그다음 ③낱장은 기준점. 원본은 사설 Storage 라 열린 장에만 서명 URL 이 온다 —
+ * 여는 길은 셋이다(2026-09-18 구매 폐지): ①멤버십(전 장) ②광고 보고 하루 1장 ③사주를 마친 사람의
+ * 「내게 필요한 기운」 선물 1장. 원본은 사설 Storage 라 열린 장에만 서명 URL 이 온다 —
  * 잠긴 장은 공개 썸네일을 흐려 보여주고, 「받기」 링크 자체가 서지 않는다.
  */
 function PremiumSection({
   access,
   pendingId,
-  onPurchase,
-  onPack,
+  onAd,
 }: {
   access: WallpaperStatus
   pendingId: string | null
-  onPurchase: (item: PurchasableItem) => void
-  onPack: (pack: WallpaperPack) => void
+  onAd: (item: PremiumDisplayItem) => void
 }) {
   const items = buildPremiumDisplaySet(access.premiumUrls)
   // 판정은 도메인 한 곳 — 용신(element)을 myElement 로 넘겨 «내게 필요한 기운» 선물이 선다.
-  const accessCtx: WallpaperAccess = { ...access, myElement: access.element }
-  const allOpen = items.every((item) => resolveWallpaperAccess(item, accessCtx).unlocked)
+  // 🔴 선물이 이미 행으로 확정됐으면(source='saju') 그 행이 연다 — 용신을 다시 넘기면 용신이 바뀐
+  //    계정에 두 번째 선물을 «열린 것처럼» 그린다(서버 loadAccessContext 의 고정 규칙과 같게).
+  const giftRecorded = access.unlocks.some((u) => u.source === 'saju')
+  const accessCtx: WallpaperAccess = { ...access, myElement: giftRecorded ? null : access.element }
 
   return (
     <div className="mt-2 flex flex-col gap-3 border-t border-gold-500/20 pt-4">
@@ -519,30 +439,6 @@ function PremiumSection({
         </Link>
       )}
 
-      {!access.isMember && !allOpen && (
-        <div className="flex flex-col gap-1.5">
-          {WALLPAPER_PACKS.map((pack) => (
-            <button
-              key={pack.id}
-              type="button"
-              onClick={() => onPack(pack)}
-              disabled={pendingId !== null}
-              className="flex h-9 items-center justify-between rounded-lg border border-white/15 px-3 font-serif text-[11px] text-ink-light/80 transition-colors hover:border-gold-500/45 hover:text-gold-500 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="flex items-center gap-1.5">
-                {pendingId === pack.id ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <IconBokjumeoni className="h-3 w-3" />
-                )}
-                {pack.title}
-              </span>
-              <span className="font-bold">{pack.price}만냥</span>
-            </button>
-          ))}
-        </div>
-      )}
-
       {PREMIUM_CATEGORY_ORDER.map((category) => (
         <div key={category} className="flex flex-col gap-2">
           <div className="px-0.5">
@@ -562,8 +458,9 @@ function PremiumSection({
                   item={item}
                   accessCtx={accessCtx}
                   myElement={access.element}
+                  adUsedToday={access.adUsedToday}
                   pending={pendingId === item.id}
-                  onPurchase={() => onPurchase(item)}
+                  onAd={() => onAd(item)}
                 />
               ))}
           </div>
@@ -577,14 +474,16 @@ function PremiumTile({
   item,
   accessCtx,
   myElement,
+  adUsedToday,
   pending,
-  onPurchase,
+  onAd,
 }: {
   item: PremiumDisplayItem
   accessCtx: WallpaperAccess
   myElement: WallpaperStatus['element']
+  adUsedToday: boolean
   pending: boolean
-  onPurchase: () => void
+  onAd: () => void
 }) {
   const { unlocked, via, reason } = resolveWallpaperAccess(item, accessCtx)
   const mine = item.category === 'gi' && item.element !== null && item.element === myElement
@@ -650,17 +549,7 @@ function PremiumTile({
           )
         : null}
 
-      {!unlocked && (
-        <button
-          type="button"
-          onClick={onPurchase}
-          disabled={pending}
-          className="flex h-8 items-center justify-center gap-1 rounded-lg border border-gold-500/45 bg-gold-500/10 font-serif text-[11px] font-bold text-gold-500 transition-colors hover:bg-gold-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Coins className="h-3 w-3" />}
-          {wallpaperPrice(item)}만냥으로 소장
-        </button>
-      )}
+      {!unlocked && <AdUnlockButton adUsedToday={adUsedToday} pending={pending} onAd={onAd} />}
     </div>
   )
 }

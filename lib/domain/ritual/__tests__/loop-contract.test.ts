@@ -1,7 +1,8 @@
 /**
  * 초하루 의례 — 보안·멱등 계약 동결 테스트 (baekil.test.ts 패턴).
  * 라이브 DB 없이 마이그레이션 SQL·서버 액션 소스를 텍스트로 검증해
- * V1(서비스롤 전용)·E2(원자 upsert)·3A(적립 원자화) 계약의 회귀를 잡는다.
+ * V1(서비스롤 전용)·E2(원자 upsert)·10A(기원 누적) 계약의 회귀를 잡는다.
+ * 2026-09-18 이용권 전환: 완주 재화 보상은 폐지됐다 — 현행 complete_ritual 정의는 전환 마이그레이션에 있다.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -10,6 +11,10 @@ const ROOT = process.cwd()
 const sql = readFileSync(join(ROOT, 'supabase/migrations/20260821_ritual_loop.sql'), 'utf8')
 const action = readFileSync(join(ROOT, 'app/actions/ritual/loop.ts'), 'utf8')
 const cron = readFileSync(join(ROOT, 'app/api/cron/ritual-push/route.ts'), 'utf8')
+const cutover = readFileSync(join(ROOT, 'supabase/migrations/20260918b_voucher_cutover.sql'), 'utf8')
+
+/** 전환 마이그레이션이 다시 정의한 complete_ritual 본문 — 현행 정의다. */
+const cutoverCompleteBody = cutover.split('FUNCTION public.complete_ritual')[1]?.split('$function$;')[0] ?? ''
 
 describe('마이그레이션 계약 (V1·E2·V3)', () => {
   it('두 RPC 모두 authenticated 직접 호출이 봉쇄된다 (V1)', () => {
@@ -39,13 +44,17 @@ describe('마이그레이션 계약 (V1·E2·V3)', () => {
     expect(completeBody).not.toContain('last_prayer_date')
   })
 
-  it('보상은 복채(add_bokchae) — bok_points 는 소비처 없는 게이지라 쓰지 않는다 (11A)', () => {
-    const completeBody = sql.split('FUNCTION public.complete_ritual')[1]?.split('$$;')[0] ?? ''
-    expect(completeBody).toContain('add_bokchae')
-    expect(completeBody).not.toContain('add_bok_points')
-    // 새 원장을 만들지 않는다 — add_bokchae 가 wallet_transactions 에 이미 남긴다.
-    expect(completeBody).not.toContain('INSERT INTO bok_transactions')
-    expect(sql).not.toContain('bok_transactions_type_check')
+  it('🔴 재화 보상 폐지 — 현행 complete_ritual 은 기원 누적만 하고 재화를 만지지 않는다 (2026-09-18)', () => {
+    expect(cutoverCompleteBody).not.toBe('')
+    expect(cutoverCompleteBody).toContain('record_shrine_devotion')
+    for (const payout of ['add_bokchae', 'add_bok_points', 'wallet', 'ent_grant']) {
+      expect([payout, cutoverCompleteBody.includes(payout)]).toEqual([payout, false])
+    }
+    // 멱등 가드가 기원 누적보다 먼저다 — 이미 완주한 달은 누적을 다시 올리지 않는다
+    expect(cutoverCompleteBody.indexOf('IF v_id IS NULL THEN')).toBeGreaterThan(-1)
+    expect(cutoverCompleteBody.indexOf('IF v_id IS NULL THEN')).toBeLessThan(
+      cutoverCompleteBody.indexOf('record_shrine_devotion')
+    )
   })
 
   it('소원 갈래는 기존 신당 소원 목록과 같다 — 새 enum 금지 (9A)', () => {
@@ -77,15 +86,13 @@ describe('마이그레이션 계약 (V1·E2·V3)', () => {
   // 움직이고, 백일기도 진행도는 그 값에서 파생된다(vowProgress = total − snapshot).
   // 아래 두 계약이 깨지면 기존 기능이 조용히 틀어진다.
 
-  it('회귀: 기원 적립은 완주 upsert 가 성공한 뒤에만 일어난다 — 이미 완주한 달은 안 올린다', () => {
+  it('회귀: 기원 누적은 완주 upsert 가 성공한 뒤에만 일어난다 — 이미 완주한 달은 안 올린다', () => {
     const completeBody = sql.split('FUNCTION public.complete_ritual')[1]?.split('$$;')[0] ?? ''
     const guardAt = completeBody.indexOf('IF v_id IS NULL THEN')
     const devotionAt = completeBody.indexOf('record_shrine_devotion')
-    const awardAt = completeBody.indexOf('add_bokchae')
     expect(guardAt).toBeGreaterThan(-1)
-    // 멱등 가드(early RETURN)가 적립·지급보다 **먼저** 와야 중복 탭이 누적을 부풀리지 않는다.
+    // 멱등 가드(early RETURN)가 누적보다 **먼저** 와야 중복 탭이 누적을 부풀리지 않는다.
     expect(guardAt).toBeLessThan(devotionAt)
-    expect(devotionAt).toBeLessThan(awardAt)
   })
 
   it('회귀: 기원이 no-op(오늘 이미 기원함)이어도 의례는 완주로 남는다', () => {
@@ -104,10 +111,11 @@ describe('마이그레이션 계약 (V1·E2·V3)', () => {
   })
 })
 
-describe('서버 액션 계약 (3A·V1)', () => {
-  it('적립량은 system_settings 에서 읽는다 — 클라 입력 불신 (3A)', () => {
-    expect(action).toContain("eq('key', 'ritual_bok_amount')")
-    expect(action).toContain('p_bok_amount: amount')
+describe('서버 액션 계약 (V1·보상 폐지)', () => {
+  it('🔴 재화 보상은 0 고정 — 설정값·클라 입력 어느 것도 보상을 만들지 못한다 (2026-09-18)', () => {
+    expect(action).toContain('p_bok_amount: 0')
+    expect(action).not.toContain('ritual_bok_amount')
+    expect(action).not.toMatch(/balance:/)
   })
 
   it('RPC 는 admin client 로만 호출한다 (V1)', () => {

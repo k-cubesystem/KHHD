@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import type { AnalysisHistory } from '@/app/actions/user/history'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
+import { ONBOARDING_PASSES } from '@/lib/domain/entitlement/pass'
 import { Button } from '@/components/ui/button'
 import { logger } from '@/lib/utils/logger'
 import { format } from 'date-fns'
@@ -498,7 +499,7 @@ export function SharedSajuResult({ token }: SharedSajuResultProps) {
               <br />
               정밀하게 풀어드립니다.
               <br />
-              <span className="text-gold-500/80 font-medium">신규 가입 시 50만냥 무료 지급!</span>
+              <span className="text-gold-500/80 font-medium">가입하면 풀이 {ONBOARDING_PASSES}회 무료!</span>
             </p>
           </div>
 

@@ -159,7 +159,7 @@ export interface ThemeReading {
   readonly verdict: ThemeVerdict
   readonly narration: ThemeNarration
   /**
-   * 개운 처방 전량 — **복채를 받은 풀이에만 실린다.**
+   * 개운 처방 전량 — **이용권을 쓴 풀이에만 실린다.**
    *
    * 🔴 무료 풀이에는 이 칸을 **채우지 않는다.** 화면에서 가리는 것으로는 부족하다 — 저장본이
    *    그대로 네트워크 응답에 실리므로, 값을 넣는 순간 무료로 전량이 나간다.

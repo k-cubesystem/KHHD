@@ -24,21 +24,14 @@ const INITIAL_STATE: UpgradeNudgeState = {
 }
 
 /**
- * Hook to manage the MembershipNudgeModal state.
+ * 멤버십 업그레이드 안내(MembershipNudgeModal) 상태.
  *
- * Usage:
- * ─────
- *   const { nudgeModal, closeNudge, handleDeductResult, trackAnalysis, showPremiumNudge } =
- *     useUpgradeNudge({ currentTier: userTier })
- *
- *   // After each deductTalisman call:
- *   handleDeductResult(deductResult, { featureLabel: '관상 분석' })
- *
- *   // Before accessing a premium feature:
+ *   const { nudgeModal, closeNudge, trackAnalysis, showPremiumNudge } = useUpgradeNudge({ currentTier })
  *   if (!hasPremiumAccess) { showPremiumNudge('가족 궁합 분석'); return }
- *
- *   // In JSX:
  *   <MembershipNudgeModal {...nudgeModal} onClose={closeNudge} />
+ *
+ * 🔴 이용권이 모자란 안내는 여기서 열지 않는다 — `useInsufficientPass` 가 NO_PASS 로 연다.
+ *    일일 사용 상한(DAILY_LIMIT)은 이용권 전환(2026-09-18)으로 폐지됐다.
  */
 export function useUpgradeNudge(opts?: { currentTier?: MembershipTier | null }) {
   const [state, setState] = useState<UpgradeNudgeState>(INITIAL_STATE)
@@ -59,37 +52,6 @@ export function useUpgradeNudge(opts?: { currentTier?: MembershipTier | null }) 
   const closeNudge = useCallback(() => {
     setState((prev) => ({ ...prev, isOpen: false }))
   }, [])
-
-  // ── Trigger: daily limit hit ───────────────────────────────────────────────
-
-  /**
-   * Pass the result object from `deductTalisman()` to automatically open the
-   * nudge modal on `DAILY_LIMIT` errors.
-   *
-   * Returns `true` when the error was handled (caller should abort its logic).
-   */
-  const handleDeductResult = useCallback(
-    (
-      result: {
-        success: boolean
-        error?: string
-        errorType?: string
-        currentTier?: string
-      },
-      opts?: { featureLabel?: string }
-    ): boolean => {
-      if (result.success) return false
-
-      if (result.errorType === 'DAILY_LIMIT') {
-        openNudge('DAILY_LIMIT', opts?.featureLabel)
-        return true
-      }
-
-      // INSUFFICIENT_BALANCE handled by useInsufficientBokchae separately
-      return false
-    },
-    [openNudge]
-  )
 
   // ── Trigger: premium-only feature ─────────────────────────────────────────
 
@@ -129,7 +91,6 @@ export function useUpgradeNudge(opts?: { currentTier?: MembershipTier | null }) 
     /** Spread these props onto <MembershipNudgeModal /> */
     nudgeModal: state,
     closeNudge,
-    handleDeductResult,
     showPremiumNudge,
     trackAnalysis,
     resetSessionCount,

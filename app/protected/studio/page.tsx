@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { getWalletBalance } from '@/app/actions/payment/wallet'
+import { getMyPassSummary } from '@/app/actions/payment/passes'
 import { StudioPageClient } from './studio-page-client'
 
 export const metadata: Metadata = {
@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 }
 
 export default async function StudioPage() {
-  const balance = await getWalletBalance()
+  const passSummary = await getMyPassSummary()
 
-  return <StudioPageClient initialBalance={balance} />
+  return <StudioPageClient passSummary={passSummary} />
 }

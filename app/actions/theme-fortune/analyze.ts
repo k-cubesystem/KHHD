@@ -3,11 +3,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { saveAnalysisHistoryObserved, type AnalysisContextMode } from '../user/history'
-import { deductTalisman } from '../payment/wallet'
-import { refundBokchae } from '@/lib/services/bokchae'
-import { addBokPoints } from '@/lib/services/bok-grant'
-import { UNLIMITED_BALANCE } from '@/lib/auth/privileges'
+import { chargeFeature } from '@/lib/services/feature-charge'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import type { PassErrorType } from '@/lib/domain/entitlement/pass'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { buildSajuContext, type PersonInfo } from '@/lib/saju-engine/context-builder'
@@ -37,7 +35,7 @@ import type { ThemeReading } from '@/lib/domain/theme-fortune/verdict-types'
 /**
  * 인기테마운세 — **테마 전체가 쓰는 단 하나의 서버 액션**.
  *
- * 테마마다 액션을 만들지 않는다. 다른 것은 «판정 함수와 프롬프트 조각»뿐이고, 인가·복채·캐시·
+ * 테마마다 액션을 만들지 않는다. 다른 것은 «판정 함수와 프롬프트 조각»뿐이고, 인가·이용권·캐시·
  * 저장·환불은 전부 같다(마스터 §6-2). 테마가 늘어나도 이 파일은 안 늘어난다.
  *
  * ## 🔴 'use server' export = 공개 엔드포인트
@@ -45,17 +43,17 @@ import type { ThemeReading } from '@/lib/domain/theme-fortune/verdict-types'
  * 대상 소유권 확인이 인자가 아니라 **함수 안에** 있다. 클라이언트가 보낸 값은 themeId·targetId
  * 두 개뿐이고 둘 다 서버에서 다시 해석한다(단가를 클라이언트에서 받지 않는다).
  *
- * ## 🔴 지갑은 기존 경로로만 만진다
- * `wallets` 직접 쓰기 없음. 차감 `deductTalisman` · 환불 `refundBokchae` 둘뿐이며, 실패 시
- * 환불은 `analyzeWealth` 의 `refundOnFailure` 패턴 그대로다(마스터 §7-2).
+ * ## 🔴 이용권은 한 경로로만 쓴다
+ * 이용권 표를 직접 쓰지 않는다. 사용은 `chargeFeature` 하나뿐이며, 실패 시 되돌림은 그것이 돌려주는
+ * `refundOnFailure` 다(마스터 §7-2).
  *
  * ## 흐름
- *   인가 → rate limit → 테마·판정기 해석 → 대상 조회 → **캐시(7일)** → 차감 → L1 → L2 → L3
+ *   인가 → rate limit → 테마·판정기 해석 → 대상 조회 → **캐시(7일)** → 이용권 사용 → L1 → L2 → L3
  *   → 월(月) 검증 → 저장 → 반환
  *
- * 캐시를 **차감보다 먼저** 본다. 「캐시 히트 = 환불」(수익화 v2)과 결과는 같고, 돈을 건드렸다가
- * 되돌리는 왕복이 없어 실패 지점이 하나 적다. 재분석은 `force` 로 캐시를 건너뛰며 그때는 다시
- * 차감된다(§7-2 — 버튼 문구가 차감을 밝히는 것은 화면의 몫).
+ * 캐시를 **이용권보다 먼저** 본다. 「캐시 히트 = 되돌림」(수익화 v2)과 결과는 같고, 이용권을 썼다가
+ * 되돌리는 왕복이 없어 실패 지점이 하나 적다. 재분석은 `force` 로 캐시를 건너뛰며 그때는 이용권을
+ * 다시 쓴다(§7-2 — 버튼 문구가 그 사실을 밝히는 것은 화면의 몫).
  */
 
 /** 분당 허용 횟수. 유료 AI 호출이라 넉넉히 잡지 않는다. */
@@ -74,13 +72,13 @@ export interface ThemeAnalyzeParams {
   readonly themeId: string
   /** destiny target id — 다형(본인=profiles.id / 가족=family_members.id). */
   readonly targetId: string
-  /** 캐시를 건너뛰고 다시 푼다. 🔴 복채가 다시 나간다. */
+  /** 캐시를 건너뛰고 다시 푼다. 🔴 이용권을 다시 쓴다. */
   readonly force?: boolean
 }
 
 export type ThemeAnalyzeResult =
   | { success: true; reading: ThemeReading; cached: boolean }
-  | { success: false; error: string; errorType?: string; currentTier?: string }
+  | { success: false; error: string; errorType?: PassErrorType | 'RATE_LIMIT'; requiredUnits?: number }
 
 /** KST 기준 연도 — 세운의 기준점. 엔진의 «현재 시점»과 같은 계산이다. */
 function kstYear(): number {
@@ -93,7 +91,7 @@ function isThemeReading(value: unknown, themeId: string): value is ThemeReading 
   return record.themeId === themeId && typeof record.narration === 'object' && typeof record.verdict === 'object'
 }
 
-/** 7일 안에 같은 대상·같은 테마로 푼 결과가 있으면 그것을 돌려준다(복채 안 나간다). */
+/** 7일 안에 같은 대상·같은 테마로 푼 결과가 있으면 그것을 돌려준다(이용권을 쓰지 않는다). */
 async function findCachedReading(targetId: string, themeId: string): Promise<ThemeReading | null> {
   const supabase = await createClient()
   const cutoff = new Date(Date.now() - THEME_CACHE_DAYS * 24 * 60 * 60 * 1000)
@@ -147,8 +145,8 @@ export async function analyzeThemeFortune(params: ThemeAnalyzeParams): Promise<T
     const resolver = themeResolver(theme.id)
     if (!resolver) return { success: false, error: '이 테마의 풀이는 아직 준비 중입니다.' }
 
-    // 대상은 단일 출처(v_destiny_targets)로만 해석한다. 🔴 차감보다 먼저 본다 —
-    //    대상이 없거나 남의 것이면 복채를 건드리지 않는다.
+    // 대상은 단일 출처(v_destiny_targets)로만 해석한다. 🔴 이용권보다 먼저 본다 —
+    //    대상이 없거나 남의 것이면 이용권을 건드리지 않는다.
     const target = await getDestinyTarget(params.targetId)
     if (!target) return { success: false, error: '대상 정보를 찾을 수 없습니다.' }
     if (!target.birth_date) {
@@ -161,24 +159,19 @@ export async function analyzeThemeFortune(params: ThemeAnalyzeParams): Promise<T
       if (cached) return { success: true, reading: cached, cached: true }
     }
 
-    // 🔴 표시 = 실차감. 무료 미끼 테마(§7-1)는 키가 없고, 그래서 차감 경로 자체를 타지 않는다.
+    // 🔴 표시 = 실사용. 무료 미끼 테마(§7-1)는 키가 없고, 그래서 이용권 경로 자체를 타지 않는다.
     const costKey = themeReadingCostKey(theme)
     const cost = costKey ? FEATURE_COST[costKey].display : 0
 
-    if (cost > 0) {
-      const deducted = await deductTalisman(`theme_${theme.id}`, cost)
-      if (!deducted.success) {
-        return {
-          success: false,
-          error: deducted.error ?? '복채가 부족합니다.',
-          errorType: deducted.errorType,
-          currentTier: deducted.currentTier,
-        }
-      }
-      // 마스터(무제한)는 실차감이 없으므로 환불 대상이 아니다.
-      if (deducted.remainingBalance !== UNLIMITED_BALANCE) {
-        refundOnFailure = () => refundBokchae(user.id, cost, `${theme.title} 풀이 실패 환불`)
-      }
+    if (costKey) {
+      const charge = await chargeFeature({
+        userId: user.id,
+        featureKey: `theme_${theme.id}`,
+        costKey,
+        label: `${theme.title} 풀이`,
+      })
+      if (!charge.ok) return charge.failure
+      refundOnFailure = charge.refundOnFailure
     }
 
     // ── L1 결정론 ────────────────────────────────────────────────────────────
@@ -207,7 +200,7 @@ export async function analyzeThemeFortune(params: ThemeAnalyzeParams): Promise<T
       '',
       buildThemeAdditionalContext(resolver.prompt, verdict, freeCut ? undefined : remedy),
       themeOutputFormatGuide(freeCut),
-      // 복채를 받은 풀이에만 서술 품질 규율을 얹는다(무료 미끼는 표준).
+      // 이용권을 쓴 풀이에만 서술 품질 규율을 얹는다(무료 미끼는 표준).
       freeCut ? 'standard' : 'premium'
     )
     const ai = await generateAIContent({
@@ -244,13 +237,12 @@ export async function analyzeThemeFortune(params: ThemeAnalyzeParams): Promise<T
       talisman_cost: cost,
     })
 
-    await addBokPoints(20, 'ANALYSIS', undefined, '테마 풀이').catch(() => {})
     return { success: true, reading, cached: false }
   } catch (error) {
     logger.error('[ThemeFortune] 분석 실패:', error)
     if (refundOnFailure) {
-      await refundOnFailure().catch((e) => logger.error('[ThemeFortune] 환불 실패:', e))
-      return { success: false, error: '복채는 돌려드렸습니다. 잠시 후 다시 시도해주세요.' }
+      await refundOnFailure().catch((e) => logger.error('[ThemeFortune] 이용권 되돌림 실패:', e))
+      return { success: false, error: '쓴 이용권은 돌려드렸어요. 잠시 후 다시 시도해 주세요.' }
     }
     return {
       success: false,

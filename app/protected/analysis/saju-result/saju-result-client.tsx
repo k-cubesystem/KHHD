@@ -3,13 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { analyzeCheonjiinAction } from '@/app/actions/ai/cheonjiin'
 import { createSajuShareTokenByTarget } from '@/app/actions/ai/share-saju'
-import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
-import { getWalletBalance } from '@/app/actions/payment/wallet'
-import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
-import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
-import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
-import { PaywallModal } from '@/components/shared/paywall-modal'
-import { PremiumBlurSection } from '@/components/shared/premium-blur-section'
+import { formatFeatureCost } from '@/lib/domain/payment/feature-costs'
+import { useInsufficientPass } from '@/hooks/use-insufficient-pass'
+import { useRefreshPasses } from '@/hooks/use-passes'
+import { InsufficientPassModal } from '@/components/payment/insufficient-pass-modal'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { DestinyTarget } from '@/app/actions/user/destiny'
@@ -34,8 +31,6 @@ import { motion } from 'framer-motion'
 
 type AnalysisData = SajuReadingData
 
-const SAJU_COST = FEATURE_COST.saju.display // 단일 소스 — 표시 = 실차감(2만냥)
-
 interface SajuResultClientProps {
   target: DestinyTarget
   initialData?: AnalysisData | null
@@ -47,12 +42,8 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
   const [isLoading, setIsLoading] = useState(!initialData)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
-  const { checkQuota, paywallProps, quota } = useAnalysisQuota()
-  const { bokchaeModal, closeBokchaeModal, handleDeductResult } = useInsufficientBokchae()
-  const [walletBalance, setWalletBalance] = useState<number | null>(null)
-  useEffect(() => {
-    getWalletBalance().then(setWalletBalance)
-  }, [])
+  const { passModal, closePassModal, handleChargeResult } = useInsufficientPass()
+  const refreshPasses = useRefreshPasses()
   const started = useRef(false)
   // 분석 결과 공개 순간 효과음(풍경) 1회 — 전역 음소거·최초 제스처 정책 존중(useShrineAudio 내부)
   const { play: playShrineFx } = useShrineAudio()
@@ -98,34 +89,27 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
   }, [apiDone, isLoading])
 
   async function runAnalysis() {
-    const canProceed = await checkQuota()
-    if (!canProceed) {
-      setIsLoading(false)
-      return
-    }
     setIsLoading(true)
     setProgress(0)
     setApiDone(false)
     setError(null)
     GA.analysisStart('saju')
 
-    // 🔴 여기서 차감하지 않는다. 복채는 서버 액션 안에서, 캐시 확인 뒤에 빠진다.
+    // 🔴 여기서 이용권을 쓰지 않는다. 이용권은 서버 액션 안에서, 캐시 확인 뒤에 쓰인다.
     //    화면이 차감하던 종전 구조에서는 액션을 브라우저에서 직접 부르면 공짜였다.
     //    실패 시 되돌리는 것도 액션이 한다 — 화면이 환급을 부르면 그 자체가 어뷰즈 경로가 된다.
+    // 🔴 «무료 분석 N회» 페이월(useAnalysisQuota)을 앞에 세우지 않는다 — 이용권 판정은 서버(NO_PASS)가 하고,
+    //    화면이 먼저 막으면 무료인 캐시 적중까지 막히고 «무료 분석»이라는 없는 약속을 말하게 된다.
     try {
       const result = await analyzeCheonjiinAction(target.id, null, false, true)
       if (result.success && result.data) {
-        if (result.remainingBalance !== undefined) setWalletBalance(result.remainingBalance)
+        void refreshPasses()
         setData(result.data as AnalysisData)
         GA.analysisComplete('saju')
         setApiDone(true) // progress가 80% 미만이어도 완료 처리
       } else {
         setIsLoading(false)
-        const handled = handleDeductResult(result, {
-          currentBalance: walletBalance ?? 0,
-          requiredAmount: SAJU_COST,
-          featureLabel: '사주 분석',
-        })
+        const handled = handleChargeResult(result, { featureLabel: '사주 분석' })
         if (!handled) setError(result.error || '분석 중 오류가 발생했습니다.')
       }
     } catch (err) {
@@ -167,21 +151,20 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
     )
   }
 
-  // 데이터 없음 — 차감 실패(잔액 부족)/할당 초과 등. 업셀·페이월 모달 + 복구 CTA.
+  // 데이터 없음 — 이용권 부족. 이용권 안내 모달 + 복구 CTA.
   if (!data) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <PaywallModal {...paywallProps} />
-        <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
+        <InsufficientPassModal {...passModal} onClose={closePassModal} />
         <div className="text-center space-y-4">
-          <p className="text-ink-light/60 text-sm">분석을 시작하려면 복채가 필요합니다.</p>
+          <p className="text-ink-light/60 text-sm">사주 풀이에는 {formatFeatureCost('saju')}이 필요해요.</p>
           <div className="flex gap-2 justify-center">
             <Button onClick={runAnalysis} variant="outline" size="sm" className="gap-2">
               <RefreshCw className="w-4 h-4" />
               다시 시도
             </Button>
-            <Link href="/protected/store?tab=bokchae">
-              <Button size="sm">복채 충전</Button>
+            <Link href="/protected/store?tab=pass">
+              <Button size="sm">이용권 구매</Button>
             </Link>
           </div>
         </div>
@@ -198,8 +181,7 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
     >
-      <PaywallModal {...paywallProps} />
-      <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
+      <InsufficientPassModal {...passModal} onClose={closePassModal} />
 
       {/* 결과 상단(헤더 + 리포트 카드) — 뒤에 깊은 밤 서재 앰비언스를 깔고, 아래로 내려가며
           배경색에 완전히 잠기게 한다. 표현 레이어일 뿐이라 내용은 그대로 z-10 위에 선다. */}
@@ -288,37 +270,36 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
 
       <SajuFreeSections data={data} />
 
-      {/* 프리미엄 섹션 — 무료 사용자에게 블러 처리 */}
-      <PremiumBlurSection isPaid={quota.isPaid}>
-        {/* 타고난 성격 */}
-        <DetailSection
-          title={data.cheon?.title || '타고난 성격과 재능이에요'}
-          data={data.cheon}
-          hanja="天"
-          tagline="하늘의 기운 · 타고난 것"
-        />
+      {/* 🔴 블러를 걸지 않는다. 이 화면의 풀이는 캐시든 새 풀이든 이미 이용권을 쓴 것이다 — 예전 판정(«지금
+          이용권이 남았나»)으로 가리면 가입 맛보기 1장을 쓴 사람이 다시 열 때 자기가 산 풀이가 잠긴다. */}
+      {/* 타고난 성격 */}
+      <DetailSection
+        title={data.cheon?.title || '타고난 성격과 재능이에요'}
+        data={data.cheon}
+        hanja="天"
+        tagline="하늘의 기운 · 타고난 것"
+      />
 
-        <SajuDeepSections data={data} />
+      <SajuDeepSections data={data} />
 
-        {/* 天 → 地 시네마틱 전환 구분자 */}
-        <CheonToJiDivider />
+      {/* 天 → 地 시네마틱 전환 구분자 */}
+      <CheonToJiDivider />
 
-        {/* 운의 흐름 (地) */}
-        <DetailSection
-          title={data.ji?.title || '지금 흐르는 운의 방향이에요'}
-          data={data.ji}
-          hanja="地"
-          tagline="땅의 기운 · 흐르는 것"
-        />
+      {/* 운의 흐름 (地) */}
+      <DetailSection
+        title={data.ji?.title || '지금 흐르는 운의 방향이에요'}
+        data={data.ji}
+        hanja="地"
+        tagline="땅의 기운 · 흐르는 것"
+      />
 
-        {/* 인연과 내면 (人)
-            🔴 라이브가 天·地만 그리고 人 을 통째로 빠뜨리고 있었다(2026-08-18 발견). 저장본에는
-               귀인·관계 조언은 물론 **관상·손금 교차 해석**까지 들어 있는데 결과 화면에서 한 줄도
-               안 보였다. 기록 화면이 쓰던 `InSection` 을 그대로 재사용한다 — 세 번째 렌더러 금지. */}
-        <InSection data={data.in ?? null} />
+      {/* 인연과 내면 (人)
+          🔴 라이브가 天·地만 그리고 人 을 통째로 빠뜨리고 있었다(2026-08-18 발견). 저장본에는
+             귀인·관계 조언은 물론 **관상·손금 교차 해석**까지 들어 있는데 결과 화면에서 한 줄도
+             안 보였다. 기록 화면이 쓰던 `InSection` 을 그대로 재사용한다 — 세 번째 렌더러 금지. */}
+      <InSection data={data.in ?? null} />
 
-        <SajuCrossAnalysisSection data={data} />
-      </PremiumBlurSection>
+      <SajuCrossAnalysisSection data={data} />
 
       {/* 풀이 → 공유 사이의 호흡. 모양 정본은 /story 비주얼 브레이크(story-visual-break.tsx) —
           여기서는 글 없이 향로 앰비언스 + 단청 구분선만 두는 얇은 밴드로 줄였다. */}

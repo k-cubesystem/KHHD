@@ -74,8 +74,15 @@ export async function chargeFeature(params: {
   const ledgerIds = result.ledgerIds
   return {
     ok: true,
+    // 실패 처리 중의 2차 실패가 풀이 실패 응답까지 삼키지 않게 — 던지지 않고 경보만 남긴다.
     refundOnFailure: async () => {
-      const restored = await refundPass(params.userId, ledgerIds)
+      const restored = await refundPass(params.userId, ledgerIds).catch((err: unknown) => {
+        logger.error(err instanceof Error ? err : new Error('[FeatureCharge] 이용권 되돌림 예외'), {
+          userId: params.userId,
+          featureKey: params.featureKey,
+        })
+        return 0
+      })
       if (restored <= 0) {
         logger.error(new Error('[FeatureCharge] 실패한 풀이의 이용권을 되돌리지 못함'), {
           userId: params.userId,

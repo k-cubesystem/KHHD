@@ -77,8 +77,8 @@ export const THEME_CATEGORIES = {
 /**
  * 지금 실제로 돌아가는 풀이 화면.
  *
- * 🔴 `costKey: null` 은 «그 화면이 복채를 받지 않는다»는 **사실 진술**이다. 추측이 아니라
- * 실차감 호출부를 보고 적었고, 회귀 테스트가 그 파일을 다시 읽어 확인한다.
+ * 🔴 `costKey: null` 은 «그 화면이 이용권을 쓰지 않는다»는 **사실 진술**이다. 추측이 아니라
+ * 실사용 호출부를 보고 적었고, 회귀 테스트가 그 파일을 다시 읽어 확인한다.
  */
 export interface ThemeDestination {
   readonly href: string
@@ -108,7 +108,7 @@ export type ThemeDestinationKey = keyof typeof THEME_DESTINATIONS
  *    들여다보기」 섹션이 없어지면서, 오늘의 운세와 2026 병오년은 링크가 한 곳도 남지 않을
  *    뻔했다. 여기서 빼는 순간 기능이 접근 불가가 된다 — 뺄 거면 라우트도 함께 지울 것.
  *
- * 🔴 둘 다 **복채를 받지 않는다**(`FEATURE_COST.today/newYear.free`). 표기는 다른 카드와 같은
+ * 🔴 둘 다 **이용권을 쓰지 않는다**(`FEATURE_COST.today/newYear.free`). 표기는 다른 카드와 같은
  *    경로(`formatFeatureCost`)로 만들어 «무료»가 화면에서 유료로 보이지 않게 한다.
  */
 export const STANDALONE_ROUTES = {
@@ -124,7 +124,7 @@ export function openRoutes(): readonly ThemeDestination[] {
   return [...Object.values(THEME_DESTINATIONS), ...Object.values(STANDALONE_ROUTES)]
 }
 
-/** 그 화면이 복채를 받지 않는가 — 배지 문구·색을 가르는 데만 쓴다. */
+/** 그 화면이 이용권을 쓰지 않는가 — 배지 문구·색을 가르는 데만 쓴다. */
 export function isFreeRoute(route: ThemeDestination): boolean {
   return route.costKey === null || FEATURE_COST[route.costKey].free
 }
@@ -166,14 +166,14 @@ export interface ThemeFortune {
   /**
    * 개별 풀이(L2 판정)가 섰는가. 켜면 카드가 `destination` 이 아니라 **자기 풀이 화면**으로 간다.
    *
-   * 🔴 이 한 칸이 **가는 곳과 복채를 함께** 바꾼다. 링크만 바꾸고 단가를 안 바꾸면 「무료」라고
-   *    적힌 카드가 복채를 받는다 — 표시광고법 사고의 전형이다(마스터 §7-1 표시 = 실차감).
-   * 🔴 켜 두고 판정을 등록하지 않으면 화면이 「준비 중」으로 닫히고 복채는 못 받는다.
+   * 🔴 이 한 칸이 **가는 곳과 이용권을 함께** 바꾼다. 링크만 바꾸고 장 수를 안 바꾸면 「무료」라고
+   *    적힌 카드가 이용권을 쓴다 — 표시광고법 사고의 전형이다(마스터 §7-1 표시 = 실사용).
+   * 🔴 켜 두고 판정을 등록하지 않으면 화면이 「준비 중」으로 닫히고 이용권은 쓰이지 않는다.
    *    그 어긋남은 빌드가 아니라 **테스트가 잡는다**(`__tests__/resolvers.test.ts`).
    */
   readonly reading?: boolean
   /**
-   * 개별 풀이를 복채 없이 여는 «미끼»인가 (마스터 §7-1 — 카테고리당 1종).
+   * 개별 풀이를 이용권 없이 여는 «미끼»인가 (마스터 §7-1 — 카테고리당 1종).
    *
    * 🔴 근거는 «인심»이 아니라 **엔진 원가**다(직장·재물 §4). 이 둘만 세운 타임라인을 돌지 않아
    *    다른 테마보다 실제로 싸다. 그래서 이 플래그 하나가 표시(무료 배지)와 실차감(차감 건너뜀)을
@@ -688,7 +688,7 @@ export const HUB_THEME_ROWS = 5
 
 /**
  * 개별 풀이 캐시 기간(일) — 기존 `analyzeTrendAction` 승계(마스터 §7-2).
- * 이 기간 안의 재진입은 저장본을 보여 주고 **복채가 나가지 않는다.**
+ * 이 기간 안의 재진입은 저장본을 보여 주고 **이용권을 쓰지 않는다.**
  *
  * ⚠️ 여기 사는 이유: 서버 액션 모듈은 **async 함수만 내보낼 수 있다**(Next 규칙) — 상수를
  *    거기 두면 빌드가 깨진다. 정책 숫자는 도메인 상수 자리인 이 파일이 맞다.
@@ -807,16 +807,16 @@ export function themeDestination(theme: ThemeFortune): ThemeDestination | null {
   return theme.destination ? THEME_DESTINATIONS[theme.destination] : null
 }
 
-/** 개별 풀이가 선 테마인가 — 가는 곳과 복채를 함께 가른다. */
+/** 개별 풀이가 선 테마인가 — 가는 곳과 이용권을 함께 가른다. */
 export function hasThemeReading(theme: ThemeFortune): boolean {
   return theme.reading === true
 }
 
 /**
- * 단가 키 — **카드를 눌렀을 때 실제로 나가는 복채**의 키. null 은 «복채를 받지 않는다».
+ * 단가 키 — **카드를 눌렀을 때 실제로 쓰이는 이용권**의 키. null 은 «이용권을 쓰지 않는다».
  *
  * 🔴 개별 풀이가 선 테마는 `destination` 이 아니라 **자기 풀이**의 값을 쓴다. 링크는 풀이로
- *    가는데 배지가 도착 화면의 값을 쓰면, 「무료」라고 적힌 카드가 복채를 받는다.
+ *    가는데 배지가 도착 화면의 값을 쓰면, 「무료」라고 적힌 카드가 이용권을 쓴다.
  */
 export function themeCostKey(theme: ThemeFortune): FeatureCostKey | null {
   if (hasThemeReading(theme)) return themeReadingCostKey(theme)
@@ -824,7 +824,7 @@ export function themeCostKey(theme: ThemeFortune): FeatureCostKey | null {
 }
 
 /**
- * 카드에 찍는 복채 표기.
+ * 카드에 찍는 이용권 표기.
  * 숫자는 `feature-costs.ts` 에서만 온다 — 이 파일에는 금액이 한 글자도 없다.
  */
 export function themeCostLabel(theme: ThemeFortune): string {
@@ -834,7 +834,7 @@ export function themeCostLabel(theme: ThemeFortune): string {
   return routeCostLabel(destination)
 }
 
-/** 그 복채가 «무료»인가 — 배지 색을 가르는 데만 쓴다. */
+/** 그 풀이가 «무료»인가 — 배지 색을 가르는 데만 쓴다. */
 export function isFreeTheme(theme: ThemeFortune): boolean {
   if (hasThemeReading(theme)) return isFreeReading(theme)
   const destination = themeDestination(theme)
@@ -850,8 +850,8 @@ export function themeAnchorId(themeId: string): string {
 /**
  * 허브 카드가 가는 곳 = **목록 페이지의 그 카드 자리**.
  *
- * 개별 테마 풀이가 아직 없으므로, 허브에서 곧장 복채 차감 화면으로 던지지 않는다. 목록에서
- * «지금은 어느 풀이로 이어지는지»와 복채를 한 번 보여 준 다음 사용자가 누르게 한다.
+ * 개별 테마 풀이가 아직 없으므로, 허브에서 곧장 이용권을 쓰는 화면으로 던지지 않는다. 목록에서
+ * «지금은 어느 풀이로 이어지는지»와 필요한 장 수를 한 번 보여 준 다음 사용자가 누르게 한다.
  */
 export function themeListHref(theme: ThemeFortune): string {
   return `${THEME_LIST_PATH}?tab=${tabOfCategory(theme.category)}#${themeAnchorId(theme.id)}`
@@ -886,7 +886,7 @@ export function themeReadingPath(themeId: string): string {
 }
 
 /**
- * 개별 풀이의 실차감 키. `null` 은 «복채를 받지 않는다».
+ * 개별 풀이의 실사용 키. `null` 은 «이용권을 쓰지 않는다».
  *
  * 🔴 표시 = 실차감(마스터 §7-1). 이 함수가 화면의 배지도, 서버 액션의 차감액도 정한다 —
  *    금액은 `feature-costs.ts` 에서만 오고 이 파일에는 숫자가 한 글자도 없다.
@@ -895,7 +895,7 @@ export function themeReadingCostKey(theme: ThemeFortune): FeatureCostKey | null 
   return theme.freeReading ? null : 'themeFortune'
 }
 
-/** 상세 화면에 찍는 복채 표기. */
+/** 상세 화면에 찍는 이용권 표기. */
 export function themeReadingCostLabel(theme: ThemeFortune): string {
   const key = themeReadingCostKey(theme)
   return key ? formatFeatureCost(key) : '무료'

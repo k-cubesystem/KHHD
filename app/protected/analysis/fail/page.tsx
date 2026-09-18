@@ -20,8 +20,8 @@ function FailContent() {
     <PaymentFailureView
       code={code}
       message={message}
-      retryHref="/protected/store"
-      retryLabel="다시 충전하기"
+      retryHref="/protected/store?tab=pass"
+      retryLabel="다시 구매하기"
       exitHref="/protected/analysis"
       exitLabel="분석으로 돌아가기"
     />

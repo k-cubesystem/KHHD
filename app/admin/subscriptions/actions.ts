@@ -6,6 +6,7 @@ import { getUserRole } from '@/lib/auth'
 import { logger } from '@/lib/utils/logger'
 import { logAdminAction } from '@/lib/admin/audit'
 import { requireAdmin } from '@/lib/admin/require-admin'
+import { adjustPassesAsAdmin } from '@/lib/admin/pass-adjust'
 
 export interface AdminSubscription {
   id: string
@@ -22,6 +23,7 @@ export interface AdminSubscription {
     id: string
     name: string
     price: number
+    monthly_passes: number
   } | null
   profile: {
     email: string
@@ -50,15 +52,17 @@ async function checkAdminRole() {
   return user
 }
 
+// 🔴 subscriptions 의 RLS 는 «본인 것만»(subscriptions_select_own)이다 — 세션 클라이언트로 읽으면 관리자 자기 구독만
+//    보여 목록·통계가 텅 빈다. 권한 확인 뒤 service_role 로 읽는다.
+
 // 구독 통계 조회
 export async function getSubscriptionStats(): Promise<SubscriptionStats> {
   await checkAdminRole()
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
-  const { data: subscriptions } = await supabase.from('subscriptions').select(`
-            status,
-            plan:membership_plans(price)
-        `)
+  const { data: subscriptions } = await supabase
+    .from('subscriptions')
+    .select('status, billing_key, plan:membership_plans(price)')
 
   const stats: SubscriptionStats = {
     totalActive: 0,
@@ -73,7 +77,8 @@ export async function getSubscriptionStats(): Promise<SubscriptionStats> {
       switch (sub.status) {
         case 'ACTIVE':
           stats.totalActive++
-          if (sub.plan && typeof sub.plan === 'object' && 'price' in sub.plan) {
+          // 관리자 부여(결제 없음)는 매출이 아니다 — 정기결제 키가 있는 구독만 센다.
+          if (sub.billing_key && sub.plan && typeof sub.plan === 'object' && 'price' in sub.plan) {
             stats.monthlyRevenue += (sub.plan as { price: number }).price
           }
           break
@@ -93,6 +98,9 @@ export async function getSubscriptionStats(): Promise<SubscriptionStats> {
   return stats
 }
 
+const SUBSCRIPTION_LIST_COLUMNS =
+  'id, user_id, status, current_period_start, current_period_end, next_billing_date, last_payment_date, cancelled_at, cancel_reason, created_at, plan:membership_plans(id, name, price, monthly_passes)'
+
 // 구독 목록 조회
 export async function getSubscriptions(
   page: number = 1,
@@ -104,16 +112,10 @@ export async function getSubscriptions(
   totalPages: number
 }> {
   await checkAdminRole()
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
-  let query = supabase.from('subscriptions').select(
-    `
-            *,
-            plan:membership_plans(id, name, price),
-            profile:profiles(email, role)
-        `,
-    { count: 'exact' }
-  )
+  // 🔴 billing_key·customer_key 는 화면으로 내보내지 않는다 — 열을 골라 읽는다(select * 금지).
+  let query = supabase.from('subscriptions').select(SUBSCRIPTION_LIST_COLUMNS, { count: 'exact' })
 
   if (statusFilter && statusFilter !== 'ALL') {
     query = query.eq('status', statusFilter)
@@ -128,8 +130,25 @@ export async function getSubscriptions(
     return { subscriptions: [], total: 0, totalPages: 0 }
   }
 
+  const rows = (data ?? []) as unknown as Array<Omit<AdminSubscription, 'profile'>>
+
+  // subscriptions.user_id 는 auth.users 를 가리킨다 — profiles 와 잇는 FK 가 없어 임베드(profile:profiles)는
+  // PostgREST 가 관계를 못 찾아 목록 전체가 실패한다. 따로 읽어 붙인다.
+  const userIds = Array.from(new Set(rows.map((row) => row.user_id)))
+  const profileById = new Map<string, { email: string; role: string }>()
+  if (userIds.length > 0) {
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, email, role')
+      .in('id', userIds)
+    if (profileError) logger.warn('[Admin] 구독 목록 프로필 조회 실패', { message: profileError.message })
+    for (const p of (profiles ?? []) as Array<{ id: string; email: string | null; role: string | null }>) {
+      profileById.set(p.id, { email: p.email ?? '', role: p.role ?? 'user' })
+    }
+  }
+
   return {
-    subscriptions: (data || []) as AdminSubscription[],
+    subscriptions: rows.map((row) => ({ ...row, profile: profileById.get(row.user_id) ?? null })),
     total: count || 0,
     totalPages: Math.ceil((count || 0) / limit),
   }
@@ -183,105 +202,32 @@ export async function updateSubscriptionStatus(
   return { success: true }
 }
 
-// 수동 부적 지급
-export async function grantTalismans(
+/**
+ * 이용권 수동 발급 — 회원 상세의 조정과 같은 길(adjustPassesAsAdmin)을 쓴다. 감사에 남는다.
+ * `requestKey` 는 발급 창을 열 때 한 번 만든다 — 같은 키로는 한 번만 발급된다.
+ */
+export async function grantPassesToSubscriber(
   userId: string,
-  amount: number,
-  reason: string
+  quantity: number,
+  reason: string,
+  validDays: number | null,
+  requestKey: string
 ): Promise<{ success: boolean; error?: string }> {
   const actor = await requireAdmin()
   if (!actor.authorized) return { success: false, error: actor.error }
 
-  if (amount <= 0 || amount > 100) {
-    return { success: false, error: '복채는 1~100만냥 사이여야 합니다.' }
+  if (typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity <= 0) {
+    return { success: false, error: '발급할 이용권은 1장 이상이어야 해요.' }
   }
 
-  // 직접 wallet 업데이트 (Service Role 필요 — 타인 지갑 대상이므로 admin 클라이언트 필수)
-  const supabase = createAdminClient()
-
-  // 먼저 wallet 존재 확인
-  const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', userId).single()
-
-  if (!wallet) {
-    // wallet이 없으면 생성
-    await supabase.from('wallets').insert({ user_id: userId, balance: amount })
-  } else {
-    // 기존 balance에 추가
-    await supabase
-      .from('wallets')
-      .update({ balance: wallet.balance + amount })
-      .eq('user_id', userId)
-  }
-
-  // 트랜잭션 기록
-  await supabase.from('wallet_transactions').insert({
-    user_id: userId,
-    amount: amount,
-    type: 'BONUS',
-    description: `관리자 지급: ${reason}`,
+  const result = await adjustPassesAsAdmin({
+    actor,
+    targetUserId: userId,
+    delta: quantity,
+    reason,
+    validDays,
+    requestKey,
+    via: 'subscriptions',
   })
-
-  // 🔴 돈이다. 지갑 거래내역과 별개로 «누가 왜 줬는지» 를 감사에 남긴다.
-  await logAdminAction({
-    actorId: actor.actorId,
-    actorEmail: actor.actorEmail,
-    action: 'talisman_grant',
-    targetUser: userId,
-    detail: { amount, reason, before: wallet?.balance ?? 0, after: (wallet?.balance ?? 0) + amount },
-  })
-
-  return { success: true }
-}
-
-// 멤버십 플랜 목록 조회 (관리자용)
-export async function getMembershipPlansAdmin() {
-  await checkAdminRole()
-  const supabase = await createClient()
-
-  const { data, error } = await supabase.from('membership_plans').select('*').order('sort_order', { ascending: true })
-
-  if (error) {
-    logger.error('[Admin] Get plans error:', error)
-    return []
-  }
-
-  return data || []
-}
-
-// 멤버십 플랜 업데이트
-export async function updateMembershipPlan(
-  planId: string,
-  updates: {
-    name?: string
-    price?: number
-    talismans_per_period?: number
-    is_active?: boolean
-  }
-): Promise<{ success: boolean; error?: string }> {
-  const actor = await requireAdmin()
-  if (!actor.authorized) return { success: false, error: actor.error }
-  const supabase = await createClient()
-
-  const { data: before } = await supabase
-    .from('membership_plans')
-    .select('name, price, talismans_per_period, is_active')
-    .eq('id', planId)
-    .single()
-
-  const { error } = await supabase.from('membership_plans').update(updates).eq('id', planId)
-
-  if (error) {
-    logger.error('[Admin] Update plan error:', error)
-    return { success: false, error: '플랜 업데이트에 실패했습니다.' }
-  }
-
-  // 🔴 가격·혜택 문구는 표시광고법 사안이다. 사후에 「누가 언제 얼마로 바꿨나」를 못 대면 곤란해진다.
-  await logAdminAction({
-    actorId: actor.actorId,
-    actorEmail: actor.actorEmail,
-    action: 'plan_update',
-    detail: { planId, before: before ?? null, after: updates },
-  })
-
-  return { success: true }
+  return result.success ? { success: true } : { success: false, error: result.error }
 }

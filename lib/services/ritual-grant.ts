@@ -9,8 +9,9 @@ import { BAEKIL_ITEM_NAME } from '@/lib/domain/ritual/baekil'
  *
  * ⚠️ 여기 있는 함수는 절대 `'use server'` 파일에서 re-export 하지 말 것.
  *    Next.js 규약상 `'use server'` 파일의 모든 export 는 로그인 유저가 직접 호출 가능한
- *    공개 엔드포인트가 된다. 인벤토리 아이템은 배치 효험·상점 정가(5만냥)가 걸린 재화이므로
- *    지급 함수가 그대로 노출되면 유저가 자기 계정에 무제한 발행할 수 있다(bok-grant.ts 와 같은 이유).
+ *    공개 엔드포인트가 된다. 「백일 소원끈」은 상점에서 받을 수 없는 완주 보상 전용 품목이므로
+ *    (shop-sections REWARD_ONLY_ITEM_NAMES) 지급 함수가 그대로 노출되면 유저가 백 일을 걷지 않고
+ *    자기 계정에 얼마든지 발행할 수 있다(bok-grant.ts 와 같은 이유).
  *    공개되는 것은 **인자 없는** 얇은 액션(settleBaekilVow)뿐이고, 그 액션이 이 모듈을 부른다.
  *
  * ⚠️ 완주 판정과 지급은 **RPC 한 트랜잭션 안에서** 끝난다(complete_shrine_vow).

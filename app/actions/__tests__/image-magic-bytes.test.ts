@@ -3,7 +3,7 @@
  *
  * 핵심 계약: 위조 이미지는 AI 호출 이전에 끊긴다.
  * 2026-09-01 부터 과금도 이 액션 안에서 일어나므로, 계약이 하나 더 붙는다 —
- * **위조 이미지에는 복채가 빠지지 않는다.** 게이트가 차감보다 앞에 있어야 성립한다.
+ * **위조 이미지에는 이용권이 쓰이지 않는다.** 게이트가 이용권 사용보다 앞에 있어야 성립한다.
  */
 import { UNSUPPORTED_IMAGE_MESSAGE } from '@/lib/security/magic-bytes'
 
@@ -35,12 +35,7 @@ jest.mock('@/app/actions/user/history', () => ({
   saveAnalysisHistoryObserved: jest.fn(async () => undefined),
 }))
 
-// 복 포인트 발행은 서버 전용 모듈(lib/services/bok-grant)에 있다 — 대역으로 대체한다.
-jest.mock('@/lib/services/bok-grant', () => ({
-  addBokPoints: jest.fn(async () => undefined),
-}))
-
-// 과금은 액션 안에서 일어난다 — 로그인 사용자와 차감을 대역으로 세워 «불렸는가»를 본다.
+// 과금은 액션 안에서 일어난다 — 로그인 사용자와 이용권 사용을 대역으로 세워 «불렸는가»를 본다.
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(async () => ({
     auth: { getUser: jest.fn(async () => ({ data: { user: { id: 'test-user' } } })) },
@@ -48,7 +43,7 @@ jest.mock('@/lib/supabase/server', () => ({
 }))
 
 jest.mock('@/lib/services/feature-charge', () => ({
-  chargeFeature: jest.fn(async () => ({ ok: true, remainingBalance: 10, refundOnFailure: null })),
+  chargeFeature: jest.fn(async () => ({ ok: true, refundOnFailure: null })),
 }))
 
 import { analyzeFaceForDestiny, analyzePalmReading, analyzeInteriorForFengshui } from '../ai/image'
@@ -120,7 +115,7 @@ describe('이미지 분석 액션 매직바이트 게이트', () => {
     expect(result.error).not.toBe(UNSUPPORTED_IMAGE_MESSAGE)
   })
 
-  it('정상 이미지일 때는 액션이 스스로 과금한다 — 화면이 차감해 주기를 기다리지 않는다', async () => {
+  it('정상 이미지일 때는 액션이 스스로 과금한다 — 화면이 이용권을 써 주기를 기다리지 않는다', async () => {
     await analyzeFaceForDestiny(JPEG_BASE64, 'general')
 
     expect(mockChargeFeature).toHaveBeenCalledWith(

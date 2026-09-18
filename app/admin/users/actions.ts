@@ -1,12 +1,13 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { UserRole } from '@/types/auth'
 import { revalidatePath, unstable_noStore } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 import { logAdminAction } from '@/lib/admin/audit'
 import { requireAdmin } from '@/lib/admin/require-admin'
+import { adjustPassesAsAdmin } from '@/lib/admin/pass-adjust'
+import { getPassLedger, getPassSummary } from '@/lib/services/entitlement'
 import { grantMembershipDeity } from '@/lib/services/membership-deity'
 
 export interface AdminUser {
@@ -27,15 +28,10 @@ export async function getUsers(
   unstable_noStore()
 
   try {
-    const supabase = await createClient()
-
-    // 1. Check Caller Auth
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) {
-      logger.error('getUsers: Auth failed', authError)
+    // 🔴 회원 전원의 이메일을 돌려주는 공개 엔드포인트다 — 로그인만으로 부를 수 있으면 안 된다.
+    const adminCheck = await requireAdmin()
+    if (!adminCheck.authorized) {
+      logger.warn('getUsers: 관리자 아님', adminCheck.error)
       return { data: [], total: 0 }
     }
 
@@ -120,38 +116,31 @@ export async function updateUserRole(targetUserId: string, newRole: UserRole) {
 
 export async function getUserDetails(userId: string) {
   try {
-    const supabase = await createClient()
+    // 🔴 남의 결제·이용권·가족 정보를 통째로 돌려준다 — 로그인 확인만으로는 안 된다.
+    const adminCheck = await requireAdmin()
+    if (!adminCheck.authorized) return { error: 'Forbidden' }
 
-    // 1. Check Auth
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return { error: 'Unauthorized' }
-
-    // TEMPORARY: Use admin client to bypass RLS
     const adminClient = createAdminClient()
 
-    // 2. Fetch Data in Parallel
-    const [profileRes, sajuRes, familyRes, paymentsRes, walletRes, subscriptionRes, txRes, shrinesRes] =
+    const [profileRes, sajuRes, familyRes, paymentsRes, subscriptionRes, shrinesRes, passSummary, passLedger] =
       await Promise.all([
         adminClient.from('profiles').select('*').eq('id', userId).single(),
         adminClient.from('saju_records').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         adminClient.from('family_members').select('*').eq('user_id', userId),
-        adminClient.from('payments').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-        adminClient.from('wallets').select('*').eq('user_id', userId).single(),
+        adminClient
+          .from('payments')
+          .select('id, amount, cancelled_amount, order_id, status, created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false }),
+        // 🔴 billing_key 는 결제를 일으키는 비밀이다 — 화면(브라우저)으로 보내지 않게 열을 골라 읽는다.
         adminClient
           .from('subscriptions')
-          .select('*, membership_plans(*)')
+          .select('status, current_period_end, end_date, membership_plans(tier)')
           .eq('user_id', userId)
           .eq('status', 'ACTIVE')
-          .single(),
-        // 복채 트랜잭션 이력 (CS 대응 — 잔액이 왜 이렇게 됐는지 추적)
-        adminClient
-          .from('wallet_transactions')
-          .select('id, amount, type, description, created_at')
-          .eq('user_id', userId)
           .order('created_at', { ascending: false })
-          .limit(50),
+          .limit(1)
+          .maybeSingle(),
         // 신당 현황 (본인 + 가족별) — 主神·테마·배치 신물 수
         adminClient
           .from('shrines')
@@ -159,6 +148,9 @@ export async function getUserDetails(userId: string) {
             'id, name, family_member_id, visibility, visitor_count, shrine_deities:main_deity_id(name, code), shrine_theme_packs:active_pack_id(name, code)'
           )
           .eq('user_id', userId),
+        // 이용권 — 멤버십 몫과 보유분을 따로(합치지 않는다) + 발급·사용 내역(CS 대응)
+        getPassSummary(userId),
+        getPassLedger(userId, 50),
       ])
 
     // 신당별 배치 신물 수 (한 번에 집계)
@@ -195,6 +187,21 @@ export async function getUserDetails(userId: string) {
       logger.warn('getUserDetails: Failed to fetch auth user', e)
     }
 
+    interface SubscriptionJoinRow {
+      current_period_end: string | null
+      end_date: string | null
+      membership_plans: { tier: string } | { tier: string }[] | null
+    }
+    const subRow = subscriptionRes.data as unknown as SubscriptionJoinRow | null
+    const subPlan = Array.isArray(subRow?.membership_plans) ? subRow.membership_plans[0] : subRow?.membership_plans
+    const subscription = subRow
+      ? {
+          current_period_end: subRow.current_period_end,
+          end_date: subRow.end_date,
+          membership_plans: subPlan ? { tier: subPlan.tier } : undefined,
+        }
+      : null
+
     interface ShrineJoinRow {
       id: string
       name: string
@@ -222,9 +229,9 @@ export async function getUserDetails(userId: string) {
       sajuRecords: sajuRes.data || [],
       familyMembers: familyRes.data || [],
       payments: paymentsRes.data || [],
-      wallet: walletRes.data || { balance: 0 },
-      subscription: subscriptionRes.data || null,
-      transactions: txRes.data || [],
+      subscription,
+      passSummary,
+      passLedger,
       shrines,
       authCreatedAt,
       error: null,
@@ -237,26 +244,53 @@ export async function getUserDetails(userId: string) {
 
 export async function deleteUser(userId: string) {
   try {
-    const supabase = await createClient()
-
-    // 1. Check Auth & Admin Role
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Unauthorized' }
-
-    const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-
-    if (!callerProfile || callerProfile.role !== 'admin') {
-      return { success: false, error: 'Forbidden: Admin only' }
-    }
+    const adminCheck = await requireAdmin()
+    if (!adminCheck.authorized) return { success: false, error: adminCheck.error }
 
     // 2. Prevent self-deletion
-    if (user.id === userId) {
+    if (adminCheck.actorId === userId) {
       return { success: false, error: '본인 계정은 삭제할 수 없습니다.' }
     }
 
     const adminClient = createAdminClient()
+
+    // 약관 제12조 2호 — 구매한 이용권 미사용분과 이용 중인 정기결제 멤버십은 «환불한 뒤» 탈퇴를 처리한다.
+    // 기한이 지난 미사용분도 환불 청구 대상이다(상사소멸시효 5년) — 만료 여부로 거르지 않는다.
+    const [{ data: purchasedGrants, error: grantsError }, { data: paidSubs, error: subsError }] = await Promise.all([
+      adminClient
+        .from('entitlement_grants')
+        .select('quantity, consumed, revoked')
+        .eq('user_id', userId)
+        .eq('source', 'purchase'),
+      adminClient
+        .from('subscriptions')
+        .select('id, current_period_end')
+        .eq('user_id', userId)
+        .in('status', ['ACTIVE', 'CANCELLED'])
+        .not('billing_key', 'is', null),
+    ])
+    if (grantsError || subsError) {
+      logger.error('[deleteUser] 환불 선행 확인 실패', { userId, grantsError, subsError })
+      return { success: false, error: '환불 대상 확인에 실패해 삭제하지 않았습니다. 잠시 후 다시 시도해 주세요.' }
+    }
+    const unusedPurchased = (purchasedGrants ?? []).reduce(
+      (n, g) => n + Math.max(0, g.quantity - g.consumed - g.revoked),
+      0
+    )
+    const nowMs = Date.now()
+    const livePaidSub = (paidSubs ?? []).some(
+      (s) => !s.current_period_end || new Date(s.current_period_end).getTime() > nowMs
+    )
+    if (unusedPurchased > 0 || livePaidSub) {
+      const parts = [
+        unusedPurchased > 0 ? `구매한 이용권 미사용 ${unusedPurchased}장` : null,
+        livePaidSub ? '이용 중인 정기결제 멤버십' : null,
+      ].filter(Boolean)
+      return {
+        success: false,
+        error: `${parts.join('·')}이 남아 있어 삭제할 수 없습니다. 결제 취소(환불)를 먼저 처리해 주세요.`,
+      }
+    }
 
     // 감사: 삭제 전 대상 스냅샷 (감사 로그는 FK 없어 삭제 후에도 보존)
     const { data: targetProfile } = await adminClient
@@ -265,8 +299,8 @@ export async function deleteUser(userId: string) {
       .eq('id', userId)
       .maybeSingle()
     await logAdminAction({
-      actorId: user.id,
-      actorEmail: user.email ?? null,
+      actorId: adminCheck.actorId,
+      actorEmail: adminCheck.actorEmail,
       action: 'user_delete',
       targetUser: userId,
       detail: {
@@ -301,71 +335,34 @@ export async function deleteUser(userId: string) {
 }
 
 /**
- * 회원 복채 잔액 조정 — 절대값 덮어쓰기가 아닌 **증감(delta) + 사유**.
- * 원자 RPC(add/deduct_wallet_balance) 경유로 레이스·음수 방지, 감사 로그에 전/후 기록.
+ * 회원 이용권 조정 — 양수 = 발급(유효기간, 기본 90일), 음수 = 회수. 사유 필수, 감사에 전·후가 남는다.
+ * `requestKey` 는 화면이 조정 폼을 열 때 한 번 만든다 — 같은 키로는 한 번만 발급된다.
  */
-export async function adjustUserBalance(targetUserId: string, delta: number, reason: string) {
+export async function adjustUserPasses(
+  targetUserId: string,
+  delta: number,
+  reason: string,
+  validDays: number | null,
+  requestKey: string
+) {
   const adminCheck = await requireAdmin()
-  if (!adminCheck.authorized) return { success: false, error: adminCheck.error }
+  if (!adminCheck.authorized) return { success: false as const, error: adminCheck.error }
 
-  const amount = Math.trunc(delta)
-  if (!Number.isFinite(amount) || amount === 0) {
-    return { success: false, error: '증감액은 0이 아닌 정수여야 합니다.' }
-  }
-  if (Math.abs(amount) > 1_000_000) {
-    return { success: false, error: '한 번에 최대 100만냥까지 조정할 수 있습니다.' }
-  }
-  const trimmedReason = reason.trim().slice(0, 200)
-  if (!trimmedReason) {
-    return { success: false, error: '조정 사유를 입력하세요.' }
-  }
-
-  const adminClient = createAdminClient()
-  const { data: before } = await adminClient.from('wallets').select('balance').eq('user_id', targetUserId).maybeSingle()
-  const beforeBalance = before?.balance ?? 0
-
-  // 원자 증감 — 지급/차감 각각 전용 RPC
-  let newBalance: number
-  if (amount > 0) {
-    const { data, error } = await adminClient.rpc('add_wallet_balance', { p_user_id: targetUserId, p_amount: amount })
-    if (error || typeof data !== 'number') {
-      logger.error('[adjustUserBalance] add failed:', error)
-      return { success: false, error: '잔액 충전 실패' }
-    }
-    newBalance = data
-  } else {
-    const { data, error } = await adminClient.rpc('deduct_wallet_balance', {
-      p_user_id: targetUserId,
-      p_amount: -amount,
-    })
-    if (error || typeof data !== 'number') {
-      logger.error('[adjustUserBalance] deduct failed:', error)
-      return { success: false, error: '잔액 차감 실패' }
-    }
-    if (data === -1) return { success: false, error: '해당 회원의 지갑이 없습니다.' }
-    if (data === -2) return { success: false, error: `잔액이 부족합니다 (현재 ${beforeBalance.toLocaleString()}만냥).` }
-    newBalance = data
-  }
-
-  // 트랜잭션 로그 (실 증감액 기록)
-  await adminClient.from('wallet_transactions').insert({
-    user_id: targetUserId,
-    amount,
-    type: amount > 0 ? 'BONUS' : 'USE',
-    description: `[관리자 조정] ${trimmedReason}`,
+  const result = await adjustPassesAsAdmin({
+    actor: adminCheck,
+    targetUserId,
+    delta,
+    reason,
+    validDays,
+    requestKey,
+    via: 'user_detail',
   })
-
-  await logAdminAction({
-    actorId: adminCheck.actorId,
-    actorEmail: adminCheck.actorEmail,
-    action: 'balance_adjust',
-    targetUser: targetUserId,
-    detail: { before: beforeBalance, after: newBalance, delta: amount, reason: trimmedReason },
-  })
-
-  revalidatePath(`/admin/users/${targetUserId}`)
-  return { success: true, newBalance }
+  if (result.success) revalidatePath(`/admin/users/${targetUserId}`)
+  return result
 }
+
+/** 관리자가 여는 멤버십 기간(일) — 결제 없이 한 번 연다. 자동 갱신은 없다. */
+const ADMIN_GRANT_DAYS = 30
 
 export async function updateUserSubscription(targetUserId: string, planTier: string | null) {
   const adminCheck = await requireAdmin()
@@ -382,42 +379,45 @@ export async function updateUserSubscription(targetUserId: string, planTier: str
     planId = plan.id
   }
 
-  // 2. Manage Subscription
+  // 🔴 정기결제 중인 구독을 여기서 덮거나 끄면 청구가 조용히 멈춘다 — 결제 구독은 구독 관리 화면에서 다룬다.
+  const { data: liveRows, error: liveError } = await adminClient
+    .from('subscriptions')
+    .select('id, billing_key')
+    .eq('user_id', targetUserId)
+    .eq('status', 'ACTIVE')
+  if (liveError) return { success: false, error: liveError.message }
+  const live = (liveRows ?? []) as Array<{ id: string; billing_key: string | null }>
+  if (live.some((row) => row.billing_key)) {
+    return { success: false, error: '정기결제 중인 구독이 있어요. 구독 관리에서 먼저 처리하세요.' }
+  }
+
+  if (live.length > 0) {
+    const { error: expireError } = await adminClient
+      .from('subscriptions')
+      .update({ status: 'EXPIRED', current_period_end: new Date().toISOString() })
+      .in(
+        'id',
+        live.map((row) => row.id)
+      )
+    if (expireError) return { success: false, error: expireError.message }
+  }
+
   if (planId) {
-    // Upsert Active Subscription
-    const { error } = await adminClient.from('subscriptions').upsert(
-      {
-        user_id: targetUserId,
-        plan_id: planId,
-        status: 'ACTIVE',
-        start_date: new Date().toISOString(),
-        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 days
-        payment_status: 'PAID', // Admin grant
-      },
-      { onConflict: 'user_id' }
-    ) // Assuming one sub per user or logic to handle multiple
-
-    // Note: If distinct constraints are different, might need logic to deactivate old ones.
-    // For now assuming 1 active sub per user for simplicity or upsert handles it if checking unique user_id/status.
-    // Actually standard subscription table might allow multiple history.
-    // Let's Deactivate all other active subs first to be safe.
-
-    await adminClient
-      .from('subscriptions')
-      .update({ status: 'EXPIRED' })
-      .eq('user_id', targetUserId)
-      .eq('status', 'ACTIVE')
-      .neq('plan_id', planId) // Don't expire if it's the same (though upsert handled it)
-
-    if (error) return { success: false, error: error.message }
-  } else {
-    // Cancel Subscription
-    const { error } = await adminClient
-      .from('subscriptions')
-      .update({ status: 'CANCELLED' })
-      .eq('user_id', targetUserId)
-      .eq('status', 'ACTIVE')
-
+    // 🔴 subscriptions 에는 user_id 유니크가 없고 customer_key 가 NOT NULL 이라, 예전 upsert(onConflict: user_id)는
+    //    매번 실패했다(관리자 부여 0건). 새 행으로 연다 — 월 이용권 창은 current_period_start 에 앵커된다.
+    const now = new Date()
+    const end = new Date(now.getTime() + ADMIN_GRANT_DAYS * 86_400_000)
+    const { error } = await adminClient.from('subscriptions').insert({
+      user_id: targetUserId,
+      plan_id: planId,
+      status: 'ACTIVE',
+      customer_key: `admin-${targetUserId}`,
+      current_period_start: now.toISOString(),
+      current_period_end: end.toISOString(),
+      start_date: now.toISOString(),
+      end_date: end.toISOString(),
+      payment_status: 'PAID',
+    })
     if (error) return { success: false, error: error.message }
   }
 

@@ -4,6 +4,7 @@
  */
 
 import type { ObangkiMatter } from '@/lib/domain/ritual/obangki'
+import { isMembershipTier, tierUnlocks, type MembershipTier } from '@/lib/domain/payment/membership-tiers'
 
 export type Element = 'wood' | 'fire' | 'earth' | 'metal' | 'water'
 export type Layer = 'wall' | 'hanging' | 'altar' | 'floor'
@@ -48,10 +49,6 @@ export interface CatalogItem {
   layer: Layer
   size: SizeGrade
   behavior: ItemBehavior
-  priceBok: number
-  priceKrw: number
-  /** 복채 가격(만냥, 단일 통화). 0=무료. */
-  priceBokchae: number
   /** 배치 효험 (없으면 null) */
   unlockEffect: UnlockEffect | null
   /**
@@ -96,13 +93,14 @@ export interface ThemePack {
   id: string
   code: string
   name: string
-  priceBok: number
-  priceKrw: number
-  /** 복채 가격(만냥, 단일 통화). 0=무료. */
-  priceBokchae: number
+  /** 쓸 수 있는 최저 멤버십 등급(shrine_theme_packs.required_tier). null = 누구나(기본 테마). */
+  requiredTier: MembershipTier | null
   elementAffinity: Element | null
   assets: ThemeAssets
+  /** 소유 행(기원·여정 보상, 예전 봉헌)이 있거나 누구나 쓰는 테마 — 등급과 무관하게 남는다. */
   owned: boolean
+  /** 지금 멤버십 등급으로 쓸 수 있는가. 소유 행이 없어도 등급이 닿으면 입힐 수 있다. */
+  unlocked: boolean
   /** 이 자리가 어떤 곳인가 — 두 문장 스토리 (없으면 구 데이터) */
   story: string | null
   /** 어떤 사주에 맞는 자리인가 — 한 문장 */
@@ -189,6 +187,28 @@ export function parsePlacementState(raw: unknown): PlacementState {
   if (typeof raw !== 'object' || raw === null) return {}
   const r = raw as Record<string, unknown>
   return { lit: r.lit === true }
+}
+
+/**
+ * DB required_tier(unknown) → 등급. 모르는 값·NULL 은 null(누구나)이다 — 열은 CHECK 로
+ * SINGLE·FAMILY·BUSINESS·NULL 만 받으므로 null 이 되는 길은 «누구나»뿐이다.
+ */
+export function parseRequiredTier(v: unknown): MembershipTier | null {
+  return isMembershipTier(v) ? v : null
+}
+
+/**
+ * 등급으로 모신 신위의 소유 행 source(user_shrine_deities.source).
+ *
+ * 소유는 두 층이다(PRD-voucher-system «소유의 두 층») — 멤버십 증정·보상·예전 봉헌은 해지해도 남는
+ * «영구 보유», 등급으로 모신 신위는 «구독 중 이용»이다. 행은 지우지 않고 등급이 닿을 때만 보유로 친다
+ * — 재구독하면 그대로 돌아온다.
+ */
+export const TIER_OPEN_DEITY_SOURCE = 'tier_open'
+
+/** 이 신위 소유 행이 지금 유효한가 — 등급으로 모신 행만 등급을 본다. */
+export function deityOwnershipHolds(source: unknown, requiredTier: unknown, tier: string | null | undefined): boolean {
+  return source !== TIER_OPEN_DEITY_SOURCE || tierUnlocks(tier, parseRequiredTier(requiredTier))
 }
 
 /** DB unlock_effect JSONB(unknown)를 UnlockEffect로 변환 */

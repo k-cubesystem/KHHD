@@ -3,6 +3,7 @@
 import type { FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { MISSION_CATEGORIES } from '@/lib/constants'
 import { motion } from 'framer-motion'
+import { MISSION_CATEGORY_TO_COST_KEY, formatFeatureCost } from '@/lib/domain/payment/feature-costs'
 
 interface StudioAnalysisLayoutProps {
   category: 'FACE' | 'HAND' | 'FENGSHUI' | 'SAJU'
@@ -20,6 +21,7 @@ const SEAL_CHAR: Record<StudioAnalysisLayoutProps['category'], string> = {
 
 export function StudioAnalysisLayout({ category, targetMember, children }: StudioAnalysisLayoutProps) {
   const categoryInfo = MISSION_CATEGORIES.find((c) => c.value === category)
+  const costKey = MISSION_CATEGORY_TO_COST_KEY[category]
 
   return (
     <div className="min-h-screen bg-background text-ink-light relative overflow-hidden">
@@ -60,12 +62,10 @@ export function StudioAnalysisLayout({ category, targetMember, children }: Studi
             </div>
           </div>
 
-          {categoryInfo && (
+          {costKey && (
             <div className="text-right hidden sm:block">
-              <p className="text-[10px] text-ink-light/40 font-light uppercase tracking-wider">이용권</p>
-              <p className="text-lg font-serif font-light text-primary">
-                {categoryInfo.cost > 0 ? `${categoryInfo.cost}만냥` : '무료'}
-              </p>
+              <p className="text-[10px] text-ink-light/40 font-light uppercase tracking-wider">풀이 1회</p>
+              <p className="text-lg font-serif font-light text-primary">{formatFeatureCost(costKey)}</p>
             </div>
           )}
         </div>

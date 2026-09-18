@@ -6,7 +6,6 @@ import {
   OBANGKI_COLOR_INFO,
   OBANGKI_DAILY_FREE,
   OBANGKI_DISCLAIMER,
-  OBANGKI_EXTRA_COST,
   OBANGKI_MATTERS,
   OBANGKI_MATTER_INFO,
   OBANGKI_MATTER_VARIANTS,
@@ -31,6 +30,7 @@ import {
   type ObangkiColor,
   type ObangkiMatter,
 } from '../obangki'
+import { FEATURE_COST, canonicalDeductCost } from '@/lib/domain/payment/feature-costs'
 
 /** KST 시각을 UTC epoch 으로 — 테스트 의도를 KST 로 읽히게 한다(KST = UTC+9). */
 function kst(y: number, m: number, d: number, h = 0, min = 0): number {
@@ -190,56 +190,77 @@ describe('스키마 — 프라이버시·RLS 를 SQL 로 강제', () => {
   })
 })
 
-describe('과금 경로 — 지갑은 server-only 모듈로만 만진다', () => {
-  it('서버 액션이 지갑 RPC 를 직접 부르지 않는다', () => {
+describe('이용권 경로 — 원장은 server-only 모듈로만 만진다', () => {
+  it('서버 액션이 지갑·이용권 RPC 를 직접 부르지 않는다', () => {
     // 주석에 이름이 나오는 것은 괜찮다 — 막는 것은 **호출**이다
     expect(ACTIONS_SRC).not.toMatch(/rpc\(\s*['"](deduct|add)_wallet_balance/)
+    expect(ACTIONS_SRC).not.toMatch(/rpc\(\s*['"]ent_(consume|refund)/)
     expect(ACTIONS_SRC).not.toMatch(/from\(\s*['"]wallets['"]/)
   })
 
-  it('차감·환불은 lib/services/bokchae 경유다', () => {
-    expect(ACTIONS_SRC).toMatch(/import \{ spendBokchae, refundBokchae \} from '@\/lib\/services\/bokchae'/)
+  it('이용권 사용·되돌림은 lib/services/feature-charge 경유다 — 복채 경로는 없다', () => {
+    expect(ACTIONS_SRC).toMatch(/import \{ chargeFeature \} from '@\/lib\/services\/feature-charge'/)
+    expect(ACTIONS_SRC).not.toContain('spendBokchae')
+    expect(ACTIONS_SRC).not.toContain('refundBokchae')
   })
 
   /**
-   * 과금 순서 회귀 방지 — **무료 시도가 복채 차감보다 반드시 먼저**여야 한다.
-   * 이 순서라야 "무료가 남았는데 돈을 물렸다"가 구조적으로 불가능하다
+   * 사용 순서 회귀 방지 — **무료 시도가 이용권 사용보다 반드시 먼저**여야 한다.
+   * 이 순서라야 "무료가 남았는데 이용권을 썼다"가 구조적으로 불가능하다
    * (클라이언트가 confirmPaid 를 항상 true 로 보내도 무료 경로에서 통과해버린다).
    */
-  it('무료 시도가 spendBokchae 보다 먼저 온다', () => {
+  it('무료 시도가 chargeFeature 보다 먼저 온다', () => {
     const freeAttempt = ACTIONS_SRC.indexOf('const free = await record(false)')
-    const spend = ACTIONS_SRC.indexOf('await spendBokchae(OBANGKI_EXTRA_COST')
+    const charge = ACTIONS_SRC.indexOf('await chargeFeature(')
     expect(freeAttempt).toBeGreaterThan(-1)
-    expect(spend).toBeGreaterThan(-1)
-    expect(freeAttempt).toBeLessThan(spend)
+    expect(charge).toBeGreaterThan(-1)
+    expect(freeAttempt).toBeLessThan(charge)
   })
 
-  it('차감 후 기록 실패는 환불한다', () => {
-    expect(ACTIONS_SRC).toMatch(/refundBokchae\(user\.id, OBANGKI_EXTRA_COST/)
+  it('동의(confirmPaid) 없이는 이용권을 쓰지 않는다 — 동의 검사가 사용보다 먼저다', () => {
+    const consent = ACTIONS_SRC.indexOf('if (!confirmPaid)')
+    const charge = ACTIONS_SRC.indexOf('await chargeFeature(')
+    expect(consent).toBeGreaterThan(-1)
+    expect(consent).toBeLessThan(charge)
+  })
+
+  it('사용 후 기록 실패는 이용권을 되돌린다', () => {
+    const charge = ACTIONS_SRC.indexOf('await chargeFeature(')
+    const refund = ACTIONS_SRC.indexOf('charge.refundOnFailure')
+    expect(refund).toBeGreaterThan(charge)
+  })
+
+  it('장 수는 서버가 costKey 로 다시 읽는다 — 호출부가 숫자를 적지 않는다', () => {
+    const call = /await chargeFeature\(\{[\s\S]*?\}\)/.exec(ACTIONS_SRC)?.[0] ?? ''
+    expect(call).toContain("costKey: 'obangkiDraw'")
+    expect(call).toContain("featureKey: 'OBANGKI_DRAW'")
+    expect(call).not.toMatch(/units\s*:/)
   })
 
   /**
    * "못 읽음"과 "거절"을 구분해야 하는 이유 — 안전한 방향이 경로마다 **반대**다.
    * 유료 기록 경로에서는 못 읽음을 거절로 보면 환불이라 안전하지만, 무료 시도 경로에서
    * 같은 처리를 하면 "무료 소진"으로 읽혀 **과금 단계로 넘어간다**. RPC 가 무료 뽑기를
-   * 이미 INSERT 한 뒤 응답만 안 읽히는 경우 공짜 뽑기에 복채를 물리게 된다.
+   * 이미 INSERT 한 뒤 응답만 안 읽히는 경우 공짜 뽑기에 이용권을 쓰게 된다.
    */
-  it('무료 응답을 못 읽으면 과금하지 않고 멈춘다 — parsed 를 allowed 와 따로 본다', () => {
+  it('무료 응답을 못 읽으면 이용권을 쓰지 않고 멈춘다 — parsed 를 allowed 와 따로 본다', () => {
     expect(ACTIONS_SRC).toMatch(/parsed:\s*boolean/)
     expect(ACTIONS_SRC).toMatch(/if \(!freeRow\.parsed\)/)
 
     const guard = ACTIONS_SRC.indexOf('if (!freeRow.parsed)')
-    const spend = ACTIONS_SRC.indexOf('await spendBokchae(OBANGKI_EXTRA_COST')
+    const charge = ACTIONS_SRC.indexOf('await chargeFeature(')
     expect(guard).toBeGreaterThan(-1)
-    // 가드가 차감보다 먼저 와야 의미가 있다
-    expect(guard).toBeLessThan(spend)
+    // 가드가 사용보다 먼저 와야 의미가 있다
+    expect(guard).toBeLessThan(charge)
   })
 })
 
 describe('정책 상수', () => {
-  it('무료는 하루 3회, 이후 1회 1만냥(wallets 단위 1)', () => {
+  it('무료는 하루 3회, 이후 한 번에 이용권 1장 — 장 수의 정본은 FEATURE_COST 다', () => {
     expect(OBANGKI_DAILY_FREE).toBe(3)
-    expect(OBANGKI_EXTRA_COST).toBe(1)
+    expect(FEATURE_COST.obangkiDraw).toEqual({ display: 1, free: false })
+    // 서버 되도출 표에도 같은 값으로 올라 있다(표시 = 사용)
+    expect(canonicalDeductCost('OBANGKI_DRAW')).toBe(FEATURE_COST.obangkiDraw.display)
   })
 
   it('아뢰는 말은 한 줄 — 한 번에 한 가지만 여쭙게 하는 장치다', () => {
@@ -436,7 +457,7 @@ describe('하루 판정 · 무료 3회', () => {
     expect(countDrawsOnDay(logs, now)).toBe(2)
   })
 
-  it('remainingFreeDraws — 0회면 3, 3회면 0, 복채로 더 뽑아도 음수가 되지 않는다', () => {
+  it('remainingFreeDraws — 0회면 3, 3회면 0, 이용권으로 더 뽑아도 음수가 되지 않는다', () => {
     const now = kst(2026, 7, 30, 12)
     const one = kst(2026, 7, 30, 9)
     expect(remainingFreeDraws([], now)).toBe(3)
@@ -451,7 +472,7 @@ describe('하루 판정 · 무료 3회', () => {
     expect(remainingFreeDraws(yesterday, kst(2026, 7, 31, 0, 0))).toBe(3)
   })
 
-  it('isPaidDraw — 무료 3회를 다 쓴 뒤부터 복채', () => {
+  it('isPaidDraw — 무료 3회를 다 쓴 뒤부터 이용권', () => {
     expect(isPaidDraw(0)).toBe(false)
     expect(isPaidDraw(2)).toBe(false)
     expect(isPaidDraw(3)).toBe(true)

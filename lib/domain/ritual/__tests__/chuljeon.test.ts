@@ -57,7 +57,7 @@ describe('전거 — 태종의 셈 (태종실록 4년 10월 6일)', () => {
 })
 
 describe('정책 — 오방기와 다른 도구다', () => {
-  it('갈림길은 2~4개, 하루 10회, 복채 없음', () => {
+  it('갈림길은 2~4개, 하루 10회, 이용권 없음', () => {
     expect(CHULJEON_WAY_MIN).toBe(2)
     expect(CHULJEON_WAY_MAX).toBe(4)
     expect(CHULJEON_DAILY_LIMIT).toBe(10)
@@ -71,14 +71,17 @@ describe('정책 — 오방기와 다른 도구다', () => {
   })
 
   it('★ 과금 경로가 아예 없다 — 갈림길에 값을 붙이면 도구가 아니라 판매다', () => {
-    // 막는 것은 **식별자**다. "복채를 물리지 않는다"고 적어 둔 주석은 남아 있어야 한다
+    // 막는 것은 **식별자**다. "이용권을 쓰지 않는다"고 적어 둔 주석은 남아 있어야 한다
     // (설명글까지 막으면 다음 사람이 이유를 모른 채 과금을 붙인다).
     const src = read('lib/domain/ritual/chuljeon.ts')
-    for (const paid of ['spendBokchae', 'refundBokchae', 'EXTRA_COST', 'isPaid']) expect(src).not.toContain(paid)
-    // 액션 쪽도 척전 구간에서는 지갑을 만지지 않는다
+    for (const paid of ['spendBokchae', 'refundBokchae', 'chargeFeature', 'consumePass', 'EXTRA_COST', 'isPaid']) {
+      expect(src).not.toContain(paid)
+    }
+    // 액션 쪽도 척전 구간에서는 이용권을 쓰지 않는다
     const section = ACTIONS_SRC.slice(ACTIONS_SRC.indexOf('R-4 척전'))
-    expect(section).not.toContain('spendBokchae')
-    expect(section).not.toContain('refundBokchae')
+    for (const paid of ['spendBokchae', 'refundBokchae', 'chargeFeature', 'consumePass']) {
+      expect(section).not.toContain(paid)
+    }
   })
 
   it('법무 고지는 다른 의식과 같은 문구다', () => {

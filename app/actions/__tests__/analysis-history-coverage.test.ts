@@ -33,7 +33,7 @@ const DB_ALLOWED_CATEGORIES = [
   'THEME',
 ] as const
 
-/** 복채를 받는 풀이 액션 — 여기 있는 것은 예외 없이 기록을 남겨야 한다. */
+/** 이용권을 쓰는 풀이 액션 — 여기 있는 것은 예외 없이 기록을 남겨야 한다. */
 const PAID_ANALYSIS_ACTIONS = [
   'app/actions/ai/samhap.ts',
   'app/actions/ai/cheonjiin.ts',
@@ -44,7 +44,7 @@ const PAID_ANALYSIS_ACTIONS = [
 ] as const
 
 describe('기록 저장 — 푼 것은 남는다', () => {
-  it('🔴 복채를 받는 풀이 전부가 기록 저장을 부른다', () => {
+  it('🔴 이용권을 쓰는 풀이 전부가 기록 저장을 부른다', () => {
     for (const path of PAID_ANALYSIS_ACTIONS) {
       const source = read(path)
       const saves = /saveAnalysisHistory(Observed)?\(|persistImageAnalysisHistory\(/.test(source)

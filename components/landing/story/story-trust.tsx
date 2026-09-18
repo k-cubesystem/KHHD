@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { CreditCard, ImageOff, KeyRound, RotateCcw, ShieldCheck, type LucideIcon } from 'lucide-react'
+import { chargeRefundPolicyLine } from '@/lib/domain/payment/self-cancel'
 import { StoryReveal } from './story-reveal'
 import { StorySectionHeading } from './story-section-heading'
 
@@ -37,8 +38,8 @@ const ITEMS: readonly TrustItem[] = [
   },
   {
     icon: RotateCcw,
-    title: '안 쓴 복채는 돌려받습니다',
-    body: '미사용 복채는 결제일로부터 7일 이내 전액 환불, 7일이 지나면 90%를 환불합니다(수수료 10%). 멤버십은 이용 일수만큼 일할 계산해 잔여 금액을 돌려드립니다.',
+    title: '안 쓴 이용권은 돌려받습니다',
+    body: `구매한 ${chargeRefundPolicyLine()} 멤버십은 즉시 해지하면 이번 달 지난 기간의 비율과 이번 달 이용권을 쓴 비율 중 큰 쪽만큼을 빼고 돌려드립니다.`,
   },
 ]
 

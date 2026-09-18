@@ -5,14 +5,18 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { ArrowRight, Coins, Sparkles, User2, Hand, Compass, Calendar, ChevronLeft, type LucideIcon } from 'lucide-react'
+import { ArrowRight, Sparkles, User2, Hand, Compass, Calendar, ChevronLeft, type LucideIcon } from 'lucide-react'
 import { IconBokjumeoni } from '@/components/icons/traditional-icons'
 import { logger } from '@/lib/utils/logger'
 import { SamhapIntroCard } from '@/components/studio/samhap-intro-card'
 import { TargetSelect, toTargetOption } from '@/components/destiny/target-select'
-import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { FEATURE_COST, formatFeatureCost } from '@/lib/domain/payment/feature-costs'
+import { formatPassUnits } from '@/lib/domain/entitlement/pass'
+import { useInsufficientPass } from '@/hooks/use-insufficient-pass'
+import { useRefreshPasses } from '@/hooks/use-passes'
+import { InsufficientPassModal } from '@/components/payment/insufficient-pass-modal'
+import { StudioPassBanner } from '@/components/studio/studio-pass-banner'
 import { resolveSamhapTarget, samhapTargetId, samhapTargetQuery } from '@/lib/domain/analysis/samhap-target'
-import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { getDestinyTargets, type DestinyTarget } from '@/app/actions/user/destiny'
 import {
   getSamhapReadiness,
@@ -29,10 +33,10 @@ import { GA, trackEvent } from '@/lib/analytics/ga4'
 type StepType = 'check' | 'loading' | 'result'
 
 const SAMHAP_COST = FEATURE_COST.samhap.display
-// 할인 포지셔닝 — 개별 4상(사주·관상·손금·풍수)을 따로 보면 합계, 종합은 5만냥.
+// 개별 4상(사주·관상·손금·풍수)을 따로 보면 드는 장 수 — 종합은 그보다 적게 든다.
 const INDIVIDUAL_TOTAL =
   FEATURE_COST.saju.display + FEATURE_COST.face.display + FEATURE_COST.palm.display + FEATURE_COST.fengshui.display
-const SAMHAP_DISCOUNT_PCT = INDIVIDUAL_TOTAL > 0 ? Math.round((1 - SAMHAP_COST / INDIVIDUAL_TOTAL) * 100) : 0
+const SAMHAP_SAVED = Math.max(0, INDIVIDUAL_TOTAL - SAMHAP_COST)
 
 /**
  * 예상 소요 시간(초) — 2026-08-15 실측 54초(출력 7,861 토큰).
@@ -61,22 +65,20 @@ function SamhapPageContent() {
   const [step, setStep] = useState<StepType>('check')
   const [readiness, setReadiness] = useState<SamhapReadiness | null>(null)
   const [result, setResult] = useState<SamhapResult | null>(null)
-  const [balance, setBalance] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [targets, setTargets] = useState<DestinyTarget[] | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const { passModal, closePassModal, handleChargeResult } = useInsufficientPass()
+  const refreshPasses = useRefreshPasses()
 
   const selectedTarget = targets?.find((t) => t.id === selectedId) ?? null
   // 🔴 본인은 targetId 를 붙이지 않는다(samhap-target.ts 주석의 함정).
   const effectiveTargetId = samhapTargetId(selectedTarget)
   const targetQuery = samhapTargetQuery(selectedTarget)
 
-  // 대상 목록·잔액은 화면당 한 번. 선택이 정해지면 아래 요건 조회가 이어받는다.
+  // 대상 목록은 화면당 한 번. 선택이 정해지면 아래 요건 조회가 이어받는다.
   useEffect(() => {
     let active = true
-    getWalletBalance().then((b) => {
-      if (active) setBalance(b)
-    })
     getDestinyTargets().then((list) => {
       if (!active) return
       setTargets(list)
@@ -124,11 +126,13 @@ function SamhapPageContent() {
       const res = await generateSamhapReport(effectiveTargetId)
       if (!res.success) {
         setStep('check')
-        toast.error(res.error || '종합사주풀이 생성에 실패했습니다.')
+        if (!handleChargeResult(res, { featureLabel: '종합사주풀이' })) {
+          toast.error(res.error || '종합사주풀이 생성에 실패했습니다.')
+        }
         return
       }
       setResult(res)
-      if (balance !== null) setBalance(balance - SAMHAP_COST)
+      void refreshPasses()
       setStep('result')
       GA.analysisComplete('samhap')
     } catch (error) {
@@ -142,6 +146,7 @@ function SamhapPageContent() {
 
   return (
     <div className="min-h-screen bg-background text-ink-light relative overflow-x-hidden pb-24">
+      <InsufficientPassModal {...passModal} onClose={closePassModal} />
       <div className="fixed inset-0 pointer-events-none -z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gold-500/5 rounded-full blur-[150px]" />
       </div>
@@ -217,7 +222,6 @@ function SamhapPageContent() {
               ) : (
                 <SamhapCheck
                   readiness={readiness}
-                  balance={balance}
                   targetQuery={targetQuery}
                   targetName={selectedTarget?.name ?? readiness.targetName}
                   onGenerate={handleGenerate}
@@ -268,14 +272,12 @@ function SamhapPageContent() {
 
 function SamhapCheck({
   readiness,
-  balance,
   targetQuery,
   targetName,
   onGenerate,
   loading,
 }: {
   readiness: SamhapReadiness
-  balance: number | null
   /** 선택한 대상의 `?target=` 쿼리(본인이면 빈 문자열) — 「준비하기」가 그 사람을 데리고 간다. */
   targetQuery: string
   /** 요건 표가 누구 것인지 밝히는 이름. */
@@ -364,27 +366,12 @@ function SamhapCheck({
 
       {readiness.ready ? (
         <>
-          {/* 잔액 + 비용 */}
-          <div className="flex items-center justify-between rounded-2xl border border-gold-500/30 bg-gold-500/[0.05] p-4">
-            <div className="flex items-center gap-2">
-              <Coins className="w-4 h-4 text-gold-500" />
-              <span className="text-xs text-white/50 font-sans">보유 복채</span>
-              <span className="text-sm font-bold text-gold-500 font-serif">
-                {balance !== null ? `${balance}만냥` : '—'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              {SAMHAP_DISCOUNT_PCT > 0 && (
-                <span className="text-[11px] text-white/30 line-through font-sans">개별 {INDIVIDUAL_TOTAL}만냥</span>
-              )}
-              <span className="text-sm font-bold text-gold-500 font-serif">종합 {SAMHAP_COST}만냥</span>
-              {SAMHAP_DISCOUNT_PCT > 0 && (
-                <span className="text-[10px] font-bold text-ink-primary bg-seal/25 border border-seal/50 rounded-full px-2 py-0.5">
-                  {SAMHAP_DISCOUNT_PCT}% 할인
-                </span>
-              )}
-            </div>
-          </div>
+          {/* 이용권 + 비용 */}
+          <StudioPassBanner
+            featureLabel="종합"
+            costKey="samhap"
+            toneClassName="from-gold-500/[0.06] to-gold-500/[0.02]"
+          />
 
           <button
             onClick={onGenerate}
@@ -405,15 +392,16 @@ function SamhapCheck({
             <span className="relative z-10 flex items-center justify-center gap-2.5 py-4">
               <Sparkles className="w-4 h-4 text-[#0A0A08]" />
               <span className="text-[15px] font-serif font-bold tracking-[0.12em] text-[#0A0A08]">
-                종합사주풀이 열람 · {SAMHAP_COST}만냥
+                종합사주풀이 열람 · {formatFeatureCost('samhap')}
               </span>
               <ArrowRight className="w-4 h-4 text-[#0A0A08]/80 group-hover/btn:translate-x-0.5 transition-transform duration-300" />
             </span>
           </button>
           <p className="text-[10px] text-white/35 text-center font-sans">
-            {SAMHAP_DISCOUNT_PCT > 0 && (
+            {SAMHAP_SAVED > 0 && (
               <>
-                개별 4가지 합 {INDIVIDUAL_TOTAL}만냥 → {SAMHAP_COST}만냥 ({SAMHAP_DISCOUNT_PCT}% 할인) ·{' '}
+                개별 4가지 합 {formatPassUnits(INDIVIDUAL_TOTAL)} → {formatFeatureCost('samhap')} ({SAMHAP_SAVED}장
+                절약) ·{' '}
               </>
             )}
             새 사진 촬영 없이, 저장된 사주·관상·손금·풍수를 종합합니다.
@@ -424,14 +412,14 @@ function SamhapCheck({
           <p className="text-sm text-white/55 font-sans font-light leading-relaxed">
             위 재료가 모두 준비되면 종합사주풀이를 열람할 수 있습니다.
             <br />
-            부족한 항목을 먼저 준비해 주세요. (준비 단계에서는 복채가 차감되지 않습니다.)
+            부족한 항목을 먼저 준비해 주세요. (요건을 확인하는 데는 이용권이 쓰이지 않습니다.)
           </p>
-          {SAMHAP_DISCOUNT_PCT > 0 && (
+          {SAMHAP_SAVED > 0 && (
             <p className="text-[11px] font-sans">
-              <span className="text-white/30 line-through">개별 4가지 합 {INDIVIDUAL_TOTAL}만냥</span>{' '}
-              <span className="text-gold-400 font-bold">→ 종합 {SAMHAP_COST}만냥</span>{' '}
+              <span className="text-white/30 line-through">개별 4가지 합 {formatPassUnits(INDIVIDUAL_TOTAL)}</span>{' '}
+              <span className="text-gold-400 font-bold">→ 종합 {formatFeatureCost('samhap')}</span>{' '}
               <span className="text-[10px] font-bold text-ink-primary bg-seal/25 border border-seal/50 rounded-full px-2 py-0.5">
-                {SAMHAP_DISCOUNT_PCT}% 할인
+                {SAMHAP_SAVED}장 절약
               </span>
             </p>
           )}

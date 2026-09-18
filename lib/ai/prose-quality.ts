@@ -173,7 +173,7 @@ export function withProseTier(analysisGuide: string, tier: ProseTier): string {
  * 상투구·기계 이음말이 결과에 남았는가 — **검사 도구이지 차단기가 아니다.**
  *
  * 🔴 일부러 지우거나 다시 부르지 않는다. 유료 결과를 문자열 치환으로 손대면 문장이 부서지고,
- *    재호출은 복채를 두 번 쓰는 셈이다. 이 함수는 비교·계측용이다(A/B 하네스와 회귀 테스트).
+ *    재호출은 이용권을 두 번 쓰는 셈이다. 이 함수는 비교·계측용이다(A/B 하네스와 회귀 테스트).
  */
 export function findProseSmells(text: string): readonly string[] {
   return [...PROSE_CLICHES, ...PROSE_MACHINE_TICS].filter((phrase) => text.includes(phrase))

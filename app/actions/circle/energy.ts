@@ -3,6 +3,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
+import { tierAllows } from '@/lib/domain/payment/membership-tiers'
 import { logger } from '@/lib/utils/logger'
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 import type { SajuContext } from '@/lib/saju-engine/context-builder'
@@ -38,8 +39,9 @@ import { getFamilyEnergyMap } from '@/app/actions/shrine/energy-map'
 import type { EnergyMapEntry } from '@/lib/domain/shrine/energy-map'
 
 /**
- * 처방전 응답 — 멤버십이 없으면 ①·② 만(teaser). 잘라내는 것은 **서버**다: 화면에 전량을 보내고
+ * 처방전 응답 — 패밀리 멤버십 미만이면 ①·② 만(teaser). 잘라내는 것은 **서버**다: 화면에 전량을 보내고
  * 가리기만 하면 개발자 도구로 열린다(속풀이 게이트와 같은 규율).
+ * 등급 기준의 정본은 membership-tiers(familyMap = 가족 기운 지도·처방전, 패밀리부터).
  */
 export type PrescriptionPayload =
   | { access: 'full'; prescription: Prescription }
@@ -61,7 +63,6 @@ interface CatalogLite {
   name: string
   element: string | null
   energy_power: number
-  price_bokchae: number
   emoji: string
   sprite_url: string | null
 }
@@ -154,7 +155,6 @@ function toCatalogLite(row: CatalogLite): PrescriptionCatalogItem | null {
     name: row.name,
     element: row.element,
     energyPower: row.energy_power,
-    priceBokchae: row.price_bokchae,
     emoji: row.emoji,
     spriteUrl: row.sprite_url,
   }
@@ -166,7 +166,7 @@ function toCatalogLite(row: CatalogLite): PrescriptionCatalogItem | null {
  * «타고난 기운»은 기운 지도와 **같은 계산**(getFamilyEnergyMap → 세력 프로필)에서 가져온다 — 처방전이 지도와 다른 수를
  * 말하면 둘 다 못 믿게 된다. 명식의 용신·희신·기신은 곁들이는 힌트다.
  *
- * 비로그인·남의 id·생년월일 없음 → null. 멤버십이 없으면 teaser.
+ * 비로그인·남의 id·생년월일 없음 → null. 패밀리 멤버십 미만이면 teaser.
  */
 export async function getPrescription(targetId: string): Promise<PrescriptionPayload | null> {
   const supabase = await createClient()
@@ -190,7 +190,7 @@ export async function getPrescription(targetId: string): Promise<PrescriptionPay
   const [{ data: catRows, error: catError }, ctx] = await Promise.all([
     supabase
       .from('shrine_item_catalog')
-      .select('id, name, element, energy_power, price_bokchae, emoji, sprite_url')
+      .select('id, name, element, energy_power, emoji, sprite_url')
       .eq('element', entry.yongsin)
       .eq('is_active', true)
       .neq('name', BAEKIL_ITEM_NAME)
@@ -217,7 +217,7 @@ export async function getPrescription(targetId: string): Promise<PrescriptionPay
     mates,
   })
 
-  if (membership) return { access: 'full', prescription }
+  if (tierAllows(membership?.tier, 'familyMap')) return { access: 'full', prescription }
   return { access: 'teaser', teaser: prescriptionTeaser(prescription) }
 }
 

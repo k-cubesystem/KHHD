@@ -7,18 +7,15 @@
  * 단계적으로 true로 전환:
  * 1. notification, business → 먼저 전환
  * 2. user, admin → 그 다음
- * 3. payment → 결제는 마지막
- * 4. ai-* → AI 함수들
+ * 3. ai-* → AI 함수들
  */
 export const EDGE_ENABLED = {
   notification: process.env.EDGE_NOTIFICATION === 'true',
   business: process.env.EDGE_BUSINESS === 'true',
   user: process.env.EDGE_USER === 'true',
   admin: process.env.EDGE_ADMIN === 'true',
-  // ('payment' 는 2026-08-21 영구 차단 — 엣지 사본은 배포된 적이 없고(라이브 함수 0개 확인),
-  //  파라미터 계약이 서버와 어긋나(customAmount vs amount) 켜지는 순간 전 기능이 1만냥 오차감되며,
-  //  addTalismans 자가발행 코드까지 실려 있었다. 함수 디렉토리도 함께 삭제.)
-  payment: false,
+  // ('payment' 는 없다 — 결제·이용권은 엣지 사본을 두지 않는다. 2026-08-21 차단 당시 엣지 사본은
+  //  배포된 적이 없었고 파라미터 계약이 서버와 어긋나 있었다. 2026-09-18 이용권 전환 때 키째 지웠다.)
   'ai-analysis': process.env.EDGE_AI_ANALYSIS === 'true',
   'ai-image': process.env.EDGE_AI_IMAGE === 'true',
   'ai-chat': process.env.EDGE_AI_CHAT === 'true',

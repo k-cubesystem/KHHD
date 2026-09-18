@@ -8,7 +8,7 @@
  *     │                          │
  *     ├──enhanceRitualCard────▶ FLASH 1줄 (실패 시 null → 클라는 폴백 유지, 1A)
  *     ├──enterRitual──────────▶ enter_ritual RPC (service_role, 창 내에만)
- *     ├──completeRitual───────▶ complete_ritual RPC (기록+적립 원자, 멱등)
+ *     ├──completeRitual───────▶ complete_ritual RPC (기록+기원 누적 원자, 멱등)
  *     └──optInRitualPush──────▶ push_subscriptions.topics += 'ritual' (V2)
  *
  * 쓰기 RPC 는 service_role 전용(V1) — 이 파일이 유일한 호출 경로이며,
@@ -235,10 +235,11 @@ export interface CompleteRitualInput {
 export async function completeRitual(input: CompleteRitualInput): Promise<{
   success: boolean
   already?: boolean
-  /** 이번 완주로 적립된 복채(만냥). 이미 완주한 달이면 0. */
+  /**
+   * 완주 재화 보상은 폐지됐다(2026-09-18) — 늘 0 이다. 화면이 옛 문구 분기를 걷을 때까지 모양만 남긴다.
+   * 완주의 몫은 기원 누적(devotionGained)이다.
+   */
   awarded?: number
-  /** 적립 후 복채 잔액. */
-  balance?: number
   /** 이번 완주로 기원 누적이 실제로 올랐는가(10A). 신당에서 오늘 이미 기원했으면 false. */
   devotionGained?: boolean
   /** 기원 누적 일수 — 단(壇) 진행의 근거. */
@@ -271,16 +272,6 @@ export async function completeRitual(input: CompleteRitualInput): Promise<{
     const { data: ownedMembers } = await supabase.from('family_members').select('id').eq('user_id', user.id)
     const membersViewed = (ownedMembers ?? []).map((m) => m.id as string).slice(0, 50)
 
-    // 적립량 서버 고정 (3A — 클라 입력 불신)
-    let amount = 30
-    const { data: setting } = await admin
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'ritual_bok_amount')
-      .maybeSingle()
-    const parsed = Number.parseInt(setting?.value ?? '', 10)
-    if (Number.isFinite(parsed) && parsed >= 0) amount = parsed
-
     const { data, error } = await admin.rpc('complete_ritual', {
       p_user_id: user.id,
       p_ritual_month: window.ritualMonth,
@@ -288,7 +279,8 @@ export async function completeRitual(input: CompleteRitualInput): Promise<{
       p_seq: window.lunarMonthSeq,
       p_wish_category: input.wishCategory,
       p_members_viewed: membersViewed,
-      p_bok_amount: amount,
+      // 재화 보상 폐지 — 0 고정(클라 입력·설정값 어느 것도 이 값을 바꾸지 못한다).
+      p_bok_amount: 0,
       // 10A: 기원 누적의 KST 날짜. 창 판정과 같은 서버 시계에서 나와야 자정 경계가 갈리지 않는다.
       p_kst_today: window.kstDate,
     })
@@ -301,8 +293,7 @@ export async function completeRitual(input: CompleteRitualInput): Promise<{
     return {
       success: true,
       already: Boolean(row?.already_completed),
-      awarded: Number(row?.awarded ?? 0),
-      balance: Number(row?.balance ?? 0),
+      awarded: 0,
       devotionGained: Boolean(row?.devotion_gained),
       devotionTotal: Number(row?.devotion_total ?? 0),
     }

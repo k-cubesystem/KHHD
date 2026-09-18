@@ -12,49 +12,13 @@ export const FEATURE_KEYS = {
   IMAGE_GEN: 'IMAGE_GEN',
 } as const
 
-// UI 표시 비용 — 단일 소스(feature-costs.ts)에서 파생. 표시 = 실차감.
-export const TALISMAN_COSTS_DISPLAY = {
-  sajuAnalysis: FEATURE_COST.saju.display,
-  faceAnalysis: FEATURE_COST.face.display,
-  palmAnalysis: FEATURE_COST.palm.display,
-  interiorAnalysis: FEATURE_COST.fengshui.display,
-  imageGeneration: FEATURE_COST.imageGeneration.display,
-} as const
-
 export type FaceDestinyGoal = 'wealth' | 'love' | 'authority'
 export type InteriorTheme = 'wealth' | 'romance' | 'health'
 
-// Talisman Package Pricing
-export const TALISMAN_PACKAGES = [
-  {
-    id: 'small',
-    name: '소원 성취 팩',
-    talismans: 3,
-    price: 9900,
-    description: '급할 때 딱 좋은 기본 팩',
-  },
-  {
-    id: 'medium',
-    name: '만사 형통 팩',
-    talismans: 10,
-    price: 29900,
-    description: '가장 인기 있는 실속형 팩',
-    badge: 'BEST',
-  },
-  {
-    id: 'large',
-    name: '운수 대통 팩',
-    talismans: 30,
-    price: 79000,
-    description: '최고의 가성비 대용량 팩',
-    badge: 'PRO',
-  },
-] as const
-
-// 복채 1만냥의 대표 원화가 (BEST 팩 기준) — 원가율 계산용.
-// medium(BEST): 10만냥 = 29,900원 → 2,990원/만냥. 가격 개편 시 위 팩만 바꾸면 동기화.
-const BEST_TALISMAN_PACK = TALISMAN_PACKAGES.find((p) => 'badge' in p && p.badge === 'BEST') ?? TALISMAN_PACKAGES[1]
-export const KRW_PER_TALISMAN = Math.round(BEST_TALISMAN_PACK.price / BEST_TALISMAN_PACK.talismans)
+// 이용권 1장의 대표 원화가 — 어드민 원가율 계산 전용. 판매가의 정본은 DB price_plans(product_kind='pass')다.
+// 5장 팩(19,800원) 기준 → 3,960원/장. 가격 개편 시 이 기준 팩만 바꾼다.
+const REFERENCE_PASS_PACK = { passes: 5, priceKrw: 19_800 } as const
+export const KRW_PER_PASS = Math.round(REFERENCE_PASS_PACK.priceKrw / REFERENCE_PASS_PACK.passes)
 
 // Mission Categories for Family Management (Legacy - kept for compatibility)
 // Mission Categories with Updated Paths

@@ -12,6 +12,9 @@ import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 import { MembershipNudgeModal } from '@/components/membership/membership-nudge-modal'
 import { useUpgradeNudge } from '@/hooks/use-upgrade-nudge'
+import { useInsufficientPass } from '@/hooks/use-insufficient-pass'
+import { useRefreshPasses } from '@/hooks/use-passes'
+import { InsufficientPassModal } from '@/components/payment/insufficient-pass-modal'
 import { logger } from '@/lib/utils/logger'
 import {
   isFreeReading,
@@ -32,7 +35,7 @@ import type { DestinyTarget } from '@/app/actions/user/destiny'
  *
  * ## 🔴 페이지 로드는 정적이다
  * 마운트에서 분석을 부르지 않는다. 9차에 「오늘의 운세 카드가 마운트마다 Gemini 생성」 사고가
- * 났고(직장·재물 §3-7), 여기는 복채까지 나가는 자리라 더 엄하다. AI 는 **버튼**에서만 돈다.
+ * 났고(직장·재물 §3-7), 여기는 이용권까지 쓰이는 자리라 더 엄하다. AI 는 **버튼**에서만 돈다.
  *
  * ## 🔴 숫자 점수를 내보내지 않는다
  * 지표는 밴드(낮음/보통/높음)와 막대 길이로만 나간다(마스터 §9-1 · §12-2). 「85점」은 측정
@@ -56,7 +59,7 @@ const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 /**
  * 무료 맛보기가 가리킬 유료 테마 한 장.
  *
- * 🔴 «유료로 가라»가 아니라 «같은 결의 다음 자리»를 가리킨다. 같은 갈래에서 복채를 받는
+ * 🔴 «유료로 가라»가 아니라 «같은 결의 다음 자리»를 가리킨다. 같은 갈래에서 이용권을 쓰는
  *    테마를 고르고, 없으면 링크 없이 개수만 밝힌다(없는 상품을 가리키지 않는다).
  */
 function relatedPaidTheme(theme: ThemeFortune): ThemeFortune | null {
@@ -87,7 +90,9 @@ export function ThemeDetailContent({
   const [reading, setReading] = useState<ThemeReading | null>(null)
   const [cached, setCached] = useState(false)
   const [confirmingRedo, setConfirmingRedo] = useState(false)
-  const { nudgeModal, closeNudge, handleDeductResult, trackAnalysis } = useUpgradeNudge()
+  const { nudgeModal, closeNudge, trackAnalysis } = useUpgradeNudge()
+  const { passModal, closePassModal, handleChargeResult } = useInsufficientPass()
+  const refreshPasses = useRefreshPasses()
 
   const target = targets.find((candidate) => candidate.id === selectedId) ?? null
   const costLabel = themeReadingCostLabel(theme)
@@ -101,13 +106,14 @@ export function ThemeDetailContent({
       const { analyzeThemeFortune } = await import('@/app/actions/theme-fortune/analyze')
       const result = await analyzeThemeFortune({ themeId: theme.id, targetId: target.id, force })
 
-      // 복채 부족·일일 한도는 모달로 받는다(다른 분석 화면과 같은 경로).
-      if (!result.success && handleDeductResult(result, { featureLabel: theme.title })) return
+      // 이용권 부족은 모달로 받는다(다른 분석 화면과 같은 경로).
+      if (!result.success && handleChargeResult(result, { featureLabel: theme.title })) return
 
       if (!result.success) throw new Error(result.error)
 
       setReading(result.reading)
       setCached(result.cached)
+      if (!result.cached) void refreshPasses()
       trackAnalysis()
     } catch (error) {
       logger.error('[ThemeDetail] 분석 실패:', error)
@@ -267,6 +273,7 @@ export function ThemeDetailContent({
       </div>
 
       <MembershipNudgeModal {...nudgeModal} onClose={closeNudge} />
+      <InsufficientPassModal {...passModal} onClose={closePassModal} />
     </div>
   )
 }
@@ -431,11 +438,15 @@ function ThemeReadingBody({
         memberName={reading.targetName}
       />
 
-      {/* 재분석 — 🔴 복채가 다시 나간다는 것을 버튼 문구가 밝히고, 두 번 눌러야 돈다(§7-2). */}
+      {/* 재분석 — 🔴 이용권이 다시 쓰인다는 것을 버튼 문구가 밝히고, 두 번 눌러야 돈다(§7-2). */}
       <div className="text-center">
         {confirmingRedo ? (
           <div className="space-y-2">
-            <p className="text-[11px] text-ink-light/60">다시 풀면 {costLabel}가 새로 나갑니다.</p>
+            <p className="text-[11px] text-ink-light/60">
+              {isFreeReading(theme)
+                ? '다시 풀어도 이용권은 쓰이지 않습니다.'
+                : `다시 풀면 ${costLabel}이 새로 쓰입니다.`}
+            </p>
             <div className="flex justify-center gap-2">
               <button
                 type="button"

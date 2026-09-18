@@ -71,7 +71,6 @@ const WALLPAPER_BASE: WallpaperStatus = {
   adUsedToday: false,
   monthly: null,
   premiumUrls: {},
-  balance: 12,
 }
 
 // ── 표 ────────────────────────────────────────────────────────────────────────

@@ -3,7 +3,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
+import { chargeFeature } from '@/lib/services/feature-charge'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import type { PassErrorType } from '@/lib/domain/entitlement/pass'
 import { logger } from '@/lib/utils/logger'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { rateLimit } from '@/lib/utils/rate-limit'
@@ -18,7 +20,6 @@ import {
 } from '@/lib/domain/ritual/aekmak'
 import {
   OBANGKI_DAILY_FREE,
-  OBANGKI_EXTRA_COST,
   countDrawsOnDay,
   dailySeed,
   drawSeed,
@@ -64,10 +65,9 @@ import { isGutKind, remainingFreeGut, type GutKind, type GutStatus } from '@/lib
  *
  * ⚠️ 이 파일은 `'use server'` — 모든 export 가 로그인 유저의 **공개 엔드포인트**다.
  *    그래서 여기엔 재화 지급·권한 상승 함수를 두지 않는다. 액막이는 무료 의식이라
- *    지급 경로가 아예 없고, 공유 보상은 기존 `claimShareReward`(app/actions/payment/bok-points)를
- *    그대로 쓴다 — 새 지급 경로를 만들지 않는다.
- *    오방기의 복채 차감도 여기서 지갑을 직접 만지지 않는다 — server-only 모듈
- *    `lib/services/bokchae.ts`(spendBokchae/refundBokchae, deduct_wallet_balance RPC)만 부른다.
+ *    지급 경로가 아예 없고, 공유 보상은 2026-09-18 적립 중단으로 없어졌다 — 새 지급 경로를 만들지 않는다.
+ *    오방기의 이용권 사용도 여기서 원장을 직접 만지지 않는다 — server-only 모듈
+ *    `lib/services/feature-charge.ts`(chargeFeature → ent_consume RPC)만 부른다.
  *    백일기도 완주 보상(트로피·신당 걸이 아이템)도 마찬가지다 — 지급은 server-only 모듈
  *    `lib/services/ritual-grant.ts` 가 하고, 여기 있는 액션은 **인자를 받지 않는다**.
  *
@@ -214,9 +214,9 @@ export interface ObangkiStatus {
   remainingFree: number
   /** 무료 상한(3) */
   freeLimit: number
-  /** 오늘(KST) 뽑은 총 횟수(복채분 포함) */
+  /** 오늘(KST) 뽑은 총 횟수(이용권으로 뽑은 것 포함) */
   todayCount: number
-  /** 무료 소진 후 1회 값 — wallets.balance 단위(1 = 1만냥) */
+  /** 무료 소진 후 1회에 쓰는 이용권 장수 — 정본 FEATURE_COST.obangkiDraw */
   cost: number
   /**
    * 오늘치 결정론 시드의 뿌리. 화면이 회차(seq)를 얹어 셔플·배정·문구를 만든다.
@@ -330,7 +330,7 @@ function toDrawEpochMs(rows: { drawn_at: string | null }[] | null): number[] {
  * 오방기 현황 — 오늘 기록만 읽어 남은 무료 횟수를 순수 함수로 판정한다(KST 단일 출처).
  *
  * 비로그인·조회 실패 모두 null 이다(액막이와 같은 규약). 실패를 기본값으로 메우면 무료 잔여를
- * 오표시해 **복채를 물릴 자리에서 무료라고 말하게 된다** — 과금이 걸린 만큼 더 엄격하다.
+ * 오표시해 **이용권을 쓰는 자리에서 무료라고 말하게 된다** — 이용권이 걸린 만큼 더 엄격하다.
  * 마이그레이션 적용 전에는 이 테이블이 없으므로 그때도 진입점을 그리지 않는 것이 옳다.
  */
 export async function getObangkiStatus(): Promise<ObangkiStatus | null> {
@@ -373,7 +373,7 @@ export async function getObangkiStatus(): Promise<ObangkiStatus | null> {
       remainingFree: remainingFreeDraws(stamps, now),
       freeLimit: OBANGKI_DAILY_FREE,
       todayCount: countDrawsOnDay(stamps, now),
-      cost: OBANGKI_EXTRA_COST,
+      cost: FEATURE_COST.obangkiDraw.display,
       seed: dailySeed(user.id, today),
       yongsin: isElement(energy?.yongsin_element) ? energy.yongsin_element : null,
       elements: elementSpread(energy),
@@ -398,16 +398,17 @@ export interface DrawObangkiResult {
     | 'RATE_LIMITED'
     | 'INVALID_MATTER'
     | 'NEEDS_PAYMENT'
-    | 'INSUFFICIENT_BOKCHAE'
+    | PassErrorType
     | 'DRAW_FAILED'
-  /** 이번 뽑기에 복채를 물었는가 */
+  /** 이용권이 모자랄 때 화면의 안내(useInsufficientPass)가 읽는 값 — chargeFeature 실패 그대로 */
+  errorType?: PassErrorType
+  requiredUnits?: number
+  /** 이번 뽑기에 이용권을 썼는가 */
   charged?: boolean
   /** 처리 후 오늘 뽑은 총 횟수 */
   todayCount?: number
   /** 처리 후 남은 무료 횟수 */
   remainingFree?: number
-  /** 차감 후 지갑 잔액(복채로 뽑았을 때만) */
-  balance?: number
   /** 서버가 확정한 향방(말기) 색 — 화면은 이 값을 **보여줄 뿐**이다(성공 시 항상 있다) */
   color?: import('@/lib/domain/ritual/obangki').ObangkiColor
   /**
@@ -422,13 +423,13 @@ export interface DrawObangkiResult {
  *
  * 과금 순서가 이 함수의 핵심이다:
  *   ① 무조건 **무료 시도 먼저**(RPC p_paid=false — 상한 검사와 INSERT 가 한 문장).
- *   ② 거절됐을 때만 = 오늘 무료가 실제로 소진됐을 때만 복채를 본다.
- *   ③ 그마저도 화면이 명시 동의(confirmPaid)를 보냈을 때만 차감한다.
+ *   ② 거절됐을 때만 = 오늘 무료가 실제로 소진됐을 때만 이용권을 본다.
+ *   ③ 그마저도 화면이 명시 동의(confirmPaid)를 보냈을 때만 이용권 1장을 쓴다.
  * 이 순서라 "무료가 남았는데 돈을 물렸다"는 사고가 구조적으로 불가능하다 —
  * 클라이언트가 confirmPaid 를 항상 true 로 보내도 ①에서 통과해버리기 때문이다.
  *
- * 차감은 server-only 모듈(spendBokchae)만 쓴다. 차감 후 기록이 실패하면 곧바로 환불한다
- * (deities.ts 의 구매 → 지급 실패 → refundBokchae 와 같은 패턴).
+ * 이용권 사용은 server-only 모듈(chargeFeature)만 쓴다. 장 수는 서버가 costKey 로 FEATURE_COST 에서
+ * 다시 읽는다. 사용 후 기록이 실패하면 곧바로 되돌린다(refundOnFailure).
  */
 export async function drawObangki(matter: string, confirmPaid: boolean): Promise<DrawObangkiResult> {
   const supabase = await createClient()
@@ -497,34 +498,36 @@ export async function drawObangki(matter: string, confirmPaid: boolean): Promise
     return { success: false, error: 'NEEDS_PAYMENT', ...counts(freeRow.todayCount) }
   }
 
-  // ③ 복채 차감 → 기록. 기록이 깨지면 되돌린다.
-  const paid = await spendBokchae(OBANGKI_EXTRA_COST, '오방기 점괘 1회', 'OBANGKI')
-  if (!paid.success) {
-    if (paid.error === 'INSUFFICIENT_BOKCHAE') {
-      return { success: false, error: 'INSUFFICIENT_BOKCHAE', ...counts(freeRow.todayCount) }
-    }
-    logger.error('[obangki] 복채 차감 실패:', paid.error)
-    return { success: false, error: 'DRAW_FAILED', ...counts(freeRow.todayCount) }
+  // ③ 이용권 1장 → 기록. 기록이 깨지면 되돌린다.
+  const charge = await chargeFeature({
+    userId: user.id,
+    featureKey: 'OBANGKI_DRAW',
+    costKey: 'obangkiDraw',
+    label: '오방기 점괘',
+  })
+  if (!charge.ok) {
+    const { errorType, requiredUnits } = charge.failure
+    return { success: false, error: errorType, errorType, requiredUnits, ...counts(freeRow.todayCount) }
   }
 
   const charged = await record(true)
   const chargedRow = readDrawRow(charged.data)
   if (charged.error || !chargedRow.allowed) {
-    logger.error('[obangki] 유료 기록 RPC 실패 — 복채 환불:', charged.error)
-    await refundBokchae(user.id, OBANGKI_EXTRA_COST, '오방기 점괘 기록 실패 환불')
+    logger.error('[obangki] 이용권 회차 기록 RPC 실패 — 이용권 되돌림:', charged.error)
+    await charge.refundOnFailure?.()
     return { success: false, error: 'DRAW_FAILED', ...counts(freeRow.todayCount) }
   }
 
-  return { success: true, charged: true, color, seq, balance: paid.balance, ...counts(chargedRow.todayCount) }
+  return { success: true, charged: true, color, seq, ...counts(chargedRow.todayCount) }
 }
 
 /**
  * RPC 응답(returns table) 파싱 — 배열의 첫 행.
  *
  * ⚠️ "못 읽음"과 "거절"을 **구분해야 한다**. 한 값으로 뭉개면 안전한 방향이 경로마다 반대가 된다:
- *   · 유료 기록 경로 — 못 읽음을 거절로 보면 환불한다 → 안전
- *   · 무료 시도 경로 — 못 읽음을 거절로 보면 "무료 소진"으로 읽혀 **과금으로 넘어간다** → 위험.
- *     RPC 가 무료 뽑기를 이미 INSERT 한 뒤 응답만 안 읽히는 경우, 공짜로 받은 뽑기에 복채를 물린다.
+ *   · 이용권 기록 경로 — 못 읽음을 거절로 보면 이용권을 되돌린다 → 안전
+ *   · 무료 시도 경로 — 못 읽음을 거절로 보면 "무료 소진"으로 읽혀 **이용권 사용으로 넘어간다** → 위험.
+ *     RPC 가 무료 뽑기를 이미 INSERT 한 뒤 응답만 안 읽히는 경우, 공짜로 받은 뽑기에 이용권을 쓰게 된다.
  * 그래서 parsed 를 따로 돌려주고, 무료 경로는 **긍정적으로 거절을 확인했을 때만** 과금 단계로 간다.
  */
 function readDrawRow(data: unknown): { parsed: boolean; allowed: boolean; todayCount: number } {
@@ -797,7 +800,7 @@ export async function settleBaekilVow(): Promise<SettleBaekilResult> {
 //
 // 갈림길을 정하는 도구 — 오방기(문복)와 **전혀 다른 의식**이다.
 // 오방기는 한 가지 일에 신이 답하는 자리이고, 척전은 사람이 이미 길을 다 알면서 고르지 못할 때
-// 하늘에 맡기는 자리다. 그래서 신격도 처방도 없고, **복채도 없다** —
+// 하늘에 맡기는 자리다. 그래서 신격도 처방도 없고, **이용권도 쓰지 않는다** —
 // 점심 메뉴를 고르는 자리에 값을 붙이면 도구가 아니라 판매가 된다.
 // 일 상한(10회)이 있는 이유는 과금이 아니라 기록 폭주를 막기 위해서다.
 

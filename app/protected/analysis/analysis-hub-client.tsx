@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
 import { RitualBanner } from '@/components/ritual/ritual-banner'
 import { trackEvent } from '@/lib/analytics/ga4'
+import { ONBOARDING_PASSES, ONBOARDING_VALID_DAYS, formatPassUnits } from '@/lib/domain/entitlement/pass'
 
 export function AnalysisHubClient() {
   const searchParams = useSearchParams()
@@ -18,8 +19,8 @@ export function AnalysisHubClient() {
   useEffect(() => {
     if (searchParams.get('welcome') === '1') {
       setTimeout(() => {
-        toast.success('🎁 50만냥이 지급되었습니다!', {
-          description: '신규 회원 가입 축하 복채 50만냥이 지갑에 입금되었습니다.',
+        toast.success(`🎁 가입 선물로 ${formatPassUnits(ONBOARDING_PASSES)}을 드렸어요`, {
+          description: `사주·궁합·관상 같은 풀이에 쓸 수 있어요 · 유효기간 ${ONBOARDING_VALID_DAYS}일`,
           duration: 6000,
           style: {
             background: 'linear-gradient(135deg, #1A1200 0%, #0D0900 100%)',

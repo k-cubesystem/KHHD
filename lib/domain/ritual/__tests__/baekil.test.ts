@@ -39,6 +39,7 @@ import {
   type VowTrophyTier,
   type VowVideoStatus,
 } from '../baekil'
+import { REWARD_ONLY_ITEM_NAMES } from '@/lib/domain/shrine/shop-sections'
 
 /** KST 시각을 UTC epoch 으로 — 테스트 의도를 KST 로 읽히게 한다(KST = UTC+9). */
 function kst(y: number, m: number, d: number, h = 0, min = 0): number {
@@ -185,14 +186,28 @@ describe('스키마 — 프라이버시·RLS 를 SQL 로 강제', () => {
     expect(fn).not.toMatch(/p_snapshot/i)
   })
 
-  it('완주 보상 아이템 시드가 걸이(hanging) 층이고 무료가 아니다', () => {
+  it('완주 보상 아이템 시드가 걸이(hanging) 층이고 가격 칸을 지우지 않았다', () => {
     const seed = /insert into public\.shrine_item_catalog[\s\S]*?;\n/i.exec(MIGRATION_SQL)?.[0] ?? ''
     expect(seed).toContain(BAEKIL_ITEM_NAME)
     expect(seed).toContain("'hanging'")
-    // 가격 0 + is_active=true 면 상점에서 무료로 집어갈 수 있다(purchaseToInventory)
+    // 가격 칸은 남긴다(PRD-voucher-system §2-4 — 지우지 말고 받기만 막는다)
     expect(seed).toMatch(/'talisman', 'legendary', 0, 0, [1-9]\d*/)
     // 재실행 시 태그 소실 이력 → UPDATE 로 덮지 않고 없을 때만 INSERT
     expect(seed).toMatch(/where not exists/i)
+  })
+
+  /**
+   * 2026-09-18 신물이 무료가 되면서 «정가를 비싸게 둬서 막던» 방식은 더 이상 막이가 아니다.
+   * 상점 받기와 기운 선물이 **서버에서** 보상 전용 목록으로 거절해야 백 일의 걸음이 공짜가 되지 않는다.
+   */
+  it('★ 보상 전용 품목은 상점 받기·선물 모두 서버가 거절한다', () => {
+    expect(REWARD_ONLY_ITEM_NAMES).toContain(BAEKIL_ITEM_NAME)
+    const inventory = read('app/actions/shrine/inventory.ts')
+    const guard = inventory.indexOf('isRewardOnlyItem(item.name)')
+    const grant = inventory.indexOf("rpc('grant_shrine_item'")
+    expect(guard).toBeGreaterThan(-1)
+    expect(guard).toBeLessThan(grant)
+    expect(read('lib/domain/circle/gift.ts')).toContain('isRewardOnlyItem(item.name)')
   })
 })
 

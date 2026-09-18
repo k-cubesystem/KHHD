@@ -5,10 +5,9 @@ import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { GA } from '@/lib/analytics/ga4'
-import { useTranslations } from 'next-intl'
 import {
+  intervalWords,
   servicePeriodLine,
-  dailySpendCapLine,
   membershipBenefitLines,
   toPlanFacts,
 } from '@/lib/domain/payment/membership-benefits'
@@ -19,11 +18,9 @@ interface Plan {
   tier: string
   price: number
   interval: string
-  daily_talisman_limit: number
   relationship_limit: number
   storage_limit: number
-  talismans_per_period: number
-  features: Record<string, boolean | number>
+  monthly_passes: number
 }
 
 interface MembershipTabsProps {
@@ -33,7 +30,6 @@ interface MembershipTabsProps {
 
 export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
   const router = useRouter()
-  const t = useTranslations('payment')
   const [selectedPlan, setSelectedPlan] = useState(plans?.[1]?.tier || plans?.[0]?.tier || 'FAMILY')
 
   // 플랜이 없으면 에러 방지
@@ -56,30 +52,12 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
     )
   }
 
-  const features = (currentPlan.features as Record<string, boolean | number>) || {}
-
-  // 등급별 특징 — 문구·숫자는 membership-benefits.ts(단일 출처)에서 파생한다.
-  // 🔴 여기에 숫자나 «매일/무제한»을 직접 쓰지 말 것: 지급은 결제 주기당 1회이고,
-  //    멤버십이 여는 것은 «입장»이지 사용량 무제한이 아니다(membership-benefits.ts 주석 참조).
-  const tierFeatures: string[] = [...membershipBenefitLines(toPlanFacts(currentPlan))]
-  tierFeatures.push('출석 체크 시 추가 복채 지급')
-
-  if (features.kakao_daily) tierFeatures.push('카카오톡 매일 운세 알림')
-  if (features.pdf_archive) tierFeatures.push('PDF 결과 내려받기')
-
-  // 등급별 추가 특징
-  if (currentPlan.tier === 'FAMILY') {
-    tierFeatures.push('가족 궁합 매트릭스')
-    tierFeatures.push('인연 네트워크 시각화')
-  }
-
-  if (currentPlan.tier === 'BUSINESS') {
-    tierFeatures.push('가족 궁합 매트릭스')
-    tierFeatures.push('인연 네트워크 시각화')
-    tierFeatures.push('API 접근 (예정)')
-    tierFeatures.push('우선 지원')
-    tierFeatures.push('맞춤형 리포트')
-  }
+  // 등급별 특징 — 문구·숫자는 membership-benefits.ts·membership-tiers.ts(단일 출처)에서 파생한다.
+  // 🔴 여기에 숫자나 «매일/무제한»을 직접 쓰지 말 것: 월 이용권은 이월되지 않고, 멤버십이 여는 것은
+  //    기능과 한 달 몫이지 사용량 무제한이 아니다. 실제로 없는 기능(예정·우선 지원 등)을 적지 않는다.
+  // 🔴 membership_plans.features 의 깃발(pdf_archive·kakao_daily)로 혜택 줄을 만들지 않는다 — 깃발은 전 등급 true 인데
+  //    PDF 내려받기는 구현이 없고, 카카오 알림 크론은 구독 상태를 소문자 'active' 로 찾아 받는 사람이 0명이다.
+  const tierFeatures = membershipBenefitLines(toPlanFacts(currentPlan))
 
   const handleSelectPlan = () => {
     GA.membershipCta(currentPlan.tier)
@@ -122,15 +100,16 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
         {/* Price */}
         <div className="text-center mb-6 pb-6 border-b border-primary/10">
           <div className="text-4xl md:text-5xl font-serif font-bold text-primary mb-2">
-            {t('perMonth')} {(currentPlan.price || 0).toLocaleString()}원
+            {intervalWords(currentPlan.interval).price} {(currentPlan.price || 0).toLocaleString()}원
           </div>
           <div className="flex items-center justify-center gap-2 mt-3">
             <Check className="w-4 h-4 text-primary" />
             <span className="text-sm text-white/60">
+              {/* 판매 실적이 없는 «가장 인기» 같은 최상급 표현은 쓰지 않는다(표시광고법). */}
               {currentPlan.tier === 'FAMILY'
-                ? '가장 인기있는 플랜'
+                ? '가족과 함께 쓰는 플랜'
                 : currentPlan.tier === 'BUSINESS'
-                  ? '프리미엄'
+                  ? '여럿을 함께 보는 플랜'
                   : '기본 플랜'}
             </span>
           </div>
@@ -138,7 +117,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
 
         {/* Features */}
         <div className="space-y-4 mb-6">
-          <div className="text-sm font-serif font-bold text-primary mb-4">• 멤버십 회원만 누리는 특별 혜택!</div>
+          <div className="text-sm font-serif font-bold text-primary mb-4">• 이 등급에서 쓰실 수 있는 것</div>
           <div className="space-y-3">
             {tierFeatures.map((feature, i) => (
               <div key={i} className="flex items-start gap-3">
@@ -147,13 +126,11 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
               </div>
             ))}
           </div>
-          {/* 지급과 «하루 사용 상한»은 다른 개념 — 혜택 줄과 섞지 않고 각주로 분리한다. */}
           <p className="text-xs text-white/45 leading-relaxed border-t border-primary/10 pt-3">
             {servicePeriodLine()}
             <br />
-            {dailySpendCapLine(currentPlan.daily_talisman_limit)}
-            <br />
-            멤버십은 신당·가족관리·속풀이의 «입장»을 엽니다. 풀이는 회원도 복채로 봅니다.
+            멤버십 이용권은 구독 시작일을 기준으로 한 달마다 새로 열리고, 남은 장은 다음 달로 넘어가지 않습니다. 다 쓰신
+            뒤에는 이용권을 따로 구매해 이어 보실 수 있습니다.
           </p>
         </div>
 

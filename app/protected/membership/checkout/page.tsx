@@ -9,13 +9,12 @@ import { Crown, Loader2, ArrowLeft, Check } from 'lucide-react'
 import Link from 'next/link'
 import { logger } from '@/lib/utils/logger'
 import {
-  bokchaeGrantLine,
-  dailySpendCapLine,
   intervalWords,
-  recordKeepingLine,
-  relationshipLine,
+  membershipBenefitLines,
+  servicePeriodLine,
   toPlanFacts,
 } from '@/lib/domain/payment/membership-benefits'
+import { TIER_LABEL, isMembershipTier } from '@/lib/domain/payment/membership-tiers'
 import { PurchaseConsent } from '@/components/payment/purchase-consent'
 
 function CheckoutContent() {
@@ -97,11 +96,8 @@ function CheckoutContent() {
 
   if (!plan) return null
 
-  const tierLabel: Record<string, string> = {
-    SINGLE: '싱글',
-    FAMILY: '패밀리',
-    BUSINESS: '비즈니스',
-  }
+  const tierName = isMembershipTier(plan.tier) ? TIER_LABEL[plan.tier] : plan.name
+  const facts = toPlanFacts(plan)
 
   return (
     <div className="min-h-screen bg-background">
@@ -119,7 +115,7 @@ function CheckoutContent() {
             <Crown className="w-4 h-4 text-primary" strokeWidth={1} />
             <span className="text-primary text-xs tracking-wide">결제 확인</span>
           </div>
-          <h1 className="text-2xl font-serif font-light text-white">{tierLabel[plan.tier] || plan.name} 멤버십</h1>
+          <h1 className="text-2xl font-serif font-light text-white">{tierName} 멤버십</h1>
         </div>
 
         {/* 플랜 요약 */}
@@ -132,13 +128,9 @@ function CheckoutContent() {
               {intervalWords(plan.interval).every}마다 자동 결제 · 언제든 해지 가능
             </p>
           </div>
-          {/* 문구는 전부 membership_plans 행에서 파생된다 — 하드코딩 금지(membership-benefits.ts 참조). */}
+          {/* 상점 멤버십 탭과 같은 목록 — 결제 직전에 혜택이 줄거나 달라 보이지 않게(membership-benefits.ts 가 정본). */}
           <ul className="space-y-2">
-            {[
-              bokchaeGrantLine(toPlanFacts(plan)),
-              relationshipLine(toPlanFacts(plan)),
-              recordKeepingLine(toPlanFacts(plan)),
-            ].map((line) => (
+            {membershipBenefitLines(facts).map((line) => (
               <li key={line} className="flex items-center gap-2 text-sm text-white/80">
                 <Check className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={1.5} />
                 {line}
@@ -146,8 +138,10 @@ function CheckoutContent() {
             ))}
           </ul>
           <p className="text-white/40 text-[11px] mt-3 leading-relaxed">
-            {dailySpendCapLine(plan.daily_talisman_limit)} · 신당·가족관리·속풀이 «입장»이 열립니다. 풀이는 회원도
-            복채로 봅니다.
+            {servicePeriodLine()}
+            <br />
+            멤버십 이용권은 구독 시작일을 기준으로 한 달마다 새로 열리고, 남은 장은 다음 달로 넘어가지 않습니다. 다 쓰신
+            뒤에는 이용권을 따로 구매해 이어 보실 수 있습니다.
           </p>
         </div>
 
@@ -155,7 +149,7 @@ function CheckoutContent() {
           <PurchaseConsent
             checked={agreed}
             onChange={setAgreed}
-            orderName={`${tierLabel[plan.tier] || plan.name} 멤버십`}
+            orderName={`${tierName} 멤버십`}
             amount={plan.price}
             interval={`${intervalWords(plan.interval).every}마다`}
           />
@@ -174,7 +168,7 @@ function CheckoutContent() {
               결제 준비 중...
             </>
           ) : (
-            `월 ${plan.price.toLocaleString()}원 결제하기`
+            `${intervalWords(plan.interval).price} ${plan.price.toLocaleString()}원 결제하기`
           )}
         </Button>
 

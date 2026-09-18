@@ -6,12 +6,21 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AlertTriangle, CheckCircle2, Headphones, Info, Loader2 } from 'lucide-react'
 import { submitChargeCancel } from '@/app/actions/payment/cancel-request'
-import type { ChargeCancelItem, ChargeCancelOverview, CancelReasonCode } from '@/lib/domain/payment/self-cancel'
+import {
+  LATE_CANCEL_FEE_RATE,
+  WITHDRAWAL_PERIOD_DAYS,
+  type ChargeCancelItem,
+  type ChargeCancelOverview,
+  type CancelReasonCode,
+} from '@/lib/domain/payment/self-cancel'
 import type { LossCapStatus } from '@/lib/domain/payment/loss-cap'
 import { CancelReasonFields } from './cancel-reason-fields'
 import { SUPPORT_CTA } from '@/lib/domain/support/contact'
+import { formatPassUnits } from '@/lib/domain/entitlement/pass'
+import { useRefreshPasses } from '@/hooks/use-passes'
 
 const won = (value: number) => `${value.toLocaleString('ko-KR')}원`
+const LATE_FEE_PERCENT = Math.round(LATE_CANCEL_FEE_RATE * 100)
 
 function paidOn(iso: string): string {
   const date = new Date(iso)
@@ -21,9 +30,9 @@ function paidOn(iso: string): string {
 
 const BLOCKED_TEXT: Readonly<Record<string, string>> = {
   ALREADY_CANCELLED: '이미 취소된 결제입니다.',
-  NOT_A_CHARGE: '복채 충전 결제가 아닙니다.',
+  NOT_A_CHARGE: '이용권 구매 결제가 아닙니다.',
   NOT_COMPLETED: '결제가 완료되지 않아 취소 대상이 아닙니다.',
-  NOTHING_GRANTED: '지급된 복채가 없어 자동 취소 대상이 아닙니다.',
+  NOTHING_GRANTED: '발급된 이용권이 없어 자동 취소 대상이 아닙니다.',
 }
 
 /**
@@ -54,6 +63,7 @@ interface ChargeCancelCardProps {
 function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
   const { plan } = item
   const router = useRouter()
+  const refreshPasses = useRefreshPasses()
   const [pending, startTransition] = useTransition()
   const [open, setOpen] = useState(false)
   const [showLossPath, setShowLossPath] = useState(false)
@@ -65,7 +75,7 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
 
   const blocked = plan.verdict === 'NOT_CANCELLABLE'
   const spent = plan.verdict === 'PARTIALLY_SPENT'
-  // 손실이 나는 취소만 상한 대상이다. 복채를 안 쓴 정상 취소는 이 값과 무관하다.
+  // 손실이 나는 취소만 상한 대상이다. 이용권을 안 쓴 정상 취소는 이 값과 무관하다.
   const lossCapMessage = capMessage ?? (spent && !lossCap.available ? (lossCap.message ?? null) : null)
   const lossPathOpen = spent && !lossCapMessage
   // (b) 갈래는 손실 처리 동의 없이는 버튼이 열리지 않는다.
@@ -85,9 +95,13 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
       })
 
       if (result.success) {
-        const lossNote = result.lossCredits ? ` 사용하신 ${result.lossCredits}만냥은 청구하지 않습니다.` : ''
+        const lossNote = result.lossCredits
+          ? ` 이미 쓰신 ${formatPassUnits(result.lossCredits)}은 청구하지 않습니다.`
+          : ''
         toast.success(`취소 접수되었습니다. ${won(result.refundAmount ?? 0)}이 환불됩니다.${lossNote}`)
         setOpen(false)
+        // 회수된 이용권이 머리글·상점 표시에서도 바로 빠지게 한다(서버 화면만 새로 그리면 클라이언트 캐시는 남는다).
+        void refreshPasses()
         router.refresh()
         return
       }
@@ -104,7 +118,7 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
 
       if (result.requiresLossAcknowledgement) {
         setShowLossPath(true)
-        toast.error(result.error ?? '이미 사용하신 복채가 있어 자동 취소가 어렵습니다.')
+        toast.error(result.error ?? '이미 쓰신 이용권이 있어 자동 취소가 어렵습니다.')
         return
       }
       toast.error(result.error ?? '취소에 실패했습니다.')
@@ -119,7 +133,7 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
             {paidOn(item.paidAt)}
           </p>
           <p className="text-lg font-serif text-ink-light">{won(item.paidAmount)}</p>
-          <p className="text-xs text-ink-light/50 font-light mt-0.5">{item.packLabel} 지급</p>
+          <p className="text-xs text-ink-light/50 font-light mt-0.5">{formatPassUnits(plan.grantedCredits)} 구매</p>
         </div>
         <span
           className={`shrink-0 text-[11px] px-2 py-1 border font-medium ${
@@ -146,7 +160,7 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
           <div className="space-y-2">
             <p className="flex items-start gap-2 text-sm font-light text-ink-light/85">
               <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-primary" strokeWidth={1.5} />
-              충전하신 복채 {plan.grantedCredits}만냥이 모두 남아 있어 지금 바로 취소하실 수 있습니다.
+              구매하신 {formatPassUnits(plan.grantedCredits)}이 모두 남아 있어 지금 바로 취소하실 수 있습니다.
             </p>
             <RefundBreakdown
               gross={plan.grossAmount}
@@ -166,8 +180,8 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
                 자동 취소가 어렵습니다
               </p>
               <p className="text-sm font-light text-ink-light/80 leading-relaxed">
-                충전하신 복채 중 <strong className="text-ink-light">{plan.spentCredits}만냥</strong>을 이미 사용하셔서
-                결제 전체를 되돌릴 수 없습니다. 지금 남아 있는 복채는 {plan.recoverableCredits}만냥입니다.
+                구매하신 이용권 중 <strong className="text-ink-light">{plan.spentCredits}장</strong>을 이미 쓰셔서 결제
+                전체를 되돌릴 수 없습니다. 지금 남아 있는 이용권은 {plan.recoverableCredits}장입니다.
               </p>
               <p className="text-[11px] text-ink-light/50 font-light leading-relaxed">
                 이미 분석 결과를 받아보신 부분은 「전자상거래 등에서의 소비자보호에 관한 법률」 제17조 제2항에 따라
@@ -188,9 +202,9 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
             ) : (
               <div className="border border-primary/20 bg-surface/30 p-3 space-y-2">
                 <p className="text-sm font-light text-ink-light/85 leading-relaxed">
-                  이미 사용하신 <strong className="text-ink-light">{plan.spentCredits}만냥</strong>은 회사가 손실로
-                  처리하며, 회원님께 따로 청구하지 않습니다. 대신 남아 있는 복채 {plan.recoverableCredits}만냥은 모두
-                  회수되고 이 충전은 취소됩니다.
+                  이미 쓰신 <strong className="text-ink-light">{plan.spentCredits}장</strong>은 회사가 손실로 처리하며,
+                  회원님께 따로 청구하지 않습니다. 대신 남아 있는 이용권 {plan.recoverableCredits}장은 모두 회수되고 이
+                  구매는 취소됩니다.
                 </p>
                 <RefundBreakdown
                   gross={plan.grossAmount}
@@ -206,7 +220,7 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
                     onChange={(event) => setLossAcknowledged(event.target.checked)}
                     className="accent-primary w-4 h-4 mt-0.5"
                   />
-                  위 내용을 확인했으며, 남은 복채가 회수되는 것에 동의합니다.
+                  위 내용을 확인했으며, 남은 이용권이 회수되는 것에 동의합니다.
                 </label>
               </div>
             )}
@@ -278,7 +292,7 @@ function RefundBreakdown({ gross, fee, refund, within, elapsedDays }: RefundBrea
       </div>
       {fee > 0 && (
         <div className="flex justify-between text-ink-light/60">
-          <span>환불 수수료 10%</span>
+          <span>환불 수수료 {LATE_FEE_PERCENT}%</span>
           <span className="tabular-nums">− {won(fee)}</span>
         </div>
       )}
@@ -288,8 +302,8 @@ function RefundBreakdown({ gross, fee, refund, within, elapsedDays }: RefundBrea
       </div>
       <p className="text-[11px] text-ink-light/45 leading-relaxed pt-1">
         {within
-          ? `결제일로부터 ${elapsedDays}일 지났습니다. 7일 이내라 수수료 없이 전액 환불됩니다.`
-          : `결제일로부터 ${elapsedDays}일 지나 이용약관 제7조 제2항에 따라 환불 수수료 10%가 차감됩니다.`}
+          ? `결제일로부터 ${elapsedDays}일 지났습니다. ${WITHDRAWAL_PERIOD_DAYS}일 이내라 수수료 없이 전액 환불됩니다.`
+          : `결제일로부터 ${elapsedDays}일 지나 이용약관 제7조 제2항에 따라 환불 수수료 ${LATE_FEE_PERCENT}%가 차감됩니다.`}
       </p>
     </div>
   )
@@ -297,14 +311,12 @@ function RefundBreakdown({ gross, fee, refund, within, elapsedDays }: RefundBrea
 
 export function ChargeCancelPanel({ overview }: { overview: ChargeCancelOverview }) {
   if (overview.items.length === 0) {
-    return <p className="text-sm text-ink-light/50 font-light text-center py-12">최근 복채 충전 내역이 없습니다.</p>
+    return <p className="text-sm text-ink-light/50 font-light text-center py-12">최근 이용권 구매 내역이 없습니다.</p>
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-[11px] text-ink-light/40 font-light px-1">
-        현재 지갑 잔액 {overview.walletBalance.toLocaleString('ko-KR')}만냥 · 최근 20건까지 보여드립니다.
-      </p>
+      <p className="text-[11px] text-ink-light/40 font-light px-1">최근 20건까지 보여드립니다.</p>
       {overview.items.map((item) => (
         <ChargeCancelCard key={item.paymentId} item={item} lossCap={overview.lossCap} />
       ))}

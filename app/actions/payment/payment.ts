@@ -4,42 +4,33 @@ import { tossGeneralSecretKey } from '@/lib/config/toss-keys'
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { addTalismans } from '@/lib/services/wallet-grant'
+import { grantPasses } from '@/lib/services/entitlement'
+import { PASS_VALID_DAYS, passExpiryFrom } from '@/lib/domain/entitlement/pass'
 import { logger } from '@/lib/utils/logger'
 import { rateLimit } from '@/lib/utils/rate-limit'
 
-// 복채 충전은 일반결제 상점(khaehwjxqe) 소관이다.
+// 이용권 구매는 일반결제 상점(khaehwjxqe) 소관이다.
 const secretKey = tossGeneralSecretKey
 
-/**
- * "한 번이라도 충전한 적 있음" 판정 대상 상태.
- * 취소된 결제('refunded')도 반드시 포함한다 — 제외하면 결제→취소→재결제로
- * 첫 구매 2배를 무한히 다시 받는 경로가 열린다.
- */
-const CHARGED_STATUSES = ['completed', 'refunded'] as const
+/** 이용권 주문번호 접두사 — 결제창(pass-checkout-client)이 만든다. 구독(SUB_)과 섞이면 웹훅 분기가 틀어진다. */
+const PASS_ORDER_PREFIX = 'PASS_'
 
-/**
- * 로그인 사용자가 복채를 한 번이라도 충전했는지 여부 (첫 구매 2배 판정용).
- * 서버에서만 판단 — 클라이언트 플래그 신뢰 안 함.
- */
-export async function hasChargedBefore(): Promise<boolean> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return true // 비로그인은 혜택 미노출(안전)
-
-  const admin = createAdminClient()
-  const { count } = await admin
-    .from('payments')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .in('status', CHARGED_STATUSES)
-    .eq('bokchae_type', 'charge')
-  return (count ?? 0) > 0
+interface PassPlanRow {
+  id: string
+  name: string
+  credits: number
+  price: number
+  valid_days: number | null
 }
 
-export async function confirmPayment(paymentKey: string, orderId: string, talismans: number = 1) {
+/**
+ * 이용권 구매 승인 — 토스 승인 → 결제 기록 → 이용권 발급.
+ *
+ * 🔴 가격·장 수·유효기간은 전부 DB(price_plans, product_kind='pass')에서 다시 읽는다. 클라이언트가 보낸 것은
+ *    «몇 장짜리를 골랐는가»뿐이고, 금액은 토스 승인 요청과 응답 양쪽에서 대조한다.
+ * 🔴 첫 구매 2배·팩 보너스는 없다(폐지) — 결제 1건 = 발급 1건 = 산 장 수 그대로.
+ */
+export async function confirmPayment(paymentKey: string, orderId: string, passes: number) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -54,19 +45,28 @@ export async function confirmPayment(paymentKey: string, orderId: string, talism
     throw new Error('결제 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.')
   }
 
-  // 상품·가격은 DB(price_plans)를 단일 소스로 검증 (클라이언트 데이터 신뢰 안 함).
+  if (typeof orderId !== 'string' || !orderId.startsWith(PASS_ORDER_PREFIX)) {
+    throw new Error('잘못된 주문번호입니다.')
+  }
+  if (!Number.isInteger(passes) || passes <= 0) {
+    throw new Error('잘못된 이용권 상품입니다.')
+  }
+
   const admin = createAdminClient()
-  const { data: pack, error: packError } = await admin
+  const { data: planData, error: planError } = await admin
     .from('price_plans')
-    .select('name, credits, price, bonus_credits')
-    .eq('credits', talismans)
+    .select('id, name, credits, price, valid_days')
+    .eq('credits', passes)
+    .eq('product_kind', 'pass')
     .eq('is_active', true)
     .maybeSingle()
 
-  if (packError || !pack) {
-    throw new Error(`잘못된 복채 상품입니다. (${talismans})`)
+  const plan = planData as PassPlanRow | null
+  if (planError || !plan) {
+    throw new Error(`잘못된 이용권 상품입니다. (${passes}장)`)
   }
-  const expectedAmount = pack.price
+  const expectedAmount = plan.price
+  const validDays = plan.valid_days ?? PASS_VALID_DAYS
 
   const basicAuth = Buffer.from(`${secretKey}:`).toString('base64')
 
@@ -83,11 +83,11 @@ export async function confirmPayment(paymentKey: string, orderId: string, talism
     }),
   })
 
-  const result = await response.json()
+  const result = (await response.json()) as Record<string, unknown>
 
   if (!response.ok) {
     logger.error('[Payment] Toss confirm failed:', { code: result.code, message: result.message, orderId })
-    throw new Error(result.message || '결제 승인에 실패했습니다.')
+    throw new Error(typeof result.message === 'string' ? result.message : '결제 승인에 실패했습니다.')
   }
 
   if (result.totalAmount !== expectedAmount) {
@@ -98,58 +98,57 @@ export async function confirmPayment(paymentKey: string, orderId: string, talism
     throw new Error('결제 금액이 일치하지 않습니다.')
   }
 
-  // 지급액 계산: 기본(구매) + 팩 보너스, 그리고 첫 구매면 전체 2배.
-  // 첫 구매 판정은 이번 결제 기록을 넣기 전에 서버에서 확인.
-  const { count: priorCharges } = await admin
-    .from('payments')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .in('status', CHARGED_STATUSES)
-    .eq('bokchae_type', 'charge')
-  const isFirstPurchase = (priorCharges ?? 0) === 0
-
-  const baseCredits = pack.credits + (pack.bonus_credits ?? 0)
-  const creditedTotal = isFirstPurchase ? baseCredits * 2 : baseCredits
-
-  const bonusParts: string[] = []
-  if ((pack.bonus_credits ?? 0) > 0) bonusParts.push(`보너스 ${pack.bonus_credits}만냥`)
-  if (isFirstPurchase) bonusParts.push('첫 구매 2배')
-  const bonusNote = bonusParts.length ? ` (${bonusParts.join(' + ')})` : ''
-
-  // 결제 정보 저장 (credits_* = 실제 지갑에 지급되는 총 복채)
-  const { data: insertedPayment, error } = await supabase
+  // 결제 기록은 admin 으로 쓴다 — 사용자 세션으로 쓰면 RLS 에 조용히 막혀도 모른 채 발급까지 간다.
+  const { data: inserted, error: insertError } = await admin
     .from('payments')
     .insert({
       user_id: user.id,
       payment_key: paymentKey,
       order_id: orderId,
       amount: expectedAmount,
-      credits_purchased: creditedTotal,
-      credits_remaining: creditedTotal,
+      credits_purchased: passes,
+      credits_remaining: passes,
       status: 'completed',
-      bokchae_type: 'charge',
+      bokchae_type: 'pass',
     })
-    .select()
+    .select('id')
     .single()
 
-  if (error) {
-    logger.error('[Payment] DB Insert Error:', error)
-    throw new Error(`결제는 성공했으나 기록 저장 실패: ${error.message}`)
+  const paymentId = (inserted as { id?: string } | null)?.id
+  if (insertError || !paymentId) {
+    logger.error(new Error('[Payment] 결제 승인 뒤 기록 저장 실패 — 수동 발급 필요'), {
+      userId: user.id,
+      orderId,
+      message: insertError?.message,
+    })
+    throw new Error(`결제는 완료되었으나 기록 저장에 실패했습니다. ${SUPPORT_ASK}`)
   }
 
-  // 지갑에 복채 충전 (기본+보너스+첫구매2배 전액 CHARGE → 일일한도 무관 사용 가능)
-  const walletResult = await addTalismans(
-    creditedTotal,
-    'CHARGE',
-    `${pack.name} 복채 ${creditedTotal}만냥 충전${bonusNote} (주문번호: ${orderId})`
-  )
+  const grant = await grantPasses({
+    userId: user.id,
+    source: 'purchase',
+    quantity: passes,
+    validDays,
+    paymentId,
+    idempotencyKey: `PURCHASE:${paymentId}`,
+    note: `${plan.name} 구매 (주문번호: ${orderId})`,
+  })
 
-  if (!walletResult.success) {
-    logger.error('[Payment] Wallet charge failed, marking payment for retry:', walletResult.error)
-    // 결제는 완료됐지만 지갑 충전 실패 — 상태를 wallet_failed로 변경하여 수동/자동 재시도 가능
-    await supabase.from('payments').update({ status: 'wallet_failed' }).eq('id', insertedPayment.id)
-    throw new Error(`결제는 완료되었으나 복채 충전에 실패했습니다. ${SUPPORT_ASK}`)
+  if (!grant.granted && grant.reason !== 'ALREADY_GRANTED') {
+    await admin.from('payments').update({ status: 'grant_failed' }).eq('id', paymentId)
+    logger.error(new Error('[Payment] 결제 승인 뒤 이용권 발급 실패 — 수동 발급 필요'), {
+      userId: user.id,
+      paymentId,
+      orderId,
+      reason: grant.reason,
+    })
+    throw new Error(`결제는 완료되었으나 이용권 발급에 실패했습니다. ${SUPPORT_ASK}`)
   }
 
-  return { ...result, creditedTotal, isFirstPurchase, baseCredits }
+  return {
+    ...result,
+    grantedPasses: passes,
+    validDays,
+    expiresAt: passExpiryFrom(Date.now(), validDays)?.toISOString() ?? '',
+  }
 }

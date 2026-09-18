@@ -4,7 +4,7 @@ import { logger } from '@/lib/utils/logger'
 /**
  * 토스 SDK 로더 — 상점(MID)이 둘이라 **클라이언트 키도 둘**이다.
  *
- * · `general` → 일반결제 `khaehwjxqe`      : 복채 충전(결제위젯 · requestPayment)
+ * · `general` → 일반결제 `khaehwjxqe`      : 이용권 구매(결제위젯 · requestPayment)
  * · `billing` → 정기결제 `bill_khaehqj1a`  : 멤버십(requestBillingAuth)
  *
  * 🔴 하나의 SDK 인스턴스를 둘이 같이 쓰면, 한쪽 상점의 결제가 다른 상점 키로 나가 거절된다.
@@ -58,7 +58,7 @@ export const getTossPaymentsSDK = (purpose: TossPurpose = 'general') => {
   return promise
 }
 
-/** 결제위젯(복채 충전) — 일반결제 상점 전용. */
+/** 결제위젯(이용권 구매) — 일반결제 상점 전용. */
 export const getTossWidgets = async (customerKey: string) => {
   const sdk = await getTossPaymentsSDK('general')
   if (!sdk) return null

@@ -22,6 +22,7 @@ import {
   themesByTab,
   themeThumbnailPath,
 } from '@/lib/domain/theme-fortune/themes'
+import { findBannedPassTerms } from '@/lib/domain/entitlement/pass'
 
 async function renderPage(tab?: string) {
   const ui = await ThemeFortuneListPage({ searchParams: Promise.resolve({ tab }) })
@@ -61,7 +62,7 @@ describe('테마 목록 — 탭', () => {
 })
 
 describe('테마 목록 — 카드', () => {
-  it('카드마다 제목·서브카피·복채가 함께 나온다', async () => {
+  it('카드마다 제목·서브카피·이용권 장 수가 함께 나온다', async () => {
     await renderPage('work')
 
     for (const theme of themesByTab('work')) {
@@ -86,8 +87,8 @@ describe('테마 목록 — 카드', () => {
     }
   })
 
-  it('🔴 개별 풀이가 선 카드는 그 풀이의 복채를 적는다 (도착지 값이 아니다)', async () => {
-    // 링크만 풀이로 바꾸고 배지가 옛 도착 화면 값을 쓰면 「무료」라고 적힌 카드가 복채를 받는다.
+  it('🔴 개별 풀이가 선 카드는 그 풀이의 이용권 장 수를 적는다 (도착지 값이 아니다)', async () => {
+    // 링크만 풀이로 바꾸고 배지가 옛 도착 화면 값을 쓰면 「무료」라고 적힌 카드가 이용권을 쓴다.
     const { container } = await renderPage('work')
     const readingThemes = themesByTab('work').filter(hasThemeReading)
     expect(readingThemes.length).toBeGreaterThan(0)
@@ -184,7 +185,15 @@ describe('테마 목록 — 기존 진입 경로를 잃지 않는다', () => {
     )
 
     expect(link?.textContent).toContain('무료')
-    expect(link?.textContent).not.toMatch(/복채/)
+    expect(link?.textContent).not.toMatch(/이용권/)
+  })
+
+  it('🔴 목록 어디에도 문구 금지어가 없다 (잔액형 재화로 읽히지 않게)', async () => {
+    for (const tab of THEME_TABS) {
+      const { container, unmount } = await renderPage(tab.key)
+      expect(findBannedPassTerms(container.textContent ?? '')).toEqual([])
+      unmount()
+    }
   })
 
   it('허브로 돌아가는 길이 있다', async () => {

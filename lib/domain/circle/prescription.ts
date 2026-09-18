@@ -18,13 +18,12 @@ import { COMPLEMENT_MIN_GAP, highestElement, lowestElement } from '@/lib/domain/
 import { avoidRemedies, elementRemedies, REMEDY_TABLE, type RemedyItem } from '@/lib/domain/remedy/remedy'
 import { ELEMENT_LORE, HANJA_OF, MOTHER_OF } from './element-lore'
 
-/** 신당 살림 후보 — 카탈로그에서 오행·세기·가격만. */
+/** 신당 살림 후보 — 카탈로그에서 오행·세기만(신물은 무료라 값이 없다). */
 export interface PrescriptionCatalogItem {
   id: string
   name: string
   element: Element
   energyPower: number
-  priceBokchae: number
   emoji: string
   spriteUrl: string | null
 }

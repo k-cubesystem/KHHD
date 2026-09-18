@@ -1,10 +1,10 @@
 /**
- * 복채 충전 승인 화면은 풀이를 돌리지 않는다.
+ * 이용권 구매 승인 화면은 풀이를 돌리지 않는다.
  *
  * 실제 사고(2026-09-01 발견): 이 화면이 결제 승인 직후 `startFateAnalysis` 를
  * **무조건** 호출해 Gemini PRO 종합 리포트를 만들고 /protected/history 로 보냈다.
- * 이 화면을 부르는 곳은 복채 충전 두 경로뿐이라, 결과적으로
- *   ① 복채만 산 사용자에게 간판 유료 상품이 매번 공짜로 나갔고
+ * 이 화면을 부르는 곳은 결제(당시 복채 충전, 지금 이용권 구매) 경로뿐이라, 결과적으로
+ *   ① 결제만 한 사용자에게 간판 유료 상품이 매번 공짜로 나갔고
  *   ② 결제 건마다 PRO 호출 원가가 붙었고
  *   ③ 그 호출이 실패하면 승인은 끝났는데 화면은 「결제 승인 실패」를 띄웠다.
  *
@@ -29,11 +29,16 @@ describe('결제 승인 화면 — 요청하지 않은 풀이 금지', () => {
 
   it('결제 승인 자체는 그대로 부른다 — 테스트가 화면을 통째로 비우는 걸 승인하지는 않는다', () => {
     expect(SOURCE).toContain('confirmPayment')
-    expect(SOURCE).toContain('GA.bokchaeCharge')
+    expect(SOURCE).toContain('GA.passPurchase')
   })
 
-  it('충전이 끝난 사용자를 풀이 기록이 아니라 허브로 보낸다', () => {
+  it('구매가 끝난 사용자를 풀이 기록이 아니라 허브로 보낸다', () => {
     expect(SOURCE).not.toContain("router.push('/protected/history')")
     expect(SOURCE).toContain("router.push('/protected/analysis')")
+  })
+
+  it('발급 장 수는 서버가 돌려준 값을 보여준다 — 화면이 쿼리 문자열로 숫자를 지어내지 않는다', () => {
+    expect(SOURCE).toContain('confirmRes.grantedPasses')
+    expect(SOURCE).not.toMatch(/formatPassUnits\(passes\)/)
   })
 })

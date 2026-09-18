@@ -6,7 +6,6 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
 import { toMemberCategory, type MemberCategory } from '@/lib/domain/family/member-category'
-import { addBokPoints } from '@/lib/services/bok-grant'
 import { canAddRelationship } from '@/app/actions/payment/membership'
 
 /**
@@ -142,7 +141,6 @@ export async function quickAddDestinyTarget(input: {
     return { success: false, error: '등록 중 오류가 발생했습니다.' }
   }
 
-  await addBokPoints(50, 'REGISTER', undefined, `${name}님 인연 등록`).catch(() => {})
   revalidatePath('/protected/family')
 
   return { success: true, id: data.id }
@@ -199,10 +197,6 @@ export async function addFamilyMember(formData: FormData) {
     logger.error('Error adding family member:', error.message)
     throw new Error('가족 정보 등록 중 오류가 발생했습니다.')
   }
-
-  // 복 포인트 적립 (인연 등록)
-  const name = formData.get('name') as string
-  await addBokPoints(50, 'REGISTER', undefined, `${name}님 인연 등록`).catch(() => {})
 
   revalidatePath('/protected/family')
 }

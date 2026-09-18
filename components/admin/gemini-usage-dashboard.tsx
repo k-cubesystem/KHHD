@@ -17,7 +17,7 @@ import { Zap, CheckCircle, RefreshCw, Save, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatStrip, StatTile } from '@/components/admin/ui/stat-tile'
 import { getActionLabel } from '@/lib/domain/gemini/actions'
-import { KRW_PER_TALISMAN } from '@/lib/constants'
+import { KRW_PER_PASS } from '@/lib/constants'
 import {
   getGeminiDailyStats,
   getGeminiActionStats,
@@ -404,12 +404,12 @@ export function GeminiUsageDashboard({
         )}
       </div>
 
-      {/* ── 원가 vs 복채 테이블 (가격 책정 근거) ── */}
+      {/* ── 원가 vs 이용권 매출 테이블 (가격 책정 근거) ── */}
       <div className="bg-ink-900/60 border border-white/[0.10] rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-white/[0.10]">
-          <h3 className="text-xs font-bold text-ink-primary/70">원가 vs 복채 ({USAGE_RANGE_LABEL[period]})</h3>
+          <h3 className="text-xs font-bold text-ink-primary/70">원가 vs 이용권 매출 ({USAGE_RANGE_LABEL[period]})</h3>
           <p className="text-[10px] text-ink-primary/40 mt-0.5">
-            호출당 AI 원가와 현재 복채 가격 대비 원가율 · 1만냥 ≈ ₩{KRW_PER_TALISMAN.toLocaleString()}
+            호출당 AI 원가와 이용권 매출 대비 원가율 · 이용권 1장 ≈ ₩{KRW_PER_PASS.toLocaleString()}
           </p>
         </div>
         <div className="overflow-x-auto">
@@ -419,7 +419,7 @@ export function GeminiUsageDashboard({
                 <th className="text-left px-3 py-2 whitespace-nowrap">기능</th>
                 <th className="text-right px-3 py-2 whitespace-nowrap">호출 수</th>
                 <th className="text-right px-3 py-2 whitespace-nowrap">호출당 원가</th>
-                <th className="text-right px-3 py-2 whitespace-nowrap">복채</th>
+                <th className="text-right px-3 py-2 whitespace-nowrap">이용권</th>
                 <th className="text-right px-3 py-2 whitespace-nowrap">원가율</th>
               </tr>
             </thead>
@@ -437,7 +437,7 @@ export function GeminiUsageDashboard({
                   <td className="px-3 py-1.5 text-right text-ink-primary/55">{r.call_count.toLocaleString()}</td>
                   <td className="px-3 py-1.5 text-right text-gold-500">₩{r.avg_cost_krw.toLocaleString()}</td>
                   <td className="px-3 py-1.5 text-right text-ink-primary/55 whitespace-nowrap">
-                    {r.bokchae_cost === null ? '—' : r.bokchae_cost === 0 ? '무료' : `${r.bokchae_cost}만냥`}
+                    {r.pass_units === null ? '—' : r.pass_units === 0 ? '무료' : `${r.pass_units}장`}
                   </td>
                   <td className="px-3 py-1.5 text-right whitespace-nowrap">
                     {r.cost_ratio_pct === null ? (

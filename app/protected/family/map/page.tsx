@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveMembership } from '@/lib/auth/subscription'
+import { tierAllows, tierUpsellLine } from '@/lib/domain/payment/membership-tiers'
 import { getCircleEnergy } from '@/app/actions/circle/energy'
 import { getRecentTogether } from '@/app/actions/circle/narrative'
 import { getShopLinks } from '@/app/actions/circle/shop-links'
@@ -16,7 +18,17 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic'
 
-function EmptyState({ title, body, cta }: { title: string; body: React.ReactNode; cta: string }) {
+function EmptyState({
+  title,
+  body,
+  cta,
+  href = '/protected/family',
+}: {
+  title: string
+  body: React.ReactNode
+  cta: string
+  href?: string
+}) {
   return (
     <div className="min-h-screen w-full max-w-[480px] mx-auto px-4 py-16">
       <div className="text-center space-y-5 border border-dashed border-gold-500/20 bg-surface/20 rounded-xl p-10">
@@ -24,7 +36,7 @@ function EmptyState({ title, body, cta }: { title: string; body: React.ReactNode
         <h1 className="text-xl font-serif font-bold text-ink-light">{title}</h1>
         <p className="text-sm text-ink-light/55 leading-relaxed">{body}</p>
         <Link
-          href="/protected/family"
+          href={href}
           className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gold-500/15 border border-gold-500/40 text-gold-300 text-sm font-serif"
         >
           {cta}
@@ -35,7 +47,9 @@ function EmptyState({ title, body, cta }: { title: string; body: React.ReactNode
 }
 
 /**
- * 기운 지도 v3 — 가족(가상 그룹)과 내 그룹이 **같은 화면**. 한 사람씩 오각형, 팩트 세 줄, 나머지는 복채 AI(함께 보기).
+ * 기운 지도 v3 — 가족(가상 그룹)과 내 그룹이 **같은 화면**. 한 사람씩 오각형, 팩트 세 줄, 나머지는 유료 AI(함께 보기).
+ * 등급: 지도는 패밀리 멤버십부터, 함께 보기는 비즈니스부터(membership-tiers). 지도 문은 여기서 서버가 닫는다 —
+ * 엔진을 사람 수만큼 돌리기 전에 판정한다.
  * 쿠팡 링크는 다섯 기운의 물건 전부를 한 번에 받아 둔다(전역 30일 캐시) — 고르는 사람이 바뀌어도 서버를 다시 부르지 않는다.
  */
 export default async function FamilyEnergyMapPage({ searchParams }: { searchParams: Promise<{ circle?: string }> }) {
@@ -47,6 +61,19 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
   if (!user) redirect('/auth/login')
 
   const circleId = circle && circle !== FAMILY_CIRCLE_ID ? circle : FAMILY_CIRCLE_ID
+  const membership = await getActiveMembership(user.id)
+  const tier = membership?.tier ?? null
+  if (!tierAllows(tier, 'familyMap')) {
+    return (
+      <EmptyState
+        title={circleId === FAMILY_CIRCLE_ID ? '우리 가족 기운 지도' : '그룹 기운 지도'}
+        body={tierUpsellLine('familyMap')}
+        cta="멤버십 보기"
+        href="/protected/store?tab=membership"
+      />
+    )
+  }
+
   const [payload, recentTogether, shopLinks] = await Promise.all([
     getCircleEnergy(circleId),
     getRecentTogether(),
@@ -82,6 +109,7 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
       recentTogether={recentTogether}
       needs={allElementNeeds()}
       shopLinks={shopLinks}
+      tier={tier}
     />
   )
 }

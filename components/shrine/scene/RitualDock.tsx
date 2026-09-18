@@ -22,6 +22,7 @@ import Link from 'next/link'
 import type { MouseEvent, RefObject } from 'react'
 import { Flag, Flame, Coins } from 'lucide-react'
 import type { AekmakStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
+import { formatPassUnits } from '@/lib/domain/entitlement/pass'
 import type { SoundKey } from '@/lib/domain/shrine/types'
 import { useRitualTransition, type RitualNavigate } from '@/hooks/use-ritual-transition'
 import { AekmakStrip } from './AekmakSheet'
@@ -128,8 +129,8 @@ function ObangkiRow({ status }: { status: ObangkiStatus }) {
           무료 {freeLeft}회 남음
         </span>
       ) : (
-        // 무료 소진 — 값을 미리 밝힌다(눌러 들어가서야 액수를 아는 문을 만들지 않는다)
-        <span className={`${STATE_CLASS} text-ink-primary/40`}>복채 {status.cost}만냥</span>
+        // 무료 소진 — 쓰는 이용권을 미리 밝힌다(눌러 들어가서야 아는 문을 만들지 않는다)
+        <span className={`${STATE_CLASS} text-ink-primary/40`}>{formatPassUnits(status.cost)}</span>
       )}
     </Link>
   )
@@ -140,7 +141,7 @@ function ObangkiRow({ status }: { status: ObangkiStatus }) {
  *
  * ⚠️ 오방기 바로 아래에 서지만 **다른 의식**이다. 오방기는 한 가지 일에 신이 답하는 자리(문복),
  *    척전은 사람이 고르지 못한 갈림길을 하늘에 맡기는 자리다. 그래서 상태 표기도 다르다 —
- *    복채가 없으므로 "무료 N회"가 아니라 그냥 "N회 남음"이다(값이 있는 척하지 않는다).
+ *    이용권을 쓰지 않으므로 "무료 N회"가 아니라 그냥 "N회 남음"이다(값이 있는 척하지 않는다).
  */
 function ChuljeonRow({ status }: { status: ChuljeonStatus }) {
   const left = status.remaining

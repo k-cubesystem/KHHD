@@ -94,20 +94,20 @@ export async function equipGuardians(slugs: string[], familyMemberId?: string | 
 
 export interface PurchaseGuardianResult {
   success: boolean
-  /** 구매 직후 본인 신당 빈자리에 자동 착좌됐는가 — UI 토스트 분기용 */
+  /** 모셔 온 직후 본인 신당 빈자리에 자동 착좌됐는가 — UI 토스트 분기용 */
   seated?: boolean
-  error?: 'UNKNOWN_GUARDIAN' | 'INSUFFICIENT_BOKCHAE' | 'FAILED'
+  error?: 'UNKNOWN_GUARDIAN' | 'FAILED'
 }
 
 /**
- * 신수 봉헌(구매) — 신수 탭에서 바로. 결제·인벤토리 반영은 기존 purchaseToInventory 를
- * **함수로 재사용**한다(경로가 두 벌이면 환불·중복 방지 같은 규칙이 갈라진다).
+ * 신수 모셔 오기(무료 받기, 2026-09-18) — 신수 탭에서 바로. 인벤토리 반영은 기존 purchaseToInventory 를
+ * **함수로 재사용**한다(경로가 두 벌이면 보상 전용·보유 상한 같은 규칙이 갈라진다).
  * 여기서는 슬러그 → 카탈로그 id 만 푼다.
  *
- * 구매가 성사되면 **본인 신당 빈자리에 바로 착좌까지** 이어 준다 — 봉헌 4좌·착좌 0좌로
- * 방이 비어 있던 실사용 데이터(2026-08-06)의 교훈: 구매와 착좌가 다른 탭이면 신수는
- * 산 채로 잊힌다. 이미 2좌면 건드리지 않는다(교체는 모아보기 「신수」 탭 그대로).
- * 착좌 실패는 구매를 되돌리지 않는다 — 봉헌은 유효하고, 착좌는 언제든 다시 할 수 있다.
+ * 받기가 성사되면 **본인 신당 빈자리에 바로 착좌까지** 이어 준다 — 봉헌 4좌·착좌 0좌로
+ * 방이 비어 있던 실사용 데이터(2026-08-06)의 교훈: 받기와 착좌가 다른 탭이면 신수는
+ * 받은 채로 잊힌다. 이미 2좌면 건드리지 않는다(교체는 모아보기 「신수」 탭 그대로).
+ * 착좌 실패는 받기를 되돌리지 않는다 — 보유는 유효하고, 착좌는 언제든 다시 할 수 있다.
  */
 export async function purchaseGuardian(slug: string): Promise<PurchaseGuardianResult> {
   const g = findGuardian(typeof slug === 'string' ? slug : '')
@@ -123,12 +123,7 @@ export async function purchaseGuardian(slug: string): Promise<PurchaseGuardianRe
   if (!item) return { success: false, error: 'FAILED' }
 
   const res = await purchaseToInventory(String(item.id))
-  if (!res.success) {
-    return {
-      success: false,
-      error: res.error === 'INSUFFICIENT_BOKCHAE' ? 'INSUFFICIENT_BOKCHAE' : 'FAILED',
-    }
-  }
+  if (!res.success) return { success: false, error: 'FAILED' }
 
   // 빈자리 자동 착좌 — 검증·admin 경유는 equipGuardians 한 벌을 그대로 쓴다(경로 분기 금지)
   let seated = false

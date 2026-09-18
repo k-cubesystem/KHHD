@@ -10,6 +10,8 @@ import {
   findJourneyRewardChoice,
   type JourneyRewardKind,
 } from '@/lib/domain/analysis/journey-reward'
+import { TIER_OPEN_DEITY_SOURCE, parseRequiredTier } from '@/lib/domain/shrine/types'
+import type { MembershipTier } from '@/lib/domain/payment/membership-tiers'
 
 export interface JourneyRewardChoiceStatus {
   kind: JourneyRewardKind
@@ -18,9 +20,12 @@ export interface JourneyRewardChoiceStatus {
   name: string
   element: string
   tagline: string
-  /** 복채 정가(만냥) — "여정 완주 무료"의 대비가격. */
-  priceBokchae: number
-  /** 이미 보유(구매·기원 등 다른 경로) — 선택 불가 안내용. */
+  /** 이 신위·테마가 멤버십으로 열리는 등급 — 「싱글 등급 신위 · 완주 선물」 표기용. 누구나면 null. */
+  requiredTier: MembershipTier | null
+  /**
+   * 이미 영구 보유(증정·기원 등 다른 경로) — 선택 불가 안내용.
+   * 등급으로 모신 신위(구독 중 이용)는 보유로 치지 않는다 — 완주 선물로 고르면 영구 보유로 바뀐다.
+   */
   owned: boolean
 }
 
@@ -56,9 +61,9 @@ export async function getJourneyRewardStatus(): Promise<JourneyRewardStatus | nu
   ] = await Promise.all([
     supabase.from('analysis_history').select('category').eq('user_id', user.id).eq('target_id', user.id),
     supabase.from('journey_reward_claims').select('reward_kind, reward_code').eq('user_id', user.id).maybeSingle(),
-    supabase.from('shrine_deities').select('id, code, name, price_bokchae').in('code', DEITY_CODES),
-    supabase.from('shrine_theme_packs').select('id, code, name, price_bokchae').in('code', THEME_CODES),
-    supabase.from('user_shrine_deities').select('deity_id').eq('user_id', user.id),
+    supabase.from('shrine_deities').select('id, code, name, required_tier').in('code', DEITY_CODES),
+    supabase.from('shrine_theme_packs').select('id, code, name, required_tier').in('code', THEME_CODES),
+    supabase.from('user_shrine_deities').select('deity_id, source').eq('user_id', user.id),
     supabase.from('user_theme_packs').select('pack_id').eq('user_id', user.id),
   ])
 
@@ -73,7 +78,9 @@ export async function getJourneyRewardStatus(): Promise<JourneyRewardStatus | nu
 
   const deityByCode = new Map((deities ?? []).map((d) => [d.code as string, d]))
   const packByCode = new Map((packs ?? []).map((p) => [p.code as string, p]))
-  const ownedDeityIds = new Set((ownedDeities ?? []).map((o) => o.deity_id as string))
+  const ownedDeityIds = new Set(
+    (ownedDeities ?? []).filter((o) => o.source !== TIER_OPEN_DEITY_SOURCE).map((o) => o.deity_id as string)
+  )
   const ownedPackIds = new Set((ownedPacks ?? []).map((o) => o.pack_id as string))
 
   const choices: JourneyRewardChoiceStatus[] = JOURNEY_REWARD_CHOICES.map((c) => {
@@ -89,7 +96,7 @@ export async function getJourneyRewardStatus(): Promise<JourneyRewardStatus | nu
       name: (row?.name as string | undefined) ?? c.name,
       element: c.element,
       tagline: c.tagline,
-      priceBokchae: (row?.price_bokchae as number | undefined) ?? 0,
+      requiredTier: parseRequiredTier(row?.required_tier),
       owned,
     }
   })
@@ -120,8 +127,8 @@ export interface ClaimJourneyRewardResult {
  * 기원 보상(claimDevotionReward)과 동일 계보의 지급 패턴.
  *
  * 신뢰 경계: 완주 판정의 근거인 analysis_history 는 RLS 상 본인 INSERT 가 열려 있어
- * (analysis_history_all_own, ALL) API 직호출로 위조 가능하다. 보상이 1만냥급 소장품
- * 계정당 1회라 수용한 위험 — 복채 등 금전 보상을 여기에 얹으려면 판정 근거를
+ * (analysis_history_all_own, ALL) API 직호출로 위조 가능하다. 보상이 싱글 등급 소장품
+ * 계정당 1회라 수용한 위험 — 이용권 등 금전 가치가 있는 보상을 여기에 얹으려면 판정 근거를
  * service_role 전용 기록으로 옮겨야 한다.
  */
 export async function claimJourneyReward(kind: string, code: string): Promise<ClaimJourneyRewardResult> {
@@ -153,6 +160,7 @@ export async function claimJourneyReward(kind: string, code: string): Promise<Cl
   let targetId: string | null = null
   let displayName = choice.name
   let alreadyOwned = false
+  let tierOpenRow = false
   if (choice.kind === 'deity') {
     const { data: deity } = await supabase
       .from('shrine_deities')
@@ -164,11 +172,12 @@ export async function claimJourneyReward(kind: string, code: string): Promise<Cl
     displayName = deity.name
     const { data: owned } = await supabase
       .from('user_shrine_deities')
-      .select('deity_id')
+      .select('deity_id, source')
       .eq('user_id', user.id)
       .eq('deity_id', deity.id)
       .maybeSingle()
-    alreadyOwned = !!owned
+    alreadyOwned = !!owned && owned.source !== TIER_OPEN_DEITY_SOURCE
+    tierOpenRow = !!owned && !alreadyOwned
   } else {
     const { data: pack } = await supabase
       .from('shrine_theme_packs')
@@ -204,12 +213,20 @@ export async function claimJourneyReward(kind: string, code: string): Promise<Cl
   // 지급 (무료). 실패 시 수령 기록 롤백 → 재시도 가능.
   let grantErr: unknown = null
   if (choice.kind === 'deity') {
-    const { error } = await admin
-      .from('user_shrine_deities')
-      .upsert(
-        { user_id: user.id, deity_id: targetId, source: 'journey_reward' },
-        { onConflict: 'user_id,deity_id', ignoreDuplicates: true }
-      )
+    // 등급으로 모셔 둔 신위면 행은 이미 있다 — source 만 바꿔 «구독 중 이용»을 영구 보유로 올린다
+    const { error } = tierOpenRow
+      ? await admin
+          .from('user_shrine_deities')
+          .update({ source: 'journey_reward' })
+          .eq('user_id', user.id)
+          .eq('deity_id', targetId)
+          .eq('source', TIER_OPEN_DEITY_SOURCE)
+      : await admin
+          .from('user_shrine_deities')
+          .upsert(
+            { user_id: user.id, deity_id: targetId, source: 'journey_reward' },
+            { onConflict: 'user_id,deity_id', ignoreDuplicates: true }
+          )
     grantErr = error
     if (!error) {
       // 인연 행은 부가 데이터 — 실패해도 지급은 성공(적립 시 upsert 로 재생성). grantDeity 와 동일 규약.

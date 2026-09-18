@@ -7,9 +7,10 @@ import {
   togglePlanStatus,
   getAllProducts,
   updateProduct,
-  type MembershipPlanAdmin,
 } from './actions'
-import { PricePlan } from '@/types/auth'
+import type { MembershipPlanAdmin, PassProductAdmin } from './types'
+import { PASS_VALID_DAYS } from '@/lib/domain/entitlement/pass'
+import { UNLIMITED_STORAGE_LIMIT } from '@/lib/domain/payment/membership-benefits'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -19,30 +20,17 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import {
-  Loader2,
-  Save,
-  RotateCcw,
-  Crown,
-  Users,
-  Calendar,
-  Database,
-  Ticket,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  X,
-} from 'lucide-react'
+import { Loader2, Save, RotateCcw, Crown, Users, Database, Ticket, ChevronDown, ChevronUp, Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function PlanManagementClient() {
   const [plans, setPlans] = useState<MembershipPlanAdmin[]>([])
-  const [products, setProducts] = useState<PricePlan[]>([])
+  const [products, setProducts] = useState<PassProductAdmin[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [savingProduct, setSavingProduct] = useState<string | null>(null)
   const [editedPlans, setEditedPlans] = useState<Record<string, Partial<MembershipPlanAdmin>>>({})
-  const [editedProducts, setEditedProducts] = useState<Record<string, Partial<PricePlan>>>({})
+  const [editedProducts, setEditedProducts] = useState<Record<string, Partial<PassProductAdmin>>>({})
   const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set())
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set())
 
@@ -71,7 +59,7 @@ export function PlanManagementClient() {
       : (plan as unknown as Record<string, unknown>)[field]
   }
 
-  const getProdVal = (prod: PricePlan, field: string) => {
+  const getProdVal = (prod: PassProductAdmin, field: string) => {
     const edited = editedProducts[prod.id]
     return edited && field in edited
       ? (edited as Record<string, unknown>)[field]
@@ -286,8 +274,7 @@ export function PlanManagementClient() {
                         {getPlanVal(plan, 'interval') === 'YEAR' ? '년' : '월'}
                       </span>
                       <span className="text-[10px] text-ink-primary/40">
-                        지급 {getPlanVal(plan, 'talismans_per_period') as number}만냥/주기 · 하루 상한{' '}
-                        {getPlanVal(plan, 'daily_talisman_limit') as number}만냥
+                        월 이용권 {getPlanVal(plan, 'monthly_passes') as number}장 · 이월 없음
                       </span>
                       <span
                         className={cn(
@@ -415,31 +402,17 @@ export function PlanManagementClient() {
                       <p className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider mb-2">
                         사용 한도
                       </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div className="space-y-1">
-                          {/* 🔴 이 칸은 «주기 지급»이다(결제 주기당 1회). 예전 라벨이 «일일 복채 지급»이라
-                              옆칸의 하루 사용 상한과 뒤섞여 앱 문구까지 틀리게 만들었다. */}
+                          {/* 🔴 결제·갱신 때 무엇도 지급하지 않는다 — 이 장수는 사용량(subscription_usage)으로만 센다. */}
                           <Label className="text-[10px] text-ink-primary/55 flex items-center gap-1">
-                            <Ticket className="w-2.5 h-2.5 text-gold-500" />
-                            주기 지급 복채
+                            <Ticket className="w-2.5 h-2.5 text-gold-500" />월 이용권 (장, 이월 없음)
                           </Label>
                           <Input
                             type="number"
-                            value={getPlanVal(plan, 'talismans_per_period') as number}
-                            onChange={(e) => changePlan(plan.id, 'talismans_per_period', parseInt(e.target.value))}
+                            value={getPlanVal(plan, 'monthly_passes') as number}
+                            onChange={(e) => changePlan(plan.id, 'monthly_passes', parseInt(e.target.value))}
                             className="h-8 text-xs font-mono bg-gold-500/10 border-gold-500/30 text-gold-300 focus:border-gold-500/50"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-ink-primary/55 flex items-center gap-1">
-                            <Calendar className="w-2.5 h-2.5" />
-                            하루 사용 상한
-                          </Label>
-                          <Input
-                            type="number"
-                            value={getPlanVal(plan, 'daily_talisman_limit') as number}
-                            onChange={(e) => changePlan(plan.id, 'daily_talisman_limit', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
@@ -465,7 +438,7 @@ export function PlanManagementClient() {
                             onChange={(e) => changePlan(plan.id, 'storage_limit', parseInt(e.target.value))}
                             className="h-8 text-xs font-mono bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
-                          <p className="text-[9px] text-ink-primary/30">999 = 무제한</p>
+                          <p className="text-[9px] text-ink-primary/30">{UNLIMITED_STORAGE_LIMIT} = 개수 제한 없음</p>
                         </div>
                       </div>
                     </div>
@@ -475,16 +448,7 @@ export function PlanManagementClient() {
                       <p className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider mb-2">
                         기능 설정 (features)
                       </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-ink-primary/55">보너스 비율 (%)</Label>
-                          <Input
-                            type="number"
-                            value={(features.bonus_rate as number) ?? 0}
-                            onChange={(e) => changeFeature(plan.id, 'bonus_rate', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
-                          />
-                        </div>
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
                           <Label className="text-[10px] text-ink-primary/55">멀티 기기 허용</Label>
                           <Select
@@ -504,25 +468,7 @@ export function PlanManagementClient() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-ink-primary/55">우선 지원</Label>
-                          <Select
-                            value={String(features.priority_support ?? false)}
-                            onValueChange={(v) => changeFeature(plan.id, 'priority_support', v === 'true')}
-                          >
-                            <SelectTrigger className="h-8 text-xs bg-surface/50 border-white/[0.12] text-ink-primary/85">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-surface border-white/[0.08]">
-                              <SelectItem value="true" className="text-xs text-success-text">
-                                허용
-                              </SelectItem>
-                              <SelectItem value="false" className="text-xs text-ink-primary/55">
-                                불허
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {/* 🔴 «우선 지원»(priority_support)은 구현 없는 약속이라 DB 에서 걷었다 — 다시 켜는 칸을 두지 않는다. */}
                       </div>
                     </div>
                   </div>
@@ -533,11 +479,11 @@ export function PlanManagementClient() {
         </div>
       </section>
 
-      {/* ===== SECTION 2: 부적 상품 (일회성) ===== */}
+      {/* ===== SECTION 2: 개별 이용권 (일반결제) — 옛 복채 팩은 서버가 숨긴다 ===== */}
       <section className="space-y-3">
         <div className="flex items-center gap-2 pb-2 border-b border-white/[0.08]">
           <Ticket className="w-4 h-4 text-gold-500" />
-          <h2 className="text-sm font-bold text-ink-primary font-serif">복채 상품 (단건 구매)</h2>
+          <h2 className="text-sm font-bold text-ink-primary font-serif">이용권 상품 (단건 구매)</h2>
           <span className="text-[10px] text-ink-primary/40 ml-auto">{products.length}개 상품</span>
         </div>
 
@@ -583,7 +529,8 @@ export function PlanManagementClient() {
                         {(getProdVal(prod, 'price') as number)?.toLocaleString()}원
                       </span>
                       <span className="text-[10px] text-ink-primary/40">
-                        복채 {getProdVal(prod, 'credits') as number}만냥
+                        이용권 {getProdVal(prod, 'credits') as number}장 · 유효기간{' '}
+                        {(getProdVal(prod, 'valid_days') as number | null) ?? PASS_VALID_DAYS}일
                       </span>
                       <span
                         className={cn(
@@ -676,12 +623,23 @@ export function PlanManagementClient() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-ink-primary/55">복채 수량 (만냥)</Label>
+                          <Label className="text-[10px] text-ink-primary/55">이용권 수량 (장)</Label>
                           <Input
                             type="number"
                             value={getProdVal(prod, 'credits') as number}
                             onChange={(e) => changeProd(prod.id, 'credits', parseInt(e.target.value))}
                             className="h-8 text-xs font-mono bg-gold-500/10 border-gold-500/30 text-gold-300 focus:border-gold-500/50"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-ink-primary/55">유효기간 (결제일로부터, 일)</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={365}
+                            value={(getProdVal(prod, 'valid_days') as number | null) ?? PASS_VALID_DAYS}
+                            onChange={(e) => changeProd(prod.id, 'valid_days', parseInt(e.target.value))}
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="sm:col-span-3 space-y-1">

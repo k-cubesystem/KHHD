@@ -4,15 +4,15 @@ import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
 import { getModelConfig } from '@/lib/config/ai-models'
 import { generateAIContent } from '@/lib/services/ai-client'
-import { deductTalisman, refundStudioCost } from '@/app/actions/payment/wallet'
-import { addBokPoints } from '@/lib/services/bok-grant'
+import { chargeFeature } from '@/lib/services/feature-charge'
+import type { PassErrorType } from '@/lib/domain/entitlement/pass'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { saveAnalysisHistoryObserved } from '@/app/actions/user/history'
 import { parseSamhap, isSamhapEmpty, type SamhapParsed } from '@/lib/domain/analysis/samhap-parse'
 import { computeSamhapCoherence, type SamhapCoherence } from '@/lib/domain/analysis/samhap-coherence'
 import { buildSystemPrompt, buildUserPrompt, type SajuBlock } from '@/lib/domain/analysis/samhap-prompt'
 
-const SAMHAP_COST = FEATURE_COST.samhap.display // 5만냥 (표시=실차감)
+const SAMHAP_COST = FEATURE_COST.samhap.display
 
 // ─── 타입 ──────────────────────────────────────────────────────────────────
 
@@ -39,7 +39,9 @@ export interface SamhapResult {
   coherence?: SamhapCoherence
   targetName?: string
   error?: string
-  errorType?: 'REQUIREMENTS' | 'DEDUCT' | 'AI' | 'AUTH'
+  errorType?: 'REQUIREMENTS' | 'AI' | 'AUTH' | PassErrorType
+  /** 이용권이 모자랄 때 필요한 장 수 — 화면의 안내가 이 값을 쓴다. */
+  requiredUnits?: number
 }
 
 // ─── 내부 헬퍼 ─────────────────────────────────────────────────────────────
@@ -386,7 +388,7 @@ export async function getSamhapReadiness(targetId?: string): Promise<SamhapReadi
 /**
  * 종합사주풀이 리포트 생성 — 삼재교차법 v2.
  * 저장된 관상·손금·풍수 + 마스터 엔진 명식 재활용, 텍스트 1콜(새 이미지 없음 — 원가 구조 보존).
- * 요건 미달이면 차감 없이 반환. 차감 후 AI 실패 시 환불(1차 패턴). 파싱 실패해도 원문 폴백.
+ * 요건 미달이면 이용권을 쓰지 않고 반환. 쓴 뒤 AI 가 실패하면 되돌린다. 파싱 실패해도 원문 폴백.
  */
 export async function generateSamhapReport(targetId?: string): Promise<SamhapResult> {
   const supabase = await createClient()
@@ -404,11 +406,14 @@ export async function generateSamhapReport(targetId?: string): Promise<SamhapRes
     }
   }
 
-  // 차감 (요건 충족 확인 후에만)
-  const deduct = await deductTalisman('SAMHAP', SAMHAP_COST)
-  if (!deduct.success) {
-    return { success: false, error: deduct.error || '복채가 부족합니다.', errorType: 'DEDUCT' }
-  }
+  // 이용권 사용 — 요건 충족 확인 뒤, AI 호출 앞.
+  const charge = await chargeFeature({
+    userId: user.id,
+    featureKey: 'SAMHAP',
+    costKey: 'samhap',
+    label: '종합사주풀이',
+  })
+  if (!charge.ok) return charge.failure
 
   try {
     const sajuBlock = await buildSajuBlock(inputs)
@@ -441,8 +446,6 @@ export async function generateSamhapReport(targetId?: string): Promise<SamhapRes
     // 점수 = 삼재 정합도(오행 교차 판정). 오행형 미확인 시 기존 관상·손금 평균 폴백.
     const score = coherence?.score ?? Math.round(((inputs.face.score ?? 60) + (inputs.hand.score ?? 60)) / 2)
 
-    await addBokPoints(30, 'ANALYSIS', undefined, '종합사주풀이 리포트').catch(() => {})
-
     const samhapResult: SamhapResult = {
       success: true,
       parsed: empty ? undefined : parsed,
@@ -471,11 +474,11 @@ export async function generateSamhapReport(targetId?: string): Promise<SamhapRes
     return samhapResult
   } catch (e) {
     logger.error('[generateSamhapReport] AI 실패:', e)
-    const refund = await refundStudioCost('SAMHAP')
+    await charge.refundOnFailure?.()
     return {
       success: false,
-      error: refund.refunded
-        ? '복채는 돌려드렸습니다. 잠시 후 다시 시도해주세요.'
+      error: charge.refundOnFailure
+        ? '쓴 이용권은 돌려드렸어요. 잠시 후 다시 시도해 주세요.'
         : '종합사주풀이 분석 중 오류가 발생했습니다.',
       errorType: 'AI',
     }

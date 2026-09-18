@@ -13,7 +13,11 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
-import { formatFeatureCost, type FeatureCostKey } from '@/lib/domain/payment/feature-costs'
+import { FEATURE_COST, formatFeatureCost, type FeatureCostKey } from '@/lib/domain/payment/feature-costs'
+import { PASS_VALID_DAYS, SHAMAN_QUESTIONS_PER_PASS } from '@/lib/domain/entitlement/pass'
+import { PURCHASE_EXPIRE_DAYS } from '@/lib/domain/chat/entitlements'
+import { FREE_TIER_LIMITS } from '@/lib/domain/payment/membership-benefits'
+import { FEATURE_MIN_TIER, TIER_FEATURE_LABEL, TIER_LABEL } from '@/lib/domain/payment/membership-tiers'
 import { StoryReveal } from './story-reveal'
 import { StorySectionHeading } from './story-section-heading'
 
@@ -98,24 +102,23 @@ const COMPANIONS: readonly CompanionItem[] = [
   {
     icon: Flame,
     label: '나만의 신당 · 기원(祈願)',
-    desc: '신위를 모시고 소원을 올립니다. 하루 한 번의 기도가 쌓여 기원 단(壇)이 오르고, 단에 따라 테마와 신물이 열립니다.',
+    desc: '신위를 모시고 소원을 올립니다. 하루 한 번의 기도가 쌓여 기원 단(壇)이 오르고, 단에 따라 테마와 신물이 열립니다. 모실 수 있는 신위와 테마는 멤버십 등급에 따라서도 열립니다.',
   },
   {
     icon: MessagesSquare,
     label: '신령님과 속풀이',
-    desc: '명리학에 뿌리를 둔 神과 문답하며 속을 풉니다.',
-    badge: '멤버십 · 1일 이용권',
+    desc: `명리학에 뿌리를 둔 神과 문답하며 속을 풉니다. 이용권 ${FEATURE_COST.shamanQuestions.display}장이면 질문 ${SHAMAN_QUESTIONS_PER_PASS}문을 ${PURCHASE_EXPIRE_DAYS}일 동안 쓸 수 있습니다.`,
+    badge: '멤버십 · 이용권',
   },
   {
     icon: Users,
     label: '가족 등록',
-    desc: '가족 각각의 사주와 신당, 서로의 궁합과 미션을 한곳에서 관리합니다.',
-    badge: '멤버십 전용',
+    desc: `가족 각각의 사주, 서로의 궁합과 미션을 한곳에서 관리합니다. 무료로 ${FREE_TIER_LIMITS.relationshipLimit}명까지 등록할 수 있고, 멤버십은 등급에 따라 더 많이 등록합니다. ${TIER_FEATURE_LABEL.familyMap}은 ${TIER_LABEL[FEATURE_MIN_TIER.familyMap]} 멤버십부터 열립니다.`,
   },
   {
     icon: Archive,
     label: '운세 기록 보관',
-    desc: '본 분석은 계정에 저장됩니다. 시간이 지난 뒤 그때의 해석을 다시 펼쳐볼 수 있습니다.',
+    desc: `본 분석은 계정에 저장됩니다. 시간이 지난 뒤 그때의 해석을 다시 펼쳐볼 수 있습니다. 보관 개수는 등급마다 다르고(무료 ${FREE_TIER_LIMITS.storageLimit}개), 넘으면 오래된 기록부터 정리됩니다.`,
   },
 ]
 
@@ -134,7 +137,7 @@ export function StoryOfferings() {
               <span className="text-gold-300">계속 펼쳐보는 기록</span>
             </>
           }
-          description="필요한 것만 골라 복채로 결제합니다. 매달 묶어서 내라고 강요하지 않습니다."
+          description="필요한 풀이만 골라 이용권으로 봅니다. 매달 묶어서 내라고 강요하지 않습니다."
         />
       </StoryReveal>
 
@@ -232,7 +235,9 @@ export function StoryOfferings() {
 
       <StoryReveal index={1}>
         <p className="mt-5 font-sans text-[11px] leading-relaxed text-ink-light/65 break-keep m-0">
-          ※ 복채는 서비스 내 결제에 쓰이는 포인트입니다. 표시 금액은 실제 차감액과 같습니다.
+          ※ 이용권은 해화당 서비스에만 쓰이며 다른 사람에게 넘길 수 없습니다. 구매한 이용권은 결제일로부터{' '}
+          {PASS_VALID_DAYS}일 동안 쓸 수 있고, 멤버십의 매달 이용권은 다음 달로 이월되지 않습니다. 표시된 장 수가 실제로
+          쓰이는 장 수와 같습니다.
         </p>
       </StoryReveal>
     </section>

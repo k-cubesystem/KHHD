@@ -45,9 +45,9 @@ export function ImageCapture({
       return
     }
 
-    // 매직바이트 검증(S-2) — 확장자·MIME 위조를 복채 차감(분석 시작) 전에 끊는다.
-    // 서버 액션에도 같은 게이트가 있으나, 차감은 이 화면에서 먼저 일어나므로 여기서 막아야
-    // 환불 경로를 타지 않는다. 읽기 실패는 fail-closed(막는다).
+    // 매직바이트 검증(S-2) — 확장자·MIME 위조를 분석 시작 전에 끊는다.
+    // 서버 액션에도 같은 게이트가 이용권 사용 앞에 있으나, 여기서 먼저 막아야 올리고 거절당하는
+    // 헛걸음이 없다. 읽기 실패는 fail-closed(막는다).
     const verdict = await verifyImageFile(file).catch((): ImageBytesVerdict => ({ ok: false, reason: 'EMPTY' }))
     if (!verdict.ok) {
       logger.warn('[ImageCapture] 매직바이트 검증 실패:', { reason: verdict.reason })

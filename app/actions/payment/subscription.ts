@@ -2,10 +2,7 @@
 import { tossBillingSecretKey } from '@/lib/config/toss-keys'
 
 import { createClient } from '@/lib/supabase/server'
-import { addTalismans } from '@/lib/services/wallet-grant'
 import { createServerClient } from '@supabase/ssr'
-import { isEdgeEnabled } from '@/lib/supabase/edge-config'
-import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { grantMembershipDeity } from '@/lib/services/membership-deity'
 import { logger } from '@/lib/utils/logger'
 import { rateLimit } from '@/lib/utils/rate-limit'
@@ -35,8 +32,8 @@ export interface MembershipPlan {
   tier: 'SINGLE' | 'FAMILY' | 'BUSINESS'
   price: number
   interval: 'MONTH' | 'YEAR'
-  talismans_per_period: number
-  daily_talisman_limit: number
+  /** 결제 주기(월)마다 쓸 수 있는 이용권 장수 — 이월 없음. 지급이 아니라 사용량 표(subscription_usage)로 센다. */
+  monthly_passes: number
   relationship_limit: number
   storage_limit: number
   features: {
@@ -49,7 +46,6 @@ export interface MembershipPlan {
     api_access?: boolean
     priority_support?: boolean
     custom_reports?: boolean
-    bonus_rate?: number
   }
   is_active: boolean
   sort_order?: number
@@ -83,7 +79,6 @@ export interface SubscriptionPayment {
   failure_reason: string | null
   billing_period_start: string | null
   billing_period_end: string | null
-  talismans_granted: number
   created_at: string
 }
 
@@ -109,9 +104,6 @@ function createAdminClient() {
 // 멤버십 플랜 조회
 // ============================================
 export async function getMembershipPlans(): Promise<MembershipPlan[]> {
-  if (isEdgeEnabled('payment')) {
-    return invokeEdgeSafe('payment', { action: 'getMembershipPlans' })
-  }
   try {
     // membership_plans RLS: is_active=true 는 누구나 조회 가능
     // admin client 실패 시 fallback으로 일반 client 사용
@@ -163,9 +155,6 @@ export async function getSubscriptionStatus(): Promise<{
   subscription: Subscription | null
   plan: MembershipPlan | null
 }> {
-  if (isEdgeEnabled('payment')) {
-    return invokeEdgeSafe('payment', { action: 'getSubscriptionStatus' })
-  }
   try {
     const supabase = await createClient()
     const {
@@ -238,17 +227,26 @@ export async function createBillingAuthUrl(planId: string): Promise<{
     return { success: false, error: '유효하지 않은 멤버십 플랜입니다.' }
   }
 
-  // 기존 구독 확인
-  const { data: existingSub } = await supabase
+  // 기존 구독 확인 — 막는 근거는 «정기결제 중인» 활성 구독뿐이다.
+  // 🔴 관리자가 결제 없이 부여한 구독(billing_key 없음)은 막지 않는다. 막으면 부여받은 회원이 유료로 올릴 길이 없다.
+  const { data: existingSubs } = await supabase
     .from('subscriptions')
     .select('*')
     .eq('user_id', user.id)
     .in('status', ['ACTIVE', 'PENDING'])
-    .single()
+    .order('created_at', { ascending: false })
 
-  if (existingSub?.status === 'ACTIVE') {
+  const nowMs = Date.now()
+  const livePaidSub = (existingSubs ?? []).find(
+    (s) =>
+      s.status === 'ACTIVE' &&
+      !!s.billing_key &&
+      (!s.current_period_end || new Date(s.current_period_end).getTime() > nowMs)
+  )
+  if (livePaidSub) {
     return { success: false, error: '이미 활성화된 구독이 있습니다.' }
   }
+  const existingSub = (existingSubs ?? []).find((s) => s.status === 'PENDING') ?? null
 
   // customerKey 생성 (사용자별 고유)
   const customerKey = `HHD_${user.id.slice(0, 8)}_${Date.now()}`
@@ -486,7 +484,6 @@ export async function executeFirstPayment(customerKey: string): Promise<{
     status: 'SUCCESS',
     billing_period_start: now.toISOString(),
     billing_period_end: periodEnd.toISOString(),
-    talismans_granted: plan.talismans_per_period,
   })
   if (successLogError) {
     logger.error('[Subscription] Success-payment log insert error:', successLogError)
@@ -506,12 +503,20 @@ export async function executeFirstPayment(customerKey: string): Promise<{
     .select()
     .single()
 
-  // 3. 부적 지급
-  await addTalismans(
-    plan.talismans_per_period,
-    'SUBSCRIPTION',
-    `${plan.name} 구독 - 부적 ${plan.talismans_per_period}장 지급`
-  )
+  // 멤버십은 아무것도 지급하지 않는다 — 이번 달 이용권은 사용량 표(subscription_usage)가 구독 기간으로 센다.
+  // (재화를 지급하는 구독은 토스 빌링 심사에서 «충전»으로 거절된다.)
+
+  // 3. 관리자가 결제 없이 부여했던 구독은 닫는다 — 활성 구독이 둘이면 등급·월 몫 판정이 흔들린다.
+  const { error: closeGrantedError } = await adminDb
+    .from('subscriptions')
+    .update({ status: 'EXPIRED', current_period_end: now.toISOString() })
+    .eq('user_id', user.id)
+    .eq('status', 'ACTIVE')
+    .is('billing_key', null)
+    .neq('id', subscription.id)
+  if (closeGrantedError) {
+    logger.error('[Subscription] 관리자 부여 구독 정리 실패:', closeGrantedError)
+  }
 
   // 4. 멤버십 무료신 증정 (등급당 1위, 멱등·해지해도 보유 유지). 실패해도 구독은 성공.
   await grantMembershipDeity(subscription.user_id, plan.tier)
@@ -531,9 +536,6 @@ export async function cancelSubscription(reason?: string): Promise<{
   success: boolean
   error?: string
 }> {
-  if (isEdgeEnabled('payment')) {
-    return invokeEdgeSafe('payment', { action: 'cancelSubscription', reason })
-  }
   const supabase = await createClient()
   const {
     data: { user },

@@ -26,12 +26,15 @@ import {
   Store,
   Globe,
   Flag,
+  Ticket,
   type LucideIcon,
 } from 'lucide-react'
 import { LocaleSwitcher } from '@/components/shared/locale-switcher'
-import { getWalletBalance } from '@/app/actions/payment/wallet'
+import { getMyPassSummary } from '@/app/actions/payment/passes'
+import { EMPTY_PASS_SUMMARY, passBadgeLabel, type PassSummary } from '@/lib/domain/entitlement/pass'
 import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getUserLimitsSummary } from '@/app/actions/payment/membership'
+import { TIER_LABEL, isMembershipTier } from '@/lib/domain/payment/membership-tiers'
 import { Button } from '@/components/ui/button'
 import { getSajuData } from '@/lib/domain/saju/saju'
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'
@@ -101,9 +104,9 @@ const PROFILE_GROUPS: readonly {
   },
   {
     title: '살림',
-    gloss: '복채 · 멤버십 · 설정',
+    gloss: '이용권 · 멤버십 · 설정',
     items: [
-      { href: '/protected/store', icon: Store, label: '상점', sub: '복채 충전과 신물' },
+      { href: '/protected/store', icon: Store, label: '상점', sub: '이용권 구매와 신물' },
       { href: '/protected/store?tab=membership', icon: Shield, label: '멤버십', sub: '등급과 혜택' },
       { href: '/protected/notifications', icon: Headphones, label: '알림', sub: '공지와 소식' },
       { href: '/protected/settings', icon: UserIcon, label: '내 정보 설정', sub: '프로필과 계정' },
@@ -189,19 +192,11 @@ export default async function MyPage() {
     is_leap_month: boolean | null
     email: string | null
   }
-  interface AttendanceStatus {
-    checkedDates: string[]
-    consecutiveStreak: number
-    weekCount: number
-    totalBokchae: number
-    canCheckIn: boolean
-  }
-
   let profile: ProfileRecord | null = null
-  let walletBalance = 0
+  let passSummary: PassSummary = EMPTY_PASS_SUMMARY
   let recordCount = 0
   let userRoleData: { role: string; userId: string | null } = { role: 'user', userId: null }
-  let attendanceStatus: AttendanceStatus | null = null
+  let attendanceStatus: Awaited<ReturnType<typeof getMonthlyAttendance>> | null = null
   let seatedDeity: { name: string; portraitUrl: string | null } | null = null
 
   try {
@@ -210,12 +205,12 @@ export default async function MyPage() {
     logger.error('Error fetching profile:', error)
   }
   try {
-    walletBalance = await getWalletBalance()
+    passSummary = (await getMyPassSummary()) ?? EMPTY_PASS_SUMMARY
   } catch (error) {
-    logger.error('Error fetching wallet balance:', error)
+    logger.error('Error fetching pass summary:', error)
   }
   try {
-    attendanceStatus = (await getMonthlyAttendance()) as AttendanceStatus
+    attendanceStatus = await getMonthlyAttendance()
   } catch (error) {
     logger.error('Error fetching attendance:', error)
   }
@@ -257,9 +252,15 @@ export default async function MyPage() {
   const isAdmin = userRoleData?.role === 'admin'
 
   const userLimits = await getUserLimitsSummary()
-  const tier = isAdmin ? '관리자' : userLimits.tier || '무료 회원'
+  // 등급 코드(SINGLE 등)를 그대로 보이지 않는다 — 이름은 membership-tiers 가 정본.
+  const tier = isAdmin
+    ? '관리자'
+    : isMembershipTier(userLimits.tier)
+      ? `${TIER_LABEL[userLimits.tier]} 멤버십`
+      : userLimits.tier === 'TESTER'
+        ? '테스터'
+        : '무료 회원'
   const isSubscribed = userLimits.is_subscribed
-  const talismanBalance = typeof walletBalance === 'number' ? walletBalance : 0
 
   // ── 사주 정체성 (일간·오행) 서버 계산 ──
   let identity: SajuIdentity | null = null
@@ -463,21 +464,21 @@ export default async function MyPage() {
         ))}
       </section>
 
-      {/* ── 3. 지표 스트립: 복채 · 멤버십 · 기록 ── */}
+      {/* ── 3. 지표 스트립: 이용권 · 멤버십 · 기록 ── */}
       <section
         aria-label="현황"
         className="px-3 mb-3.5 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100 relative z-10"
       >
         <div className="grid grid-cols-3 gap-2">
           <Link
-            href="/protected/store"
+            href="/protected/store?tab=pass"
             className="group rounded-xl border border-primary/20 bg-surface/40 p-3 flex flex-col items-center gap-1 transition-all hover:border-primary/50 hover:bg-surface/60 active:scale-95"
           >
-            <Coins className="h-4 w-4 text-primary/80" strokeWidth={1.5} />
-            <span className="font-serif text-lg font-medium text-ink-light leading-none group-hover:text-primary">
-              {talismanBalance}
+            <Ticket className="h-4 w-4 text-primary/80" strokeWidth={1.5} />
+            <span className="font-serif text-[13px] font-medium text-ink-light leading-tight text-center mt-1 group-hover:text-primary">
+              {passBadgeLabel(passSummary)}
             </span>
-            <span className="text-[9.5px] text-ink-light/45">복채 만냥</span>
+            <span className="text-[9.5px] text-ink-light/45">이용권</span>
           </Link>
           <Link
             href="/protected/store?tab=membership"
@@ -502,14 +503,12 @@ export default async function MyPage() {
         </div>
       </section>
 
-      {/* ── 4. 오늘: 출석 (기능·데이터 불변, 배너만 컴팩트) ── */}
+      {/* ── 4. 오늘: 출석 — 보상은 신당 정성(재화 없음) ── */}
       <section className="px-3 mb-3.5 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 relative z-10">
         <DailyCheckIn
-          canCheckIn={attendanceStatus?.canCheckIn ?? true}
-          checkedDates={attendanceStatus?.checkedDates || []}
-          weekCount={attendanceStatus?.weekCount || 0}
-          totalBokchae={attendanceStatus?.totalBokchae || 0}
-          consecutiveStreak={attendanceStatus?.consecutiveStreak || 0}
+          canCheckIn={attendanceStatus?.success ? attendanceStatus.canCheckIn : true}
+          checkedDates={attendanceStatus?.checkedDates ?? []}
+          consecutiveStreak={attendanceStatus?.consecutiveStreak ?? 0}
         />
       </section>
 

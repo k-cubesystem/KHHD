@@ -56,7 +56,7 @@ export function ShrineGuideBar({ neededElementKo, neededElementPlaced, mainDeity
     if (canCheckIn)
       t.push({
         id: 'attend',
-        text: '오늘 출석하고 복채 1만냥을 받아가세요.',
+        text: '오늘 출석을 남겨 신당 정성을 이어 가세요.',
         cta: '출석하기',
         href: '/protected/profile',
       })

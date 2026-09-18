@@ -14,6 +14,8 @@ import { logger } from '@/lib/utils/logger'
 import { toast } from 'sonner'
 import { useUpgradeNudge } from '@/hooks/use-upgrade-nudge'
 import { MembershipNudgeModal } from '@/components/membership/membership-nudge-modal'
+import { useInsufficientPass } from '@/hooks/use-insufficient-pass'
+import { InsufficientPassModal } from '@/components/payment/insufficient-pass-modal'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
@@ -43,7 +45,8 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
     actionItems: string[]
   } | null>(null)
 
-  const { nudgeModal, closeNudge, handleDeductResult, trackAnalysis } = useUpgradeNudge()
+  const { nudgeModal, closeNudge, trackAnalysis } = useUpgradeNudge()
+  const { passModal, handleChargeResult, closePassModal } = useInsufficientPass()
 
   const member = targets.find((t) => t.id === selectedId) ?? null
   const showSelect = targets.length > 1
@@ -59,15 +62,8 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
       // memberId 는 destiny target id — 본인=profiles.id / 가족=family_members.id (다형)
       const result = await analyzeWealth({ memberId: member.id })
 
-      // Handle daily limit / premium errors → show upgrade nudge
-      if (
-        !result.success &&
-        handleDeductResult(result as { success: boolean; error?: string; errorType?: string }, {
-          featureLabel: '재물운 분석',
-        })
-      ) {
-        return
-      }
+      // 이용권이 모자라면 안내 모달을 열고 멈춘다(장 수는 서버가 실어 보낸 값).
+      if (handleChargeResult(result, { featureLabel: '재물운 분석' })) return
 
       if (result.success && result.analysis && typeof result.analysis === 'object') {
         setWealthAnalysis(result.analysis)
@@ -332,6 +328,7 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
 
       {/* Membership upgrade nudge */}
       <MembershipNudgeModal {...nudgeModal} onClose={closeNudge} />
+      <InsufficientPassModal {...passModal} onClose={closePassModal} />
     </motion.div>
   )
 }

@@ -46,7 +46,7 @@ export function MobileHeader() {
         </Link>
 
         <div className="flex shrink-0 items-center">
-          {/* 태극 — 내 명식 바로보기(사람 선택·사주팔자·오행·복채·등급·신위). 종 왼쪽에 둔다:
+          {/* 태극 — 내 명식 바로보기(사람 선택·사주팔자·오행·이용권·등급·신위). 종 왼쪽에 둔다:
               «내 것»이 먼저, 알림이 그다음, 홈이 마지막. */}
           <ManseQuickView />
 

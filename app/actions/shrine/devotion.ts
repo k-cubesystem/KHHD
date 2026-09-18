@@ -12,6 +12,8 @@ import {
   rewardForLevel,
   type DevotionRewardKind,
 } from '@/lib/domain/shrine/devotion'
+import { parseRequiredTier } from '@/lib/domain/shrine/types'
+import type { MembershipTier } from '@/lib/domain/payment/membership-tiers'
 
 export type DevotionRewardUiStatus = 'locked' | 'claimable' | 'claimed' | 'owned'
 
@@ -22,8 +24,11 @@ export interface DevotionRewardStatus {
   code: string
   /** 표시용 이름 (DB name). 조회 실패 시 code 폴백. */
   name: string
-  /** 복채 정가(만냥). 0=무료. "기원 N단 무료"의 대비가격. */
-  priceBokchae: number
+  /**
+   * 테마 보상이 멤버십으로 열리는 등급(shrine_theme_packs.required_tier). 신물·누구나 테마는 null.
+   * 「패밀리 등급 테마 · 기원 N단 무료」처럼 무엇을 받는지 알리는 표기에만 쓴다.
+   */
+  requiredTier: MembershipTier | null
   status: DevotionRewardUiStatus
 }
 
@@ -54,8 +59,8 @@ export async function getDevotionStatus(): Promise<DevotionStatus | null> {
       supabase.from('shrine_devotion_claims').select('reward_level').eq('user_id', user.id),
       supabase.from('user_theme_packs').select('pack_id').eq('user_id', user.id),
       supabase.from('user_shrine_inventory').select('catalog_item_id, qty').eq('user_id', user.id),
-      supabase.from('shrine_theme_packs').select('id, code, name, price_bokchae'),
-      supabase.from('shrine_item_catalog').select('id, name, price_bokchae'),
+      supabase.from('shrine_theme_packs').select('id, code, name, required_tier'),
+      supabase.from('shrine_item_catalog').select('id, name'),
     ])
 
   const totalDays = dev?.total_days ?? 0
@@ -70,20 +75,19 @@ export async function getDevotionStatus(): Promise<DevotionStatus | null> {
 
   const rewards: DevotionRewardStatus[] = DEVOTION_REWARDS.map((r) => {
     let name = r.code
-    let priceBokchae = 0
+    let requiredTier: MembershipTier | null = null
     let alreadyOwned = false
     if (r.kind === 'theme') {
       const p = themeByCode.get(r.code)
       if (p) {
         name = p.name
-        priceBokchae = p.price_bokchae ?? 0
+        requiredTier = parseRequiredTier(p.required_tier)
         alreadyOwned = ownedThemeIds.has(p.id)
       }
     } else {
       const it = itemByName.get(r.code)
       if (it) {
         name = it.name
-        priceBokchae = it.price_bokchae ?? 0
         alreadyOwned = ownedItemIds.has(it.id)
       }
     }
@@ -94,7 +98,7 @@ export async function getDevotionStatus(): Promise<DevotionStatus | null> {
     else if (progress.level >= r.level) status = 'claimable'
     else status = 'locked'
 
-    return { level: r.level, kind: r.kind, code: r.code, name, priceBokchae, status }
+    return { level: r.level, kind: r.kind, code: r.code, name, requiredTier, status }
   })
 
   return {
@@ -116,9 +120,9 @@ export interface ClaimResult {
 }
 
 /**
- * 기원 보상 수령 — 무료 지급(복채 차감 없음).
+ * 기원 보상 수령 — 무료 지급.
  * 검증: 단 도달(서버 신뢰) → 이미 보유면 안내(수령 불필요) → 수령 기록 선점(PK 멱등) → 지급.
- * 테마는 user_theme_packs, 신물은 grant_shrine_item RPC(구매 경로와 동일한 지급 함수 재사용).
+ * 테마는 user_theme_packs(등급과 무관하게 남는 소유), 신물은 grant_shrine_item RPC(상점 받기와 같은 지급 함수).
  */
 export async function claimDevotionReward(level: number): Promise<ClaimResult> {
   const supabase = await createClient()

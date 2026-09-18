@@ -13,6 +13,7 @@ import {
   type JourneyRewardChoiceStatus,
 } from '@/app/actions/analysis/journey-reward'
 import { JOURNEY_COMPLETE_TITLE, type JourneyRewardKind } from '@/lib/domain/analysis/journey-reward'
+import { TIER_LABEL } from '@/lib/domain/payment/membership-tiers'
 import { GA } from '@/lib/analytics/ga4'
 
 const CLAIM_ERROR_COPY: Record<string, string> = {
@@ -147,6 +148,12 @@ export function JourneyRewardSheet({ open, onOpenChange, onClaimed }: JourneyRew
   )
 }
 
+/** 후보가 무엇인지 — 「싱글 등급 신위」처럼 멤버십 등급으로 열리는 자리를 밝힌다(값 대비 표기는 없다). */
+function choiceTierLine(c: JourneyRewardChoiceStatus): string {
+  const noun = c.kind === 'deity' ? '신위' : '테마'
+  return c.requiredTier ? `${TIER_LABEL[c.requiredTier]} 등급 ${noun}` : noun
+}
+
 function ChoiceGroup({
   title,
   icon,
@@ -195,8 +202,8 @@ function ChoiceGroup({
                   <span className="text-ink-light/40">보유 중</span>
                 ) : (
                   <>
-                    <span className="text-ink-light/30 line-through mr-1">{c.priceBokchae}만냥</span>
-                    <span className="text-gold-500/80 font-medium">완주 무료</span>
+                    <span className="text-ink-light/40 mr-1">{choiceTierLine(c)} ·</span>
+                    <span className="text-gold-500/80 font-medium">완주 선물</span>
                   </>
                 )}
               </p>

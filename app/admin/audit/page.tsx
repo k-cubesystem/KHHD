@@ -20,6 +20,19 @@ interface AuditRow {
 
 function summarize(action: string, detail: Record<string, unknown>): string {
   switch (action) {
+    case 'pass_adjust': {
+      const d = Number(detail.delta) || 0
+      const days = Number(detail.validDays) || 0
+      return [
+        `${d > 0 ? '+' : '−'}${Math.abs(d)}장`,
+        `보유 ${Number(detail.before) || 0} → ${Number(detail.after) || 0}장`,
+        d > 0 && days > 0 ? `유효 ${days}일` : null,
+        `사유: ${detail.reason ?? '-'}`,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    }
+    // 폐지된 복채 조작의 옛 기록 — 그대로 읽히게 둔다.
     case 'balance_adjust': {
       const d = Number(detail.delta) || 0
       return `${Number(detail.before) ?? '?'} → ${Number(detail.after) ?? '?'}만냥 (${d > 0 ? '+' : ''}${d.toLocaleString()}) · 사유: ${detail.reason ?? '-'}`
@@ -74,7 +87,7 @@ export default async function AdminAuditPage() {
     <div className="space-y-4 md:space-y-6">
       <AdminPageHeader
         title="감사 로그"
-        description="관리자 조작 기록 — 복채·권한·구독·가격·알림 발송·서비스 스위치. 최근 100건."
+        description="관리자 조작 기록 — 이용권·권한·구독·가격·알림 발송·서비스 스위치. 최근 100건."
         icon={<ShieldAlert className="h-5 w-5 text-gold-500" aria-hidden />}
       />
 

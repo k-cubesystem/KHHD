@@ -20,7 +20,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { toGeminiHistory } from '@/lib/domain/chat/history'
 import { recallMemories } from '@/lib/ai/memory'
@@ -32,9 +31,9 @@ import { computeEnergy, indexCatalog, ELEMENTS, EL_KO } from '@/lib/domain/shrin
 import { awardDeityBondForUser } from '@/lib/services/deity-bond'
 import { bondProgress, BOND_LEVEL_NAMES, type BondLevel } from '@/lib/domain/shrine/deities'
 import {
+  MASTER_QUESTION_ALLOWANCE,
   MEMBER_WEEKLY_QUESTIONS,
   ONBOARDING_FREE_QUESTIONS,
-  PURCHASE_COST_BOKCHAE,
   PURCHASE_QUESTIONS,
   chatUsageDateKey,
   memberWeekWindow,
@@ -43,7 +42,9 @@ import {
 } from '@/lib/domain/chat/entitlements'
 import { getUserRole } from '@/lib/supabase/helpers'
 import { getActiveMembership } from '@/lib/auth/subscription'
-import { hasUnlimitedAccess, UNLIMITED_BALANCE } from '@/lib/auth/privileges'
+import { hasUnlimitedAccess } from '@/lib/auth/privileges'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { formatPassUnits } from '@/lib/domain/entitlement/pass'
 
 // --- 상수 (액션·라우트 공용) ---
 
@@ -95,8 +96,7 @@ export interface ShamanChatMessage {
  */
 export interface ShamanQuestionStatus {
   success: boolean
-  walletBalance: number
-  /** 멤버십 여부 — 화면이 «충전»과 «가입»을 갈라 안내하는 데 쓴다. */
+  /** 멤버십 여부 — 화면이 «이용권으로 열기»와 «가입»을 갈라 안내하는 데 쓴다. */
   isMember: boolean
   /** 명식 입력 완료 맛보기 잔여(평생 1회). */
   onboardingCredits: number
@@ -256,7 +256,6 @@ export async function loadQuestionStatus(): Promise<ShamanQuestionStatus> {
   const defaultResult: ShamanQuestionStatus = {
     success: false,
     memberWeekStartIso: null,
-    walletBalance: 0,
     isMember: false,
     onboardingCredits: 0,
     memberWeeklyUsed: 0,
@@ -277,8 +276,7 @@ export async function loadQuestionStatus(): Promise<ShamanQuestionStatus> {
 
     const nowMs = Date.now()
 
-    const [walletBalance, membership, creditsResult, profileResult, adLedgerResult] = await Promise.all([
-      getWalletBalance(), // admin=999, tester=100, 일반=실제 잔액
+    const [membership, creditsResult, profileResult, adLedgerResult] = await Promise.all([
       getActiveMembership(user.id),
       supabase
         .from('shaman_question_credits')
@@ -323,22 +321,21 @@ export async function loadQuestionStatus(): Promise<ShamanQuestionStatus> {
       else if (typeof granted === 'number') onboardingCredits += granted
     }
 
-    // 마스터: 상한 자체를 개방 (잔액만 무한이고 질문은 막히던 비대칭 해소)
+    // 마스터: 상한 자체를 개방 (풀이는 통과인데 질문만 막히던 비대칭 해소)
     const role = await getUserRole(supabase, user.id)
     if (hasUnlimitedAccess(role)) {
       return {
         success: true,
         memberWeekStartIso: null, // 마스터는 상한 자체가 없다
-        walletBalance,
         isMember: true,
         onboardingCredits,
         memberWeeklyUsed: 0,
-        memberWeeklyTotal: UNLIMITED_BALANCE,
-        memberWeeklyRemaining: UNLIMITED_BALANCE,
+        memberWeeklyTotal: MASTER_QUESTION_ALLOWANCE,
+        memberWeeklyRemaining: MASTER_QUESTION_ALLOWANCE,
         adCredits,
         purchasedCredits,
         purchasedExpiresAt,
-        totalRemaining: UNLIMITED_BALANCE,
+        totalRemaining: MASTER_QUESTION_ALLOWANCE,
       }
     }
 
@@ -364,7 +361,6 @@ export async function loadQuestionStatus(): Promise<ShamanQuestionStatus> {
     return {
       success: true,
       memberWeekStartIso,
-      walletBalance,
       isMember: Boolean(membership),
       onboardingCredits,
       memberWeeklyUsed,
@@ -424,7 +420,7 @@ export async function prepareShamanChat(
   if (status.totalRemaining <= 0) {
     return {
       ok: false,
-      error: `질문 횟수가 모두 소진되었습니다. 복채 ${PURCHASE_COST_BOKCHAE}만냥으로 질문권 ${PURCHASE_QUESTIONS}회를 충전하거나, 광고를 보고 받으실 수 있습니다.`,
+      error: `질문 횟수를 모두 썼어요. ${formatPassUnits(FEATURE_COST.shamanQuestions.display)}으로 질문 ${PURCHASE_QUESTIONS}문을 열거나, 광고를 보고 받을 수 있어요.`,
       noCredits: true,
     }
   }
@@ -673,7 +669,7 @@ export async function finalizeShamanChat(prepared: PreparedChat, rawText: string
   if (prepared.records.hand) suggestions.push('손금에서 가장 주목해야 할 부분이 있나요?')
   suggestions.push('올해 가장 조심해야 할 것은?', '이번 달 주요 운세 흐름은?', '저에게 맞는 개운법을 알려주세요')
 
-  // 서버 기준 잔여(차감 반영). 마스터(UNLIMITED_BALANCE)는 감산 없이 그대로 내려간다.
+  // 서버 기준 잔여(차감 반영). 마스터(MASTER_QUESTION_ALLOWANCE)는 감산 없이 그대로 내려간다.
   const s = prepared.status
   const dec = (bucket: ConsumedFrom, value: number) =>
     prepared.consumedFrom === bucket ? Math.max(0, value - 1) : value

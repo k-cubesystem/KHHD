@@ -2,10 +2,12 @@ import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Coins, Crown, CreditCard, ArrowRight, RotateCcw } from 'lucide-react'
+import { ChevronLeft, Crown, CreditCard, ArrowRight, RotateCcw, Ticket } from 'lucide-react'
 import { getSubscriptionStatus } from '@/app/actions/payment/subscription'
-import { getWalletBalance } from '@/app/actions/payment/wallet'
+import { getMyPassSummary } from '@/app/actions/payment/passes'
 import { SubscriptionActions } from '@/components/membership/subscription-actions'
+import { EMPTY_PASS_SUMMARY, passSummaryLines } from '@/lib/domain/entitlement/pass'
+import { chargeRefundPolicyLine } from '@/lib/domain/payment/self-cancel'
 
 export const metadata: Metadata = {
   title: '결제 · 구독 관리',
@@ -30,7 +32,7 @@ function formatDate(value: string | null): string {
  * 결제 · 구독 관리.
  *
  * ## 🔴 이 화면은 «사는 곳»이 아니다
- * 예전에는 여기에 멤버십 3종과 복채 팩 4종 카탈로그가 통째로 또 있었다(`PaymentWidget`).
+ * 예전에는 여기에 멤버십 3종과 충전 팩 4종 카탈로그가 통째로 또 있었다(`PaymentWidget`).
  * 상점(`/protected/store`)이 이미 같은 것을 팔고 있었고, 이쪽 사본은 **죽은 `zen` 팔레트**를
  * 쓰고 있었다 — `zen.text` 가 흰색인데 카드가 `bg-white` 라 **흰 바탕에 흰 글씨**였고,
  * 좁은 폭에 3열을 밀어 넣어 글자가 세로로 한 자씩 쪼개졌다. 사람이 읽을 수 없는 화면이었다.
@@ -49,10 +51,12 @@ export default async function MembershipManagePage() {
     return redirect('/auth/login')
   }
 
-  const [{ isSubscribed, subscription, plan }, balance] = await Promise.all([
+  const [{ isSubscribed, subscription, plan }, passSummary] = await Promise.all([
     getSubscriptionStatus(),
-    getWalletBalance(),
+    getMyPassSummary(),
   ])
+  // 🔴 주머니별로 한 줄씩 — 멤버십 이번 달 몫과 보유 이용권을 한 숫자로 더하지 않는다.
+  const passLines = passSummaryLines(passSummary ?? EMPTY_PASS_SUMMARY)
 
   const status = subscription?.status ?? null
   const statusMeta = status ? (STATUS_LABEL[status] ?? STATUS_LABEL.PAUSED) : null
@@ -80,26 +84,35 @@ export default async function MembershipManagePage() {
         <p className="font-sans text-sm text-ink-light/50">지금 무엇을 쓰고 계신지, 그리고 그만두는 방법.</p>
       </header>
 
-      {/* 복채 잔액 */}
+      {/* 이용권 */}
       <section className="mb-3 rounded-2xl border border-white/[0.08] bg-surface/50 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-gold-500/25 bg-gold-500/[0.08]">
-              <Coins className="h-4 w-4 text-gold-400" aria-hidden />
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gold-500/25 bg-gold-500/[0.08]">
+              <Ticket className="h-4 w-4 text-gold-400" aria-hidden />
             </span>
-            <div>
-              <p className="font-sans text-[11px] leading-none text-ink-light/45">보유 복채</p>
-              <p className="mt-1.5 font-serif text-xl font-bold leading-none text-gold-300 tabular-nums">
-                {balance.toLocaleString('ko-KR')}
-                <span className="ml-0.5 font-sans text-[11px] font-normal text-ink-light/40">만냥</span>
-              </p>
+            <div className="min-w-0">
+              <p className="font-sans text-[11px] leading-none text-ink-light/45">이용권</p>
+              {passLines.length > 0 ? (
+                <ul className="mt-1.5 space-y-1">
+                  {passLines.map((line) => (
+                    <li key={line} className="break-keep font-serif text-[13px] font-bold leading-snug text-gold-300">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-1.5 font-serif text-[13px] font-bold leading-snug text-ink-light/70">
+                  지금 쓸 수 있는 이용권이 없어요
+                </p>
+              )}
             </div>
           </div>
           <Link
-            href="/protected/store?tab=bokchae"
+            href="/protected/store?tab=pass"
             className="inline-flex min-h-[40px] shrink-0 items-center rounded-full border border-gold-500/40 bg-gold-500/[0.12] px-4 font-serif text-[13px] text-gold-300 transition-colors hover:bg-gold-500/20"
           >
-            충전하기
+            구매하기
           </Link>
         </div>
       </section>
@@ -164,8 +177,8 @@ export default async function MembershipManagePage() {
         ) : (
           <div className="mt-4 space-y-3">
             <p className="break-keep font-sans text-[12.5px] leading-relaxed text-ink-light/50">
-              멤버십은 신당 · 가족관리 · 속풀이의 문을 엽니다. 사주 · 궁합 · 관상 · 손금 · 풍수는 멤버십이 없어도 복채로
-              보실 수 있습니다.
+              멤버십은 신당 · 가족관리 · 속풀이의 문을 열고, 한 달마다 등급별 장 수만큼 이용권을 쓰실 수 있게
+              합니다(이월 없음). 사주 · 궁합 · 관상 · 손금 · 풍수는 멤버십이 없어도 이용권으로 보실 수 있습니다.
             </p>
             <Link
               href="/protected/store?tab=membership"
@@ -186,11 +199,9 @@ export default async function MembershipManagePage() {
         >
           <p className="mb-1 flex items-center gap-1.5 font-serif text-[13.5px] font-bold text-ink-light">
             <CreditCard className="h-3.5 w-3.5 text-gold-500/70" aria-hidden />
-            복채 충전 취소
+            이용권 구매 취소
           </p>
-          <p className="font-sans text-[11.5px] leading-relaxed text-ink-light/45">
-            7일 이내 전액 환불 · 이후 90% 환불
-          </p>
+          <p className="font-sans text-[11.5px] leading-relaxed text-ink-light/45">{chargeRefundPolicyLine()}</p>
         </Link>
         <Link
           href="/protected/membership/cancel"
@@ -201,7 +212,7 @@ export default async function MembershipManagePage() {
             멤버십 해지
           </p>
           <p className="font-sans text-[11.5px] leading-relaxed text-ink-light/45">
-            잔여기간 일할 환불 · 받으신 복채는 그대로
+            기간 끝까지 쓰고 해지 · 또는 남은 기간 일할 환불
           </p>
         </Link>
       </section>

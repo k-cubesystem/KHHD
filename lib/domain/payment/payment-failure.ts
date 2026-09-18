@@ -84,8 +84,8 @@ const RULES: Record<string, Rule> = {
   },
   NOT_ENOUGH_BALANCE: {
     kind: 'rejected',
-    title: '잔액이 모자라요',
-    description: '카드 잔액이나 한도를 확인해 주세요.',
+    title: '결제 가능 금액이 모자라요',
+    description: '카드 한도나 결제 가능 금액을 확인해 주세요.',
   },
   NOT_SUPPORTED_METHOD: {
     kind: 'failed',

@@ -6,7 +6,7 @@ import { getGeminiUserUsage } from '@/app/actions/admin/gemini-usage'
 /**
  * **누가 · 무엇에 · 얼마나** 썼는지.
  *
- * 🔴 액션별 합계만으로는 «한 사람이 몰아 쓰는 것»이 안 보인다. 복채를 안 받는 내부 기능
+ * 🔴 액션별 합계만으로는 «한 사람이 몰아 쓰는 것»이 안 보인다. 이용권을 쓰지 않는 내부 기능
  *    (고민상담·신탁)은 특히 회원 단위로만 드러난다 — 원가는 나가는데 매출이 0인 자리다.
  */
 export async function GeminiUserUsage({ daysBack = 30 }: { daysBack?: number }) {

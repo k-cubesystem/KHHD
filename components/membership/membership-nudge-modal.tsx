@@ -22,14 +22,14 @@ import { logger } from '@/lib/utils/logger'
 
 // ─── Tier presentation ───────────────────────────────────────────────────────
 //
-// 🔴 등급의 «숫자»(가격·복채·인연·기록)는 여기에 적지 않는다. 예전엔 이 파일이 DB 를 손으로 베껴
+// 🔴 등급의 «숫자»(가격·월 이용권·인연·기록)는 여기에 적지 않는다. 예전엔 이 파일이 DB 를 손으로 베껴
 //    두었다가 실제와 어긋났다(무료 인연 1명·기록 3개로 적혀 있었으나 실제는 3명·10개, 지급 주기도
 //    «매일»로 잘못 적혀 있었다). 이제 membership_plans 를 그대로 읽고 문구는
 //    lib/domain/payment/membership-benefits.ts 가 만든다. 여기 남는 것은 색·아이콘뿐이다.
 
 export type MembershipTier = 'FREE' | 'SINGLE' | 'FAMILY' | 'BUSINESS'
 
-export type NudgeTrigger = 'DAILY_LIMIT' | 'PREMIUM_FEATURE' | 'GENTLE_REMINDER'
+export type NudgeTrigger = 'PREMIUM_FEATURE' | 'GENTLE_REMINDER'
 
 interface TierStyle {
   name: string
@@ -91,11 +91,12 @@ function freeTierView(): TierView {
     price: 0,
     facts: {
       interval: 'MONTH',
-      talismansPerPeriod: FREE_TIER_LIMITS.talismansPerPeriod,
+      // 무료 등급엔 멤버십 몫이 없다.
+      monthlyPasses: 0,
       relationshipLimit: FREE_TIER_LIMITS.relationshipLimit,
       storageLimit: FREE_TIER_LIMITS.storageLimit,
     },
-    perks: [`사주·궁합·관상·손금 개별 과금 이용`, `기록은 최근 ${FREE_RETENTION_DAYS}일까지 열람`],
+    perks: [`사주·궁합·관상·손금은 이용권으로 이용`, `기록은 최근 ${FREE_RETENTION_DAYS}일까지 열람`],
   }
 }
 
@@ -120,18 +121,15 @@ function priceLabel(view: TierView): string {
 }
 
 /**
- * 등급 비교 3줄. «복채 N만냥/일»이라 적던 자리 — 그건 지급량이 아니라 하루 사용 상한이었다.
- * 지급은 주기 단위이므로 그대로 «달마다 N만냥»으로 적는다.
+ * 등급 비교 3줄 — 월 이용권 · 인연 · 기록.
+ * 🔴 이용권 몫은 결제 주기가 아니라 «구독 시작일 앵커 한 달»마다 열린다(연 결제 플랜이어도 한 달 창) → «매달»로 적는다.
  */
 function factLines(view: TierView): string[] {
   const f = view.facts
   if (!f) return []
-  const bokchae =
-    f.talismansPerPeriod > 0
-      ? `복채 ${intervalWords(f.interval).every}마다 ${f.talismansPerPeriod}만냥`
-      : '복채 지급 없음'
-  const records = f.storageLimit === UNLIMITED_STORAGE_LIMIT ? '기록 제한 없음' : `기록 ${f.storageLimit}개`
-  return [bokchae, `인연 ${f.relationshipLimit}명`, records]
+  const passes = f.monthlyPasses > 0 ? `이용권 매달 ${f.monthlyPasses}장` : '멤버십 이용권 없음'
+  const records = f.storageLimit === UNLIMITED_STORAGE_LIMIT ? '기록 개수 제한 없음' : `기록 ${f.storageLimit}개`
+  return [passes, `인연 각 ${f.relationshipLimit}명`, records]
 }
 
 // Returns the next tier up from the given tier
@@ -145,17 +143,13 @@ function getNextTier(current: MembershipTier | null | undefined): MembershipTier
 // ─── Trigger copy ─────────────────────────────────────────────────────────────
 
 const TRIGGER_COPY: Record<NudgeTrigger, { title: string; subtitle: string }> = {
-  DAILY_LIMIT: {
-    title: '오늘의 복채 한도에 도달했습니다',
-    subtitle: '업그레이드하면 더 많은 운세를 볼 수 있어요',
-  },
   PREMIUM_FEATURE: {
     title: '프리미엄 기능입니다',
     subtitle: '이 기능은 더 높은 멤버십 등급에서 이용 가능합니다',
   },
   GENTLE_REMINDER: {
     title: '운세 분석이 쌓이고 있어요',
-    subtitle: '업그레이드로 한도를 늘리고 더 많은 혜택을 누리세요',
+    subtitle: '멤버십이면 매달 쓸 수 있는 이용권과 더 많은 기능이 열려요',
   },
 }
 
@@ -328,7 +322,7 @@ export function MembershipNudgeModal({
             className="w-full h-11 bg-gold-500 hover:bg-[#c9a62e] text-black font-semibold rounded-xl"
             onClick={onClose}
           >
-            <Link href="/protected/membership">
+            <Link href="/protected/store?tab=membership">
               <Crown size={16} className="mr-2" />
               {nextInfo.name}으로 업그레이드
               <ArrowRight size={15} className="ml-2" />

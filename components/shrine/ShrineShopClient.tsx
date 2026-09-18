@@ -6,9 +6,7 @@ import { Loader2, Check } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { purchaseToInventory, type ShopData } from '@/app/actions/shrine/inventory'
-import { BAEKIL_ITEM_NAME } from '@/lib/domain/ritual/baekil'
-import { devotionLevelForItem } from '@/lib/domain/shrine/devotion'
-import { SHOP_SECTIONS, sectionForType } from '@/lib/domain/shrine/shop-sections'
+import { SHOP_CLAIM_MAX_QTY, SHOP_SECTIONS, isRewardOnlyItem, sectionForType } from '@/lib/domain/shrine/shop-sections'
 import { EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { mattersLabel } from '@/lib/domain/shrine/item-matters'
 import { ZONE_LABEL } from '@/lib/domain/shrine/zones'
@@ -19,36 +17,33 @@ const RARITY: Record<string, { label: string; cls: string }> = {
   legendary: { label: '전설', cls: 'text-gold-300 border-gold-500/30 bg-gold-500/[0.08]' },
 }
 
+/**
+ * 신물 상점 — 신물·신수·세간은 **무료로 받는다**(2026-09-18 이용권 전환). 값·보유 재화 표기가 없다.
+ * 받기 가능 여부의 정본은 서버(purchaseToInventory)다 — 보상 전용 품목·보유 상한을 서버가 막고,
+ * 화면은 같은 규칙(shop-sections)으로 버튼만 미리 잠근다.
+ */
 export function ShrineShopClient({ data }: { data: ShopData }) {
   const [owned, setOwned] = useState<Record<string, number>>(data.owned)
-  const [balance, setBalance] = useState(data.bokBalance)
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
-  const buy = async (id: string, name: string, price: number) => {
-    if (price > balance) {
-      toast.error(`복채가 부족합니다 (필요: 복채 ${price.toLocaleString()}만냥)`)
-      return
-    }
+  const claim = async (id: string, name: string) => {
     setLoadingId(id)
     const res = await purchaseToInventory(id)
     setLoadingId(null)
     if (res.success) {
       setOwned((o) => ({ ...o, [id]: res.newQty ?? (o[id] ?? 0) + 1 }))
-      if (typeof res.newBalance === 'number') setBalance(res.newBalance)
       toast.success(`${name} — 보관함에 담겼어요`, { description: '신당 꾸미기에서 배치하세요' })
-    } else if (res.error === 'INSUFFICIENT_BOKCHAE') {
-      toast.error('복채가 부족합니다')
+    } else if (res.error === 'MAX_QTY') {
+      toast.error(`같은 신물은 ${SHOP_CLAIM_MAX_QTY}점까지 지닐 수 있어요`)
     } else {
-      toast.error('봉헌이 이루어지지 않았습니다. 다시 시도해주세요.')
+      toast.error('받지 못했습니다. 다시 시도해주세요.')
     }
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-ink-light/40 font-sans">
-          보유 복채: <span className="text-gold-500 font-bold tabular-nums">{balance.toLocaleString()}만냥</span>
-        </p>
+        <p className="text-xs text-ink-light/40 font-sans">신물·신수·세간은 무료로 받아 신당에 들일 수 있어요</p>
         <Link
           href="/protected/shrine"
           className="text-[11px] text-gold-300 border border-gold-500/25 rounded-lg px-3 py-1.5"
@@ -73,17 +68,14 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
               {items.map((item, idx) => {
                 const rarity = RARITY[item.rarity] ?? RARITY.common
                 const have = owned[item.id] ?? 0
-                const free = item.priceBokchae === 0
                 /**
-                 * 완주 보상 전용 품목 — 팔지 않는다(purchaseToInventory 가 REWARD_ONLY 로 거절한다).
+                 * 완주 보상 전용 품목 — 내주지 않는다(purchaseToInventory 가 REWARD_ONLY 로 거절한다).
                  * 카탈로그 조회가 전부 `is_active=true` 필터라 목록에서 숨길 수는 없다(숨기면 이미 배치한
-                 * 사람의 신당 렌더가 깨진다). 그래서 여기서 값 대신 얻는 방법을 적어 준다 —
-                 * 살 수 없는데 가격표만 붙어 있으면 그게 더 나쁜 화면이다.
+                 * 사람의 신당 렌더가 깨진다). 그래서 버튼 대신 얻는 방법을 적어 준다.
                  */
-                const rewardOnly = item.name === BAEKIL_ITEM_NAME
-                const canAfford = free || item.priceBokchae <= balance
+                const rewardOnly = isRewardOnlyItem(item.name)
+                const full = have >= SHOP_CLAIM_MAX_QTY
                 const loading = loadingId === item.id
-                const devotionLvl = have === 0 ? devotionLevelForItem(item.name) : null
                 return (
                   <motion.div
                     key={item.id}
@@ -158,34 +150,29 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
                           {item.unlockEffect.maxStack ? ` (최대 ${item.unlockEffect.maxStack}개)` : ''}
                         </p>
                       )}
-                      {devotionLvl != null && (
-                        <p className="text-[10px] text-gold-500/70 font-sans">🕯 기원 {devotionLvl}단 무료</p>
-                      )}
                     </div>
 
                     <button
-                      onClick={() => buy(item.id, item.name, item.priceBokchae)}
-                      disabled={loading || rewardOnly || !canAfford}
+                      onClick={() => claim(item.id, item.name)}
+                      disabled={loading || rewardOnly || full}
                       className={`w-full py-2 rounded-lg text-xs font-serif font-bold transition-all disabled:opacity-40 ${
                         rewardOnly
                           ? 'bg-white/[0.04] border border-gold-500/20 text-gold-500/70'
-                          : free
-                            ? 'bg-success/15 border border-success/30 text-success-text'
-                            : canAfford
-                              ? 'bg-gold-500/15 border border-gold-500/30 text-gold-300'
-                              : 'bg-white/[0.04] border border-white/[0.06] text-ink-light/30'
+                          : full
+                            ? 'bg-white/[0.04] border border-white/[0.06] text-ink-light/30'
+                            : 'bg-success/15 border border-success/30 text-success-text'
                       }`}
                     >
                       {loading ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />
                       ) : rewardOnly ? (
                         '🕯 백일기도 완주 보상'
-                      ) : free ? (
-                        <span className="flex items-center justify-center gap-1">
-                          <Check className="w-3 h-3" /> 무료로 받기
-                        </span>
+                      ) : full ? (
+                        `${SHOP_CLAIM_MAX_QTY}점 모두 지님`
                       ) : (
-                        `복채 ${item.priceBokchae.toLocaleString()}만냥`
+                        <span className="flex items-center justify-center gap-1">
+                          <Check className="w-3 h-3" /> {have > 0 ? '하나 더 받기' : '무료로 받기'}
+                        </span>
                       )}
                     </button>
                   </motion.div>

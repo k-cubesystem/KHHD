@@ -7,8 +7,6 @@
 import { createClient } from '@/lib/supabase/server'
 
 jest.mock('@/lib/supabase/server', () => ({ createClient: jest.fn() }))
-jest.mock('@/lib/supabase/edge-config', () => ({ isEdgeEnabled: () => false }))
-jest.mock('@/lib/services/wallet-grant', () => ({ addTalismans: jest.fn(async () => ({ success: true })) }))
 jest.mock('@/lib/services/membership-deity', () => ({ grantMembershipDeity: jest.fn() }))
 jest.mock('@/lib/utils/rate-limit', () => ({ rateLimit: jest.fn(async () => ({ success: true })) }))
 jest.mock('@/lib/utils/logger', () => ({

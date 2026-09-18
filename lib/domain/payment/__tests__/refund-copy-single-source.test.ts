@@ -7,17 +7,19 @@
  * 1차 통과 후 2차 회신을 기다리는 중에 자초하는 반려 사유다.
  *
  * 같은 숫자가 화면 4곳에 손으로 박혀 있어 수수료율을 바꾸면 옛 숫자가 남는 구조이기도 했다.
+ * 2026-09-18 이용권 전환 — 문구의 대상이 «미사용 이용권»으로 바뀌었고, 규율은 그대로다.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { chargeRefundPolicyLine, WITHDRAWAL_PERIOD_DAYS, LATE_CANCEL_FEE_RATE } from '../self-cancel'
+import { findBannedPassTerms } from '@/lib/domain/entitlement/pass'
 
 const ROOT = join(__dirname, '..', '..', '..', '..')
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8')
 
 /** 결제 전에 환불 조건을 보여주는 화면들. 새 결제 화면이 생기면 여기에 더한다. */
 const COPY_SCREENS = [
-  'components/membership/talisman-purchase-section.tsx',
+  'components/store/pass-purchase-section.tsx',
   'app/protected/store/checkout/page.tsx',
   'components/payment/purchase-consent.tsx',
 ]
@@ -33,6 +35,12 @@ describe('환불 조건 문구', () => {
     // 지금 값(10%)에서 「90%」가 나오는지 — 상수와 문구가 실제로 연결돼 있음을 확인.
     expect(LATE_CANCEL_FEE_RATE).toBe(0.1)
     expect(chargeRefundPolicyLine()).toContain('90%')
+  })
+
+  it('대상은 «미사용 이용권»이다 — 잔액형 재화 어휘를 쓰지 않는다', () => {
+    const line = chargeRefundPolicyLine()
+    expect(line).toBe('미사용 이용권은 결제일로부터 7일 이내 전액, 이후 90% 환불합니다.')
+    expect(findBannedPassTerms(line)).toEqual([])
   })
 
   it.each(COPY_SCREENS)('%s 는 정본 함수를 쓰고 숫자를 직접 적지 않는다', (rel) => {

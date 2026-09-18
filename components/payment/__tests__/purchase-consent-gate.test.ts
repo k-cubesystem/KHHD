@@ -21,7 +21,7 @@ const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
 /** 결제창을 여는 화면 — 새 결제 경로가 생기면 여기에 더한다. */
 const PAY_SCREENS = [
   { label: '멤버십 정기결제', file: 'app/protected/membership/checkout/page.tsx' },
-  { label: '복채 일반결제', file: 'app/protected/store/checkout/bokchae-checkout-client.tsx' },
+  { label: '이용권 일반결제', file: 'app/protected/store/checkout/pass-checkout-client.tsx' },
 ] as const
 
 describe('🔴 동의 없이는 결제창이 열리지 않는다', () => {
@@ -43,7 +43,9 @@ describe('🔴 동의 없이는 결제창이 열리지 않는다', () => {
   })
 })
 
-describe('🔴 복채도 주문 확인 화면을 거친다', () => {
+const PURCHASE_SECTION = 'components/store/pass-purchase-section.tsx'
+
+describe('🔴 이용권도 주문 확인 화면을 거친다', () => {
   /**
    * 예전에는 상점 카드의 「충전하기」가 곧바로 토스 결제창을 열어, 심사가 요구하는
    * 구매과정이 통째로 비어 있었다.
@@ -59,7 +61,7 @@ describe('🔴 복채도 주문 확인 화면을 거친다', () => {
    * 지금은 조건을 그대로 잰다 — 이 화면에는 결제창을 여는 코드가 **없어야 한다**.
    */
   it('상점 카드는 결제창을 열 수 있는 코드를 아예 갖지 않는다', () => {
-    const source = read('components/membership/talisman-purchase-section.tsx')
+    const source = read(PURCHASE_SECTION)
 
     expect(source).toContain('/protected/store/checkout?pack=')
     for (const forbidden of ['requestPayment', 'getTossPaymentsSDK', 'successUrl']) {
@@ -68,12 +70,19 @@ describe('🔴 복채도 주문 확인 화면을 거친다', () => {
   })
 
   it('상품 정보를 못 읽으면 결제로 넘기지 않고 멈춘다', () => {
-    const source = read('components/membership/talisman-purchase-section.tsx')
+    const source = read(PURCHASE_SECTION)
 
-    // 폴백 상수에는 DB id 가 없다. id 없는 상품은 주문 확인 화면을 만들 수 없으므로
-    // 「그냥 결제」로 떨어뜨리는 대신 사용자에게 알리고 멈춰야 한다.
+    // id 없는 상품은 주문 확인 화면을 만들 수 없으므로 「그냥 결제」로 떨어뜨리는 대신 알리고 멈춘다.
     expect(/if\s*\(\s*!plan\.id\s*\)/.test(source)).toBe(true)
     expect(source).toContain('plans_unavailable')
+  })
+
+  it('상점 카드에 손으로 적은 가격 폴백이 없다 — 가격·문구는 DB(price_plans)에서만 온다', () => {
+    const source = read(PURCHASE_SECTION)
+
+    // 예전 폴백 상수는 DB 와 어긋난 가격을 보여줄 수 있었다(결제 승인 금액 대조에서 확정 실패).
+    expect(/price:\s*\d/.test(source)).toBe(false)
+    expect(/credits:\s*\d/.test(source)).toBe(false)
   })
 
   it('주문 확인 화면은 금액을 서버에서 다시 읽는다 (화면 값을 믿지 않는다)', () => {
@@ -81,6 +90,25 @@ describe('🔴 복채도 주문 확인 화면을 거친다', () => {
 
     expect(source).toContain('getActivePlans')
     expect(source).toContain('plans.find')
+    // 판매 종료된 옛 복채 팩 id 로 들어와도 결제창까지 가지 않는다.
+    expect(source).toContain("product_kind === 'pass'")
+  })
+
+  it('주문 확인 화면은 심사가 묻는 구매 조건(구성·유효기간·양도·환불)을 적는다', () => {
+    const source = read('app/protected/store/checkout/page.tsx')
+
+    // 사용처는 손으로 고른 몇 줄이 아니라 이용권을 쓰는 기능 전부(passUsageFeatures)다.
+    for (const label of [
+      '구성',
+      '유효기간',
+      '사용처',
+      'passUsageFeatures',
+      '양도',
+      'chargeRefundPolicyLine',
+      '신용·체크카드',
+    ]) {
+      expect(`${label} 포함: ${source.includes(label)}`).toBe(`${label} 포함: true`)
+    }
   })
 })
 

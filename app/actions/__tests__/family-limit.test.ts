@@ -10,10 +10,6 @@ jest.mock('../payment/membership', () => ({
   canAddRelationship: jest.fn(),
 }))
 
-jest.mock('@/lib/services/bok-grant', () => ({
-  addBokPoints: jest.fn().mockResolvedValue(undefined),
-}))
-
 jest.mock('next/cache', () => ({
   revalidatePath: jest.fn(),
 }))

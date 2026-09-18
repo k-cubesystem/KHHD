@@ -2,28 +2,25 @@
  * 인기테마운세 서버 액션 — **돈이 오가는 경로**의 계약.
  *
  * `'use server'` export 는 공개 엔드포인트다. 그래서 여기서 재는 것은 결과의 예쁨이 아니라
- * 넷이다 — ①인가 없이는 아무것도 안 한다 ②캐시가 있으면 복채가 안 나간다 ③실패하면 돌려준다
- * ④무료 미끼는 차감 경로 자체를 안 탄다.
+ * 넷이다 — ①인가 없이는 아무것도 안 한다 ②캐시가 있으면 이용권을 쓰지 않는다 ③실패하면 돌려준다
+ * ④무료 미끼는 이용권 경로 자체를 안 탄다.
  *
  * L1·L2(사주 엔진·판정)는 **모킹하지 않는다.** 순수 함수라 실제로 돌려도 결정론이고, 그래야
  * 「액션이 판정을 제대로 태우는가」까지 함께 재진다.
  */
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/utils/rate-limit'
-import { deductTalisman } from '@/app/actions/payment/wallet'
-import { refundBokchae } from '@/lib/services/bokchae'
+import { chargeFeature } from '@/lib/services/feature-charge'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { getDestinyTarget } from '@/app/actions/user/destiny'
 import { saveAnalysisHistoryObserved } from '@/app/actions/user/history'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
-import { UNLIMITED_BALANCE } from '@/lib/auth/privileges'
+import { NO_PASS_ERROR } from '@/lib/domain/entitlement/pass'
 
 jest.mock('@/lib/supabase/server', () => ({ createClient: jest.fn() }))
 jest.mock('@/lib/utils/rate-limit', () => ({ rateLimit: jest.fn() }))
-jest.mock('@/app/actions/payment/wallet', () => ({ deductTalisman: jest.fn() }))
-jest.mock('@/lib/services/bokchae', () => ({ refundBokchae: jest.fn().mockResolvedValue(undefined) }))
-jest.mock('@/lib/services/bok-grant', () => ({ addBokPoints: jest.fn().mockResolvedValue(undefined) }))
+jest.mock('@/lib/services/feature-charge', () => ({ chargeFeature: jest.fn() }))
 jest.mock('@/lib/services/ai-client', () => ({ generateAIContent: jest.fn() }))
 jest.mock('@/lib/saju-engine/master-prompt-builder', () => ({ buildMasterPromptForAction: jest.fn() }))
 jest.mock('@/app/actions/user/destiny', () => ({ getDestinyTarget: jest.fn() }))
@@ -37,8 +34,8 @@ import { THEME_CACHE_DAYS } from '@/lib/domain/theme-fortune/themes'
 
 const mockCreateClient = createClient as jest.MockedFunction<typeof createClient>
 const mockRateLimit = rateLimit as jest.MockedFunction<typeof rateLimit>
-const mockDeduct = deductTalisman as jest.MockedFunction<typeof deductTalisman>
-const mockRefund = refundBokchae as jest.MockedFunction<typeof refundBokchae>
+const mockCharge = chargeFeature as jest.MockedFunction<typeof chargeFeature>
+const mockRefund = jest.fn<Promise<void>, []>()
 const mockAI = generateAIContent as jest.MockedFunction<typeof generateAIContent>
 const mockPrompt = buildMasterPromptForAction as jest.MockedFunction<typeof buildMasterPromptForAction>
 const mockTarget = getDestinyTarget as jest.MockedFunction<typeof getDestinyTarget>
@@ -108,7 +105,8 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockRateLimit.mockResolvedValue({ success: true, limit: 5, remaining: 4, reset: Date.now() + 60_000 })
   mockTarget.mockResolvedValue(TARGET)
-  mockDeduct.mockResolvedValue({ success: true, remainingBalance: 100 })
+  mockRefund.mockResolvedValue(undefined)
+  mockCharge.mockResolvedValue({ ok: true, refundOnFailure: mockRefund })
   mockPrompt.mockResolvedValue({ prompt: '프롬프트' })
   mockAI.mockResolvedValue({ text: AI_JSON, provider: 'gemini', model: 'flash', inputTokens: 1, outputTokens: 1 })
   mockSave.mockResolvedValue({ success: true, id: 'history-1' })
@@ -122,37 +120,37 @@ describe('인가 — 인자가 아니라 함수 안에서 판정한다', () => {
     const result = await analyzeThemeFortune({ themeId: PAID_THEME, targetId: TARGET_ID })
 
     expect(result).toEqual({ success: false, error: '로그인이 필요합니다.' })
-    expect(mockDeduct).not.toHaveBeenCalled()
+    expect(mockCharge).not.toHaveBeenCalled()
     expect(mockAI).not.toHaveBeenCalled()
   })
 
-  it('rate limit 에 걸리면 복채도 AI 도 건드리지 않는다', async () => {
+  it('rate limit 에 걸리면 이용권도 AI 도 건드리지 않는다', async () => {
     mockRateLimit.mockResolvedValue({ success: false, limit: 5, remaining: 0, reset: Date.now() + 60_000 })
 
     const result = await analyzeThemeFortune({ themeId: PAID_THEME, targetId: TARGET_ID })
 
     expect(result.success).toBe(false)
-    expect(mockDeduct).not.toHaveBeenCalled()
+    expect(mockCharge).not.toHaveBeenCalled()
     expect(mockAI).not.toHaveBeenCalled()
   })
 
-  it('🔴 남의 대상·없는 대상이면 복채를 건드리기 전에 멈춘다', async () => {
-    // getDestinyTarget 은 owner_id 로 이미 걸러 준다 — 그 결과를 차감보다 **먼저** 본다.
+  it('🔴 남의 대상·없는 대상이면 이용권을 건드리기 전에 멈춘다', async () => {
+    // getDestinyTarget 은 owner_id 로 이미 걸러 준다 — 그 결과를 이용권 사용보다 **먼저** 본다.
     mockTarget.mockResolvedValue(null)
 
     const result = await analyzeThemeFortune({ themeId: PAID_THEME, targetId: 'not-mine' })
 
     expect(result).toEqual({ success: false, error: '대상 정보를 찾을 수 없습니다.' })
-    expect(mockDeduct).not.toHaveBeenCalled()
+    expect(mockCharge).not.toHaveBeenCalled()
   })
 
-  it('생년월일이 없으면 차감하지 않는다', async () => {
+  it('생년월일이 없으면 이용권을 쓰지 않는다', async () => {
     mockTarget.mockResolvedValue({ ...TARGET, birth_date: null })
 
     const result = await analyzeThemeFortune({ themeId: PAID_THEME, targetId: TARGET_ID })
 
     expect(result.success).toBe(false)
-    expect(mockDeduct).not.toHaveBeenCalled()
+    expect(mockCharge).not.toHaveBeenCalled()
   })
 
   it('클라이언트가 보낸 테마 문자열은 서버에서 다시 해석된다', async () => {
@@ -161,22 +159,22 @@ describe('인가 — 인자가 아니라 함수 안에서 판정한다', () => {
 
       expect({ themeId, success: result.success }).toEqual({ themeId, success: false })
     }
-    expect(mockDeduct).not.toHaveBeenCalled()
+    expect(mockCharge).not.toHaveBeenCalled()
     expect(mockAI).not.toHaveBeenCalled()
   })
 
-  it('판정이 등록되지 않은 출하 테마는 복채를 받지 않는다', async () => {
+  it('판정이 등록되지 않은 출하 테마는 이용권을 받지 않는다', async () => {
     // 카피 표에 `reading` 이 켜져 있어도 판정기가 없으면 여기서 먼저 거절한다.
     // 예시는 관상 테마 — 관상 3종은 입력이 사주가 아니라 사진 기반 FACE 판정이라(관상 세트
     // §5-6) 별도 파생층이 설 때까지 판정 없이 남는 유일한 출하 갈래다.
     const result = await analyzeThemeFortune({ themeId: 'first-impression', targetId: TARGET_ID })
 
     expect(result).toEqual({ success: false, error: '이 테마의 풀이는 아직 준비 중입니다.' })
-    expect(mockDeduct).not.toHaveBeenCalled()
+    expect(mockCharge).not.toHaveBeenCalled()
   })
 })
 
-describe('🔴 캐시 — 7일 안에는 복채가 다시 안 나간다', () => {
+describe('🔴 캐시 — 7일 안에는 이용권을 다시 쓰지 않는다', () => {
   const cached = {
     themeId: PAID_THEME,
     targetId: TARGET_ID,
@@ -186,13 +184,13 @@ describe('🔴 캐시 — 7일 안에는 복채가 다시 안 나간다', () => 
     analyzedAt: '2026-08-10T00:00:00.000Z',
   }
 
-  it('저장본이 있으면 그것을 돌려주고 차감도 AI 도 하지 않는다', async () => {
+  it('저장본이 있으면 그것을 돌려주고 이용권도 AI 도 쓰지 않는다', async () => {
     useSupabase(USER, [{ result_json: cached }])
 
     const result = await analyzeThemeFortune({ themeId: PAID_THEME, targetId: TARGET_ID })
 
     expect(result).toEqual({ success: true, reading: cached, cached: true })
-    expect(mockDeduct).not.toHaveBeenCalled()
+    expect(mockCharge).not.toHaveBeenCalled()
     expect(mockAI).not.toHaveBeenCalled()
     expect(mockSave).not.toHaveBeenCalled()
   })
@@ -223,13 +221,13 @@ describe('🔴 캐시 — 7일 안에는 복채가 다시 안 나간다', () => 
     expect(stub.eqCategory).toHaveBeenCalledWith('category', 'THEME')
   })
 
-  it('재분석(force)은 캐시를 건너뛰고 다시 차감한다', async () => {
+  it('재분석(force)은 캐시를 건너뛰고 이용권을 다시 쓴다', async () => {
     useSupabase(USER, [{ result_json: cached }])
 
     const result = await analyzeThemeFortune({ themeId: PAID_THEME, targetId: TARGET_ID, force: true })
 
     expect(result.success && result.cached).toBe(false)
-    expect(mockDeduct).toHaveBeenCalledTimes(1)
+    expect(mockCharge).toHaveBeenCalledTimes(1)
   })
 
   it('캐시 기간은 기획서의 7일이다', () => {
@@ -246,38 +244,40 @@ describe('🔴 캐시 — 7일 안에는 복채가 다시 안 나간다', () => 
   })
 })
 
-describe('🔴 복채 — 표시 = 실차감', () => {
-  it('차감액이 feature-costs 단일 소스에서 온다 (리터럴 금액이 아니다)', async () => {
+describe('🔴 이용권 — 표시 = 실사용', () => {
+  it('장 수는 호출부가 적지 않는다 — 서버가 costKey 로 feature-costs 에서 다시 읽는다', async () => {
     await analyzeThemeFortune({ themeId: PAID_THEME, targetId: TARGET_ID })
 
-    expect(mockDeduct).toHaveBeenCalledWith(`theme_${PAID_THEME}`, FEATURE_COST.themeFortune.display)
+    expect(mockCharge).toHaveBeenCalledTimes(1)
+    expect(mockCharge).toHaveBeenCalledWith({
+      userId: USER.id,
+      featureKey: `theme_${PAID_THEME}`,
+      costKey: 'themeFortune',
+      label: expect.any(String),
+    })
   })
 
-  it('차감이 실패하면 AI 를 부르지 않고 오류 종류를 그대로 넘긴다 (멤버십 안내로 이어진다)', async () => {
-    mockDeduct.mockResolvedValue({
-      success: false,
-      error: '오늘의 일일 복채 한도에 도달했습니다.',
-      errorType: 'DAILY_LIMIT',
-      currentTier: 'SINGLE',
-    })
+  it('이용권이 모자라면 AI 를 부르지 않고 실패 응답을 그대로 넘긴다 (구매 안내로 이어진다)', async () => {
+    const failure = {
+      success: false as const,
+      error: '풀이에는 이용권 1장이 필요해요.',
+      errorType: NO_PASS_ERROR,
+      requiredUnits: FEATURE_COST.themeFortune.display,
+    }
+    mockCharge.mockResolvedValue({ ok: false, failure })
 
     const result = await analyzeThemeFortune({ themeId: PAID_THEME, targetId: TARGET_ID })
 
-    expect(result).toEqual({
-      success: false,
-      error: '오늘의 일일 복채 한도에 도달했습니다.',
-      errorType: 'DAILY_LIMIT',
-      currentTier: 'SINGLE',
-    })
+    expect(result).toEqual(failure)
     expect(mockAI).not.toHaveBeenCalled()
   })
 
-  it('🔴 무료 미끼 테마는 차감 경로 자체를 타지 않는다 (마스터 §7-1)', async () => {
-    // 판정이 선 지금은 «차감 0회 + 결과 성공»을 함께 잰다 — 무료 미끼가 실제 풀이를 내면서도
-    // 지갑 경로(deductTalisman)를 아예 타지 않는다.
+  it('🔴 무료 미끼 테마는 이용권 경로 자체를 타지 않는다 (마스터 §7-1)', async () => {
+    // 판정이 선 지금은 «사용 0회 + 결과 성공»을 함께 잰다 — 무료 미끼가 실제 풀이를 내면서도
+    // 이용권 경로(chargeFeature)를 아예 타지 않는다.
     const result = await analyzeThemeFortune({ themeId: 'what-next', targetId: TARGET_ID })
 
-    expect(mockDeduct).not.toHaveBeenCalled()
+    expect(mockCharge).not.toHaveBeenCalled()
     if (!result.success) throw new Error(`무료 풀이가 실패했다: ${result.error}`)
     // 절단 배선 증명 — AI 모킹은 7칸을 다 채워 보냈지만 서버가 행동·시기 해설·되짚기를
     // 버린다(직장·재물 게이트 8번). 프롬프트가 아니라 파서가 게이트를 진다.
@@ -286,16 +286,16 @@ describe('🔴 복채 — 표시 = 실차감', () => {
     expect(result.reading.narration.pastEcho).toBe('')
   })
 
-  it('AI 가 실패하면 복채를 돌려준다', async () => {
+  it('AI 가 실패하면 쓴 이용권을 돌려준다', async () => {
     mockAI.mockRejectedValue(new Error('gemini 500'))
 
     const result = await analyzeThemeFortune({ themeId: PAID_THEME, targetId: TARGET_ID })
 
-    expect(result).toEqual({ success: false, error: '복채는 돌려드렸습니다. 잠시 후 다시 시도해주세요.' })
-    expect(mockRefund).toHaveBeenCalledWith(USER.id, FEATURE_COST.themeFortune.display, expect.any(String))
+    expect(result).toEqual({ success: false, error: '쓴 이용권은 돌려드렸어요. 잠시 후 다시 시도해 주세요.' })
+    expect(mockRefund).toHaveBeenCalledTimes(1)
   })
 
-  it('AI 응답을 해석하지 못해도 복채를 돌려준다', async () => {
+  it('AI 응답을 해석하지 못해도 쓴 이용권을 돌려준다', async () => {
     mockAI.mockResolvedValue({
       text: '죄송합니다. 답변할 수 없습니다.',
       provider: 'gemini',
@@ -310,30 +310,32 @@ describe('🔴 복채 — 표시 = 실차감', () => {
     expect(mockRefund).toHaveBeenCalledTimes(1)
   })
 
-  it('🔴 마스터(무제한)는 실차감이 없으므로 환불도 하지 않는다', async () => {
-    mockDeduct.mockResolvedValue({ success: true, remainingBalance: UNLIMITED_BALANCE })
+  it('🔴 관리자·검수 통과(되돌릴 것 없음)면 AI 가 실패해도 되돌리지 않는다', async () => {
+    mockCharge.mockResolvedValue({ ok: true, refundOnFailure: null })
     mockAI.mockRejectedValue(new Error('gemini 500'))
 
-    await analyzeThemeFortune({ themeId: PAID_THEME, targetId: TARGET_ID })
+    const result = await analyzeThemeFortune({ themeId: PAID_THEME, targetId: TARGET_ID })
 
+    expect(result).toEqual({ success: false, error: 'gemini 500' })
     expect(mockRefund).not.toHaveBeenCalled()
   })
 
-  it('🔴 지갑을 직접 만지지 않는다 — 차감·환불 두 경로뿐이다', () => {
+  it('🔴 이용권 표를 직접 만지지 않는다 — chargeFeature 한 경로뿐이다', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const source: string = require('fs').readFileSync('app/actions/theme-fortune/analyze.ts', 'utf8')
 
     expect(source).not.toMatch(/from\('wallets'\)/)
     expect(source).not.toMatch(/wallet_transactions/)
-    expect(source).toMatch(/deductTalisman/)
-    expect(source).toMatch(/refundBokchae/)
+    expect(source).not.toMatch(/entitlement_grants|ent_consume|consumePass/)
+    expect(source).toMatch(/chargeFeature/)
+    expect(source).toMatch(/refundOnFailure/)
   })
 })
 
 describe('🔴 THEME 카테고리 — DB 제약과 코드가 어긋나면 캐시가 통째로 죽는다', () => {
   it('마이그레이션의 CHECK 목록이 코드의 카테고리 유니온을 전부 담는다', () => {
     // 과거 SAMHAP 이 이 제약에 막혀 저장이 통째로 실패한 전력이 있다. 테마는 **저장이 곧 캐시**라
-    // 막히면 사용자가 같은 풀이에 복채를 다시 낸다 — 그래서 코드와 SQL 을 여기서 대조한다.
+    // 막히면 사용자가 같은 풀이에 이용권을 다시 쓴다 — 그래서 코드와 SQL 을 여기서 대조한다.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const fs = require('fs') as typeof import('fs')
     const sql: string = fs.readFileSync('supabase/migrations/20260814_analysis_history_theme.sql', 'utf8')

@@ -2,41 +2,37 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getMembershipPlans, getSubscriptionStatus, type MembershipPlan } from '@/app/actions/payment/subscription'
-import { getActivePlans, getCurrentUserRole } from '@/app/actions/payment/products'
-import { hasChargedBefore } from '@/app/actions/payment/payment'
-import { getWalletBalance } from '@/app/actions/payment/wallet'
+import { getActivePlans } from '@/app/actions/payment/products'
+import { getMyPassSummary } from '@/app/actions/payment/passes'
 import { getShopData } from '@/app/actions/shrine/inventory'
 import { listThemePacks } from '@/app/actions/shrine/deities'
 import { MembershipTabs } from '@/components/membership/membership-tabs'
-import { TalismanPurchaseSection } from '@/components/membership/talisman-purchase-section'
+import { PassPurchaseSection } from '@/components/store/pass-purchase-section'
 import { ShrineShopClient } from '@/components/shrine/ShrineShopClient'
 import { ThemeShopGrid } from '@/components/store/ThemeShopGrid'
 import { StoreFunnelTracker } from '@/components/store/StoreFunnelTracker'
 import { PaymentGuide } from '@/components/store/PaymentGuide'
 import { buildPaymentGuideModel } from '@/components/store/payment-guide-model'
-import { OpenEventClaim } from '@/components/events/open-event-claim'
-import { VoucherShop } from '@/components/store/voucher-shop'
-import { getMyVouchers } from '@/app/actions/payment/vouchers'
-import { FREE_RETENTION_DAYS, getCurrentUserMembership, type ActiveMembership } from '@/lib/auth/subscription'
+import { FREE_RETENTION_DAYS, getCurrentUserMembership } from '@/lib/auth/subscription'
+import { EMPTY_PASS_SUMMARY, passBadgeLabel } from '@/lib/domain/entitlement/pass'
 import type { PricePlan } from '@/types/auth'
 import { getTranslations } from 'next-intl/server'
-import { ChevronLeft, Coins, Crown, Palette, Flame, Ticket, ArrowRight } from 'lucide-react'
+import { ChevronLeft, Crown, Palette, Flame, Ticket, ArrowRight } from 'lucide-react'
 
-const TAB_KEYS = ['bokchae', 'membership', 'voucher', 'theme', 'items'] as const
+const TAB_KEYS = ['pass', 'membership', 'theme', 'items'] as const
 type TabKey = (typeof TAB_KEYS)[number]
 
 /** 라벨은 messages/{locale}.json 의 store.tab* 에서 온다 */
-const TABS: Array<{ key: TabKey; labelKey: string; icon: typeof Coins }> = [
-  { key: 'bokchae', labelKey: 'tabBokchae', icon: Coins },
+const TABS: Array<{ key: TabKey; labelKey: string; icon: typeof Ticket }> = [
+  { key: 'pass', labelKey: 'tabPass', icon: Ticket },
   { key: 'membership', labelKey: 'tabMembership', icon: Crown },
-  { key: 'voucher', labelKey: 'tabVoucher', icon: Ticket },
   { key: 'theme', labelKey: 'tabTheme', icon: Palette },
   { key: 'items', labelKey: 'tabItems', icon: Flame },
 ]
 
 export const dynamic = 'force-dynamic'
 
-/** 통합 상점 — 복채 충전 · 멤버십 · 신당 테마 · 신물을 한 곳에서. */
+/** 통합 상점 — 이용권 · 멤버십 · 신당 테마 · 신물을 한 곳에서. */
 export default async function StorePage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const supabase = await createClient()
   const {
@@ -45,11 +41,12 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
   if (!user) redirect('/auth/login')
 
   const { tab: rawTab } = await searchParams
-  const tab: TabKey = TAB_KEYS.includes(rawTab as TabKey) ? (rawTab as TabKey) : 'bokchae'
+  // 판매를 접은 옛 탭(bokchae·voucher)의 북마크·옛 링크도 여기서 이용권 탭으로 받는다.
+  const tab: TabKey = TAB_KEYS.includes(rawTab as TabKey) ? (rawTab as TabKey) : 'pass'
 
   // 결제 도우미·각 탭이 같은 값을 두 번 읽지 않도록 페이지에서 한 번만 가져와 내려준다.
-  const [balance, t, plans, packs, membership] = await Promise.all([
-    getWalletBalance(),
+  const [passSummary, t, plans, packs, membership] = await Promise.all([
+    getMyPassSummary(),
     getTranslations('store'),
     getMembershipPlans(),
     getActivePlans(),
@@ -77,9 +74,10 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
         <div className="flex items-center gap-2 min-w-0">
           {/* 자동 열림은 탭 지정 없이 들어온 «정문» 진입에서만 — 특정 탭으로 바로 온 사람은 막지 않는다 */}
           <PaymentGuide model={guideModel} autoOpenEligible={rawTab === undefined} />
-          <span className="text-xs text-ink-light/45 font-sans whitespace-nowrap">
-            {t('balance')} <span className="text-gold-500 font-bold tabular-nums">{balance.toLocaleString()}</span>
-            {t('balanceUnit')}
+          {/* 🔴 멤버십 몫과 보유 이용권을 한 숫자로 더하지 않는다 — 한 마디는 passBadgeLabel 이 정한다 */}
+          <span className="inline-flex items-center gap-1 text-xs text-gold-300/90 font-sans whitespace-nowrap">
+            <Ticket className="w-3.5 h-3.5 text-gold-500" aria-hidden />
+            {passBadgeLabel(passSummary ?? EMPTY_PASS_SUMMARY)}
           </span>
         </div>
       </div>
@@ -90,8 +88,7 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
         <p className="text-sm text-ink-light/50 font-sans">{t('subtitle')}</p>
       </header>
 
-      {/* 탭 바 */}
-      <nav className="grid grid-cols-5 gap-1.5 mb-6" aria-label={t('tabsAria')}>
+      <nav className="grid grid-cols-4 gap-1.5 mb-6" aria-label={t('tabsAria')}>
         {TABS.map(({ key, labelKey, icon: Icon }) => {
           const active = key === tab
           return (
@@ -112,34 +109,16 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
         })}
       </nav>
 
-      {tab === 'bokchae' && <BokchaeTab userId={user.id} packs={packs} />}
+      {tab === 'pass' && <PassTab packs={packs} />}
       {tab === 'membership' && <MembershipTab plans={plans} />}
-      {tab === 'voucher' && <VoucherTab membership={membership} />}
       {tab === 'theme' && <ThemeTab />}
       {tab === 'items' && <ItemsTab />}
     </div>
   )
 }
 
-async function VoucherTab({ membership }: { membership: ActiveMembership | null }) {
-  const vouchers = await getMyVouchers()
-  return <VoucherShop initialVouchers={vouchers} isMember={membership !== null} />
-}
-
-async function BokchaeTab({ userId, packs }: { userId: string; packs: PricePlan[] }) {
-  const [roleData, alreadyCharged] = await Promise.all([getCurrentUserRole(), hasChargedBefore()])
-  return (
-    <div className="space-y-3">
-      {/* 오픈 이벤트 일일 복채 — 종료됨(OPEN_EVENT_END_KST). 되살릴 때만 다시 그려진다 */}
-      <OpenEventClaim />
-      <TalismanPurchaseSection
-        initialPlans={packs}
-        userRole={roleData.role}
-        memberId={userId}
-        hasCharged={alreadyCharged}
-      />
-    </div>
-  )
+function PassTab({ packs }: { packs: PricePlan[] }) {
+  return <PassPurchaseSection plans={packs.filter((p) => p.product_kind === 'pass')} />
 }
 
 async function MembershipTab({ plans }: { plans: MembershipPlan[] }) {

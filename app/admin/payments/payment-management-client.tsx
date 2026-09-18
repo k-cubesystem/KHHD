@@ -116,7 +116,7 @@ export function PaymentManagementClient() {
       {/* Header */}
       <div className="space-y-1">
         <h1 className="text-xl md:text-2xl font-black text-ink-primary font-serif">결제 내역</h1>
-        <p className="text-xs md:text-sm text-ink-primary/40">회원들의 결제 및 충전 기록을 확인하세요.</p>
+        <p className="text-xs md:text-sm text-ink-primary/40">회원들의 결제 기록을 확인하세요.</p>
       </div>
 
       {/* Filters */}
@@ -148,7 +148,7 @@ export function PaymentManagementClient() {
                 전액 취소
               </SelectItem>
               <SelectItem value="test_charge" className="text-gold-400">
-                테스트 충전
+                테스트 결제
               </SelectItem>
               <SelectItem value="failed" className="text-error-text">
                 결제 실패
