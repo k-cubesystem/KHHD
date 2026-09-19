@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { loadWornMainDeity } from '@/lib/services/shrine-wear'
+import { logger } from '@/lib/utils/logger'
 import { toMemberCategory, type MemberCategory } from '@/lib/domain/family/member-category'
 import { baseFromBirth } from '@/lib/domain/shrine/energy-born'
 import { energyToShare } from '@/lib/domain/saju/element-profile'
@@ -61,8 +63,8 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
   } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: me }, { data: members }, { data: shrines }, { data: catRows }, { data: profiles }] = await Promise.all(
-    [
+  const [{ data: me }, { data: members }, { data: shrines }, { data: catRows }, { data: profiles }, wornSelf] =
+    await Promise.all([
       supabase
         .from('profiles')
         .select('full_name, birth_date, birth_time, calendar_type')
@@ -82,8 +84,13 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
           'family_member_id, base_wood, base_fire, base_earth, base_metal, base_water, yongsin_element, face_modifier, palm_modifier'
         )
         .eq('user_id', user.id),
-    ]
-  )
+      // 본인 신당의 主神 — 등급이 끊겨 좌정이 풀렸으면 지도에서도 비운다(판정은 shrine-wear 한 곳).
+      // 신위 이름은 부가 정보 — 실패해도 지도의 본체(오행)는 성립한다.
+      loadWornMainDeity(supabase, user.id).catch((e: unknown) => {
+        logger.warn('[getFamilyEnergyMap] seated deity skipped:', e)
+        return null
+      }),
+    ])
 
   const shrineRows = shrines ?? []
   const shrineIds = shrineRows.map((s) => s.id)
@@ -96,8 +103,12 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
         .in('shrine_id', shrineIds)
     : { data: [] }
 
-  // 주신 이름 — 신당마다 좌정한 신위
-  const deityIds = shrineRows.map((s) => s.main_deity_id).filter((v): v is string => !!v)
+  // 주신 이름 — 가족 신당 행(2026-08-25 폐지·행만 보존)은 좌정 기록 그대로 읽는다.
+  // 🔴 본인 행은 여기서 읽지 않는다 — 풀린 主神이 되살아난다. 본인은 wornSelf 가 진다.
+  const deityIds = shrineRows
+    .filter((s) => s.family_member_id !== null)
+    .map((s) => s.main_deity_id)
+    .filter((v): v is string => !!v)
   const { data: deityRows } = deityIds.length
     ? await supabase.from('shrine_deities').select('id, name').in('id', deityIds)
     : { data: [] }
@@ -186,7 +197,12 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
       category: t.category,
       hasShrine: !!shrine,
       itemCount: placements.length,
-      deityName: shrine?.main_deity_id ? (deityName.get(shrine.main_deity_id) ?? null) : null,
+      deityName:
+        t.id === 'self'
+          ? (wornSelf?.name ?? null)
+          : shrine?.main_deity_id
+            ? (deityName.get(shrine.main_deity_id) ?? null)
+            : null,
       energy,
       energyLive: energyToShare(live),
       yongsin: lowestElement(energy),

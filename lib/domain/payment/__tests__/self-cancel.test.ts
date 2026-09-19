@@ -151,6 +151,64 @@ describe('classifyChargeCancel — 청약철회 7일(약관 제7조 제2항)', (
   })
 })
 
+describe('classifyChargeCancel — 쓰지 않은 장만 환불(약관 제7조 제2항의 기본 산식)', () => {
+  it('10장 중 1장 사용·7일 이내 — 결제 금액 ÷ 구매한 장 수 × 쓰지 않은 장 수', () => {
+    const plan = classifyChargeCancel(
+      chargeInput({ paidAmount: 39_800, grantedCredits: 10, ledgerRemaining: 10, unusedPasses: 9 })
+    )
+    expect(plan.verdict).toBe('PARTIALLY_SPENT')
+    expect(plan.unusedRefund).toEqual({ grossAmount: 35_820, feeAmount: 0, refundAmount: 35_820 })
+  })
+
+  it('7일 경과면 미사용분의 90% — 수수료는 내림', () => {
+    const plan = classifyChargeCancel(
+      chargeInput({
+        paidAmount: 39_800,
+        grantedCredits: 10,
+        ledgerRemaining: 10,
+        unusedPasses: 9,
+        paidAt: paidDaysAgo(30),
+      })
+    )
+    expect(plan.unusedRefund).toEqual({ grossAmount: 35_820, feeAmount: 3_582, refundAmount: 32_238 })
+  })
+
+  it('한 장도 안 썼거나(전액 취소 대상) 전부 썼으면(돌려줄 장이 없다) 이 경로는 없다', () => {
+    expect(classifyChargeCancel(chargeInput()).unusedRefund).toBeNull()
+    expect(classifyChargeCancel(chargeInput({ unusedPasses: 0 })).unusedRefund).toBeNull()
+  })
+
+  it('🔴 미사용분을 이미 돌려받은 결제는 다시 열지 않는다 — 남은 금액에는 환불 수수료가 섞여 있다', () => {
+    const plan = classifyChargeCancel(
+      chargeInput({
+        paidAmount: 39_800,
+        cancelledAmount: 32_238,
+        grantedCredits: 10,
+        ledgerRemaining: 1,
+        unusedPasses: 0,
+        paidAt: paidDaysAgo(30),
+      })
+    )
+    expect(plan.verdict).toBe('NOT_CANCELLABLE')
+    expect(plan.blockedReason).toBe('UNUSED_ALREADY_REFUNDED')
+    expect(plan.refundAmount).toBe(0)
+    expect(plan.unusedRefund).toBeNull()
+  })
+
+  it('상담원이 일부를 먼저 환불했어도 쓰지 않은 장이 남아 있으면 남은 금액 안에서 환불한다', () => {
+    const plan = classifyChargeCancel(
+      chargeInput({
+        paidAmount: 39_800,
+        cancelledAmount: 35_000,
+        grantedCredits: 10,
+        ledgerRemaining: 5,
+        unusedPasses: 4,
+      })
+    )
+    expect(plan.unusedRefund?.grossAmount).toBe(4_800)
+  })
+})
+
 describe('validateCancelReason — 객관식 + 메모', () => {
   it('알 수 없는 사유 코드는 거부한다', () => {
     expect(validateCancelReason({ reasonCode: 'HACK' })).toEqual({ ok: false, error: '취소 사유를 선택해주세요.' })

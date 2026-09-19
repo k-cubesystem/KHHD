@@ -170,6 +170,19 @@ describe('PaymentGuide 내용', () => {
     renderGuide({ member })
     expect(screen.getByText(/패밀리 멤버십부터/)).not.toBeNull()
     expect(screen.getByText(/비즈니스 멤버십부터/)).not.toBeNull()
+    expect(screen.getByText(/오방기/).textContent).toContain('싱글 멤버십부터')
+  })
+
+  // 라이브에 멤버십 전용 웹툰 회차가 아직 없다 — «열린다»고 적으면 없는 혜택을 파는 문구다.
+  it.each([
+    ['비회원', false],
+    ['회원', true],
+  ])('%s 안내는 웹툰 멤버십 회차를 이미 있는 혜택처럼 말하지 않는다', (_label, member) => {
+    renderGuide({ member })
+    const text = document.body.textContent ?? ''
+    expect(text).toContain('웹툰')
+    expect(text).not.toMatch(/웹툰[^.]*(열람|열립니다|열려 있습니다)/)
+    expect(text).toMatch(/웹툰[^.]*연재 예정/)
   })
 
   it.each([

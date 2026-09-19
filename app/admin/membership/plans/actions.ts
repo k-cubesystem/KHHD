@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 import { logAdminAction } from '@/lib/admin/audit'
 import { requireAdmin } from '@/lib/admin/require-admin'
-import { findBannedPassTerms } from '@/lib/domain/entitlement/pass'
+import { findBannedPassTerms, PASS_MAX_ORDER_AMOUNT } from '@/lib/domain/entitlement/pass'
 import type { MembershipPlanAdmin, MembershipPlanUpdate, PassProductAdmin, PassProductUpdate } from './types'
 
 type Check = (value: unknown) => boolean
@@ -42,12 +42,13 @@ const PLAN_FIELDS: Record<keyof MembershipPlanUpdate, Check> = {
   sort_order: isIntIn(0, 10_000),
 }
 
-// 🔴 이용권 팩은 토스 일반결제 상품이다 — 유효기간은 1년을 넘기지 않는다(결제일로부터).
+// 🔴 이용권 팩은 토스 일반결제 상품이다 — 유효기간은 1년, 1회 결제 금액은 상한(PASS_MAX_ORDER_AMOUNT)을 넘기지 않는다.
+//    멤버십(빌링)은 이 상한의 대상이 아니다.
 const PRODUCT_FIELDS: Record<keyof PassProductUpdate, Check> = {
   name: isText(50),
   description: isOptionalText(500),
   badge_text: isOptionalText(20),
-  price: isIntIn(1, 10_000_000),
+  price: isIntIn(1, PASS_MAX_ORDER_AMOUNT),
   credits: isIntIn(1, 100),
   valid_days: isIntIn(1, 365),
   features: isStringList,

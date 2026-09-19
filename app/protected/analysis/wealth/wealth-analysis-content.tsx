@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import { useUpgradeNudge } from '@/hooks/use-upgrade-nudge'
 import { MembershipNudgeModal } from '@/components/membership/membership-nudge-modal'
 import { useInsufficientPass } from '@/hooks/use-insufficient-pass'
+import { useRefreshPasses } from '@/hooks/use-passes'
 import { InsufficientPassModal } from '@/components/payment/insufficient-pass-modal'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
@@ -47,6 +48,7 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
 
   const { nudgeModal, closeNudge, trackAnalysis } = useUpgradeNudge()
   const { passModal, handleChargeResult, closePassModal } = useInsufficientPass()
+  const refreshPasses = useRefreshPasses()
 
   const member = targets.find((t) => t.id === selectedId) ?? null
   const showSelect = targets.length > 1
@@ -63,9 +65,14 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
       const result = await analyzeWealth({ memberId: member.id })
 
       // 이용권이 모자라면 안내 모달을 열고 멈춘다(장 수는 서버가 실어 보낸 값).
-      if (handleChargeResult(result, { featureLabel: '재물운 분석' })) return
+      // 요약도 다시 읽는다 — 화면이 아는 장 수가 낡아서 여기까지 온 것일 수 있다.
+      if (handleChargeResult(result, { featureLabel: '재물운 분석' })) {
+        void refreshPasses()
+        return
+      }
 
       if (result.success && result.analysis && typeof result.analysis === 'object') {
+        void refreshPasses()
         setWealthAnalysis(result.analysis)
         toast.success('재물운 분석이 완료되었습니다!')
         trackAnalysis()

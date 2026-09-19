@@ -17,6 +17,8 @@ function errorMessage(error: GiftError): string {
   switch (error) {
     case 'DAILY_LIMIT':
       return '오늘 보낼 수 있는 선물을 다 보냈습니다. 내일 다시 보내 주세요.'
+    case 'MAX_QTY':
+      return '이 살림은 신당에 둘 수 있는 만큼 이미 모셨습니다.'
     case 'ITEM_NOT_GIFTABLE':
       return '이 살림은 선물할 수 없는 품목입니다.'
     case 'SELF':

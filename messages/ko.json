@@ -241,7 +241,7 @@
     "tabTheme": "신당 테마",
     "tabItems": "신물",
     "membershipActive": "{plan} 이용중",
-    "membershipManageHint": "플랜 변경·해지·결제 내역은 멤버십 관리에서",
+    "membershipManageHint": "해지·결제 내역은 멤버십 관리에서",
     "membershipManageCta": "멤버십 관리",
     "themeHint": "멤버십 등급에 따라 열리는 테마 — 본인·가족 신당 어디든 적용할 수 있어요",
     "themeOwned": "보유중 · 신당에서 적용",

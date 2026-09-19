@@ -26,7 +26,15 @@ let inserted: unknown[] = []
 let upserted: unknown[] = []
 
 function membership(tier: string): ActiveMembership {
-  return { tier, planId: 'plan-1', status: 'ACTIVE', currentPeriodEnd: null, currentPeriodStart: null, isMaster: false }
+  return {
+    tier,
+    planId: 'plan-1',
+    status: 'ACTIVE',
+    currentPeriodEnd: null,
+    currentPeriodStart: null,
+    isMaster: false,
+    renews: true,
+  }
 }
 
 function singleRow(row: unknown) {

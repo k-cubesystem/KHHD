@@ -58,6 +58,7 @@ function membershipOf(tier: string): ActiveMembership {
     status: 'ACTIVE',
     currentPeriodEnd: null,
     currentPeriodStart: null,
+    renews: true,
     isMaster: tier === 'MASTER',
   }
 }

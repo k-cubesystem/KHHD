@@ -14,6 +14,7 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { SAJU_CACHE_HOURS } from '@/lib/domain/payment/cache-windows'
 import { chargeFeature } from '@/lib/services/feature-charge'
 
 /**
@@ -98,9 +99,9 @@ export async function analyzeCheonjiinAction(
 
     // 2. 최근 캐시 확인 (skipCache 또는 forceRefresh가 아닐 때)
     if (!skipCache && !forceRefresh) {
-      const cached = await getCachedAnalysis(user.id, targetId, 'SAJU', 24)
+      const cached = await getCachedAnalysis(user.id, targetId, 'SAJU', SAJU_CACHE_HOURS)
 
-      if (cached && isCacheValid(cached, 24)) {
+      if (cached && isCacheValid(cached, SAJU_CACHE_HOURS)) {
         logger.log(`[CheonjiinAnalysis] 캐시 적중 (${cached.created_at}) - AI 호출 생략`)
 
         // 캐시 반환 시에도 fortune_journal 업데이트 (UPSERT이므로 중복 안전)

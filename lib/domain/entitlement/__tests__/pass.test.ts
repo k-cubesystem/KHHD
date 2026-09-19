@@ -61,6 +61,57 @@ describe('membershipWindow — 구독 시작일에 앵커한 한 달', () => {
   })
 })
 
+describe('membershipWindow — 기간 끝 앞의 꼬리는 새 창으로 열지 않는다(월 몫이 두 번 열리면 안 된다)', () => {
+  // 기간 끝은 JS setMonth(넘침)·관리자 30일 부여로 만들어진다 — 말일 앵커 창과 어긋난다.
+  const cases: Array<{ name: string; start: number; end: number; probe: number }> = [
+    {
+      name: '8/31 시작 + setMonth → 10/1 끝, 9/30 에 본다',
+      start: Date.UTC(2026, 7, 31, 3),
+      end: Date.UTC(2026, 9, 1, 3),
+      probe: Date.UTC(2026, 8, 30, 12),
+    },
+    {
+      name: '1/31 시작 + setMonth → 3/3 끝, 3/1 에 본다',
+      start: Date.UTC(2027, 0, 31, 9),
+      end: Date.UTC(2027, 2, 3, 9),
+      probe: Date.UTC(2027, 2, 1, 9),
+    },
+    {
+      name: '1/29 시작 + setMonth → 3/1 끝, 2/28 저녁에 본다',
+      start: Date.UTC(2027, 0, 29, 9),
+      end: Date.UTC(2027, 2, 1, 9),
+      probe: Date.UTC(2027, 1, 28, 20),
+    },
+    {
+      name: '2/1 시작 + 30일 부여 → 3/3 끝, 3/2 에 본다',
+      start: Date.UTC(2027, 1, 1, 0),
+      end: Date.UTC(2027, 2, 3, 0),
+      probe: Date.UTC(2027, 2, 2, 0),
+    },
+    {
+      name: '12/31 시작 + setMonth → 1/31 끝, 1/30 에 본다',
+      start: Date.UTC(2026, 11, 31, 9),
+      end: Date.UTC(2027, 0, 31, 9),
+      probe: Date.UTC(2027, 0, 30, 9),
+    },
+  ]
+
+  it.each(cases)('$name — 창은 기간 전체 하나', ({ start, end, probe }) => {
+    const expected = { startIso: new Date(start).toISOString(), endIso: new Date(end).toISOString() }
+    expect(membershipWindow(start, end, probe)).toEqual(expected)
+    expect(membershipWindow(start, end, start + DAY)).toEqual(expected)
+  })
+
+  it('여러 달짜리 기간은 달마다 창이 갈리고, 마지막 창만 기간 끝까지 간다', () => {
+    const start = Date.UTC(2026, 0, 31, 0)
+    const end = Date.UTC(2026, 4, 2, 0) // 1/31 → 5/2 : 창 [1/31,2/28) [2/28,3/31) [3/31,5/2)
+    expect(membershipWindow(start, end, Date.UTC(2026, 1, 10))?.endIso).toBe('2026-02-28T00:00:00.000Z')
+    expect(membershipWindow(start, end, Date.UTC(2026, 2, 10))?.startIso).toBe('2026-02-28T00:00:00.000Z')
+    const last = membershipWindow(start, end, Date.UTC(2026, 4, 1))
+    expect(last).toEqual({ startIso: '2026-03-31T00:00:00.000Z', endIso: '2026-05-02T00:00:00.000Z' })
+  })
+})
+
 describe('기한·이관', () => {
   it('구매 이용권 기한은 90일 — 토스 기준(1년 이내)', () => {
     expect(PASS_VALID_DAYS).toBe(90)
@@ -82,7 +133,7 @@ describe('기한·이관', () => {
 describe('요약 — 주머니를 합치지 않는다', () => {
   const summary: PassSummary = {
     unlimited: false,
-    membership: { quota: 5, used: 2, remaining: 3, resetsAt: '2026-10-18T12:00:00.000Z' },
+    membership: { quota: 5, used: 2, remaining: 3, resetsAt: '2026-10-18T12:00:00.000Z', renews: true },
     holdings: [
       { id: 'a', source: 'purchase', remaining: 4, expiresAt: '2026-12-17T00:00:00.000Z' },
       { id: 'b', source: 'migration', remaining: 11, expiresAt: null },
@@ -105,6 +156,14 @@ describe('요약 — 주머니를 합치지 않는다', () => {
     expect(lines[2]).toContain('이전 보유분 11장 (기한 없음)')
   })
 
+  it('다시 채워지지 않는 멤버십(해지·결제 수단 없는 부여)의 마지막 창은 «다시 N장»을 약속하지 않는다', () => {
+    const ending: PassSummary = { ...summary, membership: { ...summary.membership!, renews: false } }
+    const line = passSummaryLines(ending)[0]
+    expect(line).toContain('멤버십 이번 달 3장')
+    expect(line).toContain('까지')
+    expect(line).not.toContain('다시')
+  })
+
   it('쓸 수 있는지 — 여러 주머니에서 나눠 쓰는 것은 허용', () => {
     expect(canCoverUnits(summary, 18)).toBe(true)
     expect(canCoverUnits(summary, 19)).toBe(false)
@@ -123,7 +182,7 @@ describe('금지어 — 화면 문구에 잔액형 재화의 말을 쓰지 않�
       ...Object.values(PASS_SOURCE_LABEL),
       ...passSummaryLines({
         unlimited: false,
-        membership: { quota: 5, used: 0, remaining: 5, resetsAt: '2026-10-18T00:00:00.000Z' },
+        membership: { quota: 5, used: 0, remaining: 5, resetsAt: '2026-10-18T00:00:00.000Z', renews: true },
         holdings: [{ id: 'x', source: 'onboarding', remaining: 1, expiresAt: '2026-12-17T00:00:00.000Z' }],
       }),
       passSummaryLines({ unlimited: true, membership: null, holdings: [] }).join(' '),

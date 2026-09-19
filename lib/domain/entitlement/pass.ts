@@ -16,6 +16,12 @@ import { PURCHASE_QUESTIONS } from '@/lib/domain/chat/entitlements'
 /** 구매한 이용권의 유효기간(일) — 결제일로부터. 토스 기준(1년 이내)보다 짧게 둔다. */
 export const PASS_VALID_DAYS = 90
 
+/**
+ * 이용권 1회 결제 금액 상한(원) — 토스 심사 조건(1회 결제 10만원 이하).
+ * 관리자 상품 편집·결제 승인·DB CHECK(price_plans_pass_price_cap_check)가 같은 값을 쓴다.
+ */
+export const PASS_MAX_ORDER_AMOUNT = 100_000
+
 /** 가입 맛보기 — 평생 한 번. */
 export const ONBOARDING_PASSES = 1
 export const ONBOARDING_VALID_DAYS = 90
@@ -103,10 +109,15 @@ export function addMonthsAnchored(anchorMs: number, k: number): number {
  * 달력 1일 리셋을 쓰지 않는다 — 말일 가입자가 하루 만에 한 달치를 잃는다.
  * 구독 시작일에서 한 달씩 끊고, 구독이 끝나는 시각(periodEnd)을 넘지 않는다.
  * 구독이 이미 끝났으면 null.
+ *
+ * 🔴 기간 끝 앞에 한 달이 안 되게 남는 꼬리는 새 창으로 열지 않고 앞 창에 붙인다.
+ *    기간 끝을 만드는 곳(첫 결제·갱신 크론의 setMonth, 관리자 30일 부여)은 말일을 넘겨 3/3 같은 날을 만들고,
+ *    창은 말일에 붙는다(1/31 → 2/28). 꼬리를 창으로 열면 한 결제 주기에 월 몫이 두 번 열린다.
  */
 export function membershipWindow(periodStartMs: number, periodEndMs: number | null, nowMs: number): PassWindow | null {
   if (!Number.isFinite(periodStartMs)) return null
-  if (periodEndMs !== null && Number.isFinite(periodEndMs) && nowMs >= periodEndMs) return null
+  const endMs = periodEndMs !== null && Number.isFinite(periodEndMs) ? periodEndMs : null
+  if (endMs !== null && nowMs >= endMs) return null
 
   let k = 0
   if (nowMs > periodStartMs) {
@@ -117,9 +128,15 @@ export function membershipWindow(periodStartMs: number, periodEndMs: number | nu
     while (k > 0 && addMonthsAnchored(periodStartMs, k) > nowMs) k -= 1
   }
 
+  let lastWindow = false
+  if (endMs !== null) {
+    // 기간 안에 온전히 들어가는 달 수 − 1 = 마지막 창의 번호. 그 뒤의 꼬리는 마지막 창에 붙는다.
+    while (k > 0 && addMonthsAnchored(periodStartMs, k + 1) > endMs) k -= 1
+    lastWindow = addMonthsAnchored(periodStartMs, k + 2) > endMs
+  }
+
   const start = addMonthsAnchored(periodStartMs, k)
-  let end = addMonthsAnchored(periodStartMs, k + 1)
-  if (periodEndMs !== null && Number.isFinite(periodEndMs) && periodEndMs < end) end = periodEndMs
+  const end = lastWindow && endMs !== null ? endMs : addMonthsAnchored(periodStartMs, k + 1)
   if (end <= start) return null
 
   return { startIso: new Date(start).toISOString(), endIso: new Date(end).toISOString() }
@@ -146,8 +163,10 @@ export interface MembershipPocket {
   quota: number
   used: number
   remaining: number
-  /** 다음에 다시 채워지는 시각(이번 창의 끝) ISO */
+  /** 이번 창의 끝 ISO — renews 면 이때 다시 채워지고, 아니면 이때 끝난다 */
   resetsAt: string
+  /** 창이 끝난 뒤 다시 채워지는가. 해지했거나 갱신 결제가 없는 멤버십의 마지막 창이면 false */
+  renews: boolean
 }
 
 export interface PassHolding {
@@ -197,8 +216,11 @@ export function passSummaryLines(summary: PassSummary): string[] {
   if (summary.unlimited) return ['관리자 계정 — 이용권 없이 이용']
   const lines: string[] = []
   if (summary.membership) {
+    const m = summary.membership
     lines.push(
-      `멤버십 이번 달 ${summary.membership.remaining}장 남음 (${shortDate(summary.membership.resetsAt)}에 다시 ${summary.membership.quota}장)`
+      m.renews
+        ? `멤버십 이번 달 ${m.remaining}장 남음 (${shortDate(m.resetsAt)}에 다시 ${m.quota}장)`
+        : `멤버십 이번 달 ${m.remaining}장 남음 (${shortDate(m.resetsAt)}까지)`
     )
   }
   for (const h of summary.holdings) {

@@ -82,6 +82,12 @@ describe('buildPaymentGuideModel', () => {
     }
   })
 
+  // 오방기는 신당(멤버십 게이트) 안에 있다 — 조건 없이 «1장»만 적으면 비회원이 이용권을 사서 뽑을 수 있는 것처럼 읽힌다.
+  it('오방기는 멤버십이 있어야 쓴다 — 가장 낮은 등급을 싣는다', () => {
+    const obangki = passUsageFeatures().find((f) => f.key === 'obangkiDraw')
+    expect(obangki?.minTierLabel).toBe(TIER_LABEL.SINGLE)
+  })
+
   it('입문 상품은 «가장 싼 활성 이용권 팩» — 정렬 순서·비활성 행·옛 복채 팩에 속지 않는다', () => {
     const model = build()
     expect(model.entryPack).toEqual({ name: '이용권 1장', passes: 1, price: 4800, validDays: 90 })

@@ -11,13 +11,19 @@
  *  1. 전액/부분 취소 모두 회수 경로를 탄다 — 부분 취소는 PAYMENT_STATUS_CHANGED 로만 도착한다.
  *  2. 인증 실패 요청은 회수 경로에 진입하지 못한다.
  *  3. 구독(SUB_) 주문은 이용권 회수 대상이 아니다 — 멤버십은 아무것도 지급하지 않는다.
+ *  4. 완료(DONE) 이벤트는 승인 액션과 같은 확정 함수를 탄다 — 상태만 completed 로 올리면 이용권 없는 결제가 된다.
  */
 import { revokePaymentPasses } from '@/lib/services/pass-revoke'
+import { settlePassPurchase } from '@/lib/services/pass-purchase'
 
 const SECRET = 'test_sk_webhook'
 
 jest.mock('@/lib/services/pass-revoke', () => ({
   revokePaymentPasses: jest.fn(async () => ({ applied: true, reason: 'OK', revoked: 5, shortfall: 0 })),
+}))
+
+jest.mock('@/lib/services/pass-purchase', () => ({
+  settlePassPurchase: jest.fn(async () => ({ ok: false, reason: 'NO_PAYMENT' })),
 }))
 
 import { findBannedPassTerms } from '@/lib/domain/entitlement/pass'
@@ -38,6 +44,7 @@ jest.mock('@supabase/supabase-js', () => ({
 }))
 
 const mockRevoke = revokePaymentPasses as jest.MockedFunction<typeof revokePaymentPasses>
+const mockSettle = settlePassPurchase as jest.MockedFunction<typeof settlePassPurchase>
 
 // 라우트는 모듈 로드 시점에 시크릿을 읽는다 — 환경변수를 먼저 세운 뒤 지연 로드해야 한다.
 type PostHandler = (typeof import('../route'))['POST']
@@ -188,16 +195,31 @@ describe('토스 취소 웹훅 — 이용권 회수 배선', () => {
     expect(supabaseFrom).toHaveBeenCalledWith('subscription_payments')
   })
 
-  it('완료(DONE) 이벤트는 회수를 부르지 않는다', async () => {
+  it('🔴 완료(DONE) 이벤트는 회수가 아니라 확정 함수를 탄다 — 창을 닫아 pending 으로 남은 결제가 여기서 발급된다', async () => {
     await POST(
       webhookRequest({
         eventType: 'PAYMENT_STATUS_CHANGED',
         createdAt: '2026-08-11T00:00:00+09:00',
-        data: { orderId: 'order-1', status: 'DONE' },
+        data: { orderId: 'PASS_order-1', status: 'DONE', totalAmount: 19_800 },
       })
     )
 
     expect(mockRevoke).not.toHaveBeenCalled()
-    expect(supabaseFrom).toHaveBeenCalledWith('payments')
+    expect(mockSettle).toHaveBeenCalledWith({ orderId: 'PASS_order-1', approvedAmount: 19_800 })
+    // 결제 상태를 웹훅이 직접 고치지 않는다 — 취소·실패·수동 발급 대기를 되살리지 않는 판단은 확정 함수에 있다.
+    expect(supabaseFrom).not.toHaveBeenCalledWith('payments')
+  })
+
+  it('완료(DONE) 웹훅에 금액이 없으면 확정하지 않는다', async () => {
+    mockSettle.mockClear()
+    await POST(
+      webhookRequest({
+        eventType: 'PAYMENT_STATUS_CHANGED',
+        createdAt: '2026-08-11T00:00:00+09:00',
+        data: { orderId: 'PASS_order-1', status: 'DONE' },
+      })
+    )
+
+    expect(mockSettle).not.toHaveBeenCalled()
   })
 })

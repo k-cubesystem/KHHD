@@ -11,7 +11,7 @@ import { getFamilyHallData, type FamilyHallData } from '@/app/actions/shrine/fam
 import { PrayerList } from '@/components/shrine/PrayerList'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
-import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
+import { SHRINE_GATE_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
 import { logger } from '@/lib/utils/logger'
 
 /**
@@ -47,6 +47,8 @@ export default async function ShrinePage() {
   if (!user) redirect('/auth/login')
 
   // 게이트: 신당은 멤버십 전용. 비멤버는 업셀(데이터는 보존 — 가입 시 그대로). 마스터는 통과.
+  // 🔴 레이아웃 게이트와 겹쳐 보여도 지우지 않는다 — 신당 안에서의 소프트 내비게이션은 레이아웃을 다시
+  //    그리지 않아, 세션 중에 멤버십이 끝난 사람은 이 게이트만 만난다. 문구는 레이아웃과 한 상수를 쓴다.
   const membership = await getCurrentUserMembership()
   if (!membership) {
     return (
@@ -54,11 +56,7 @@ export default async function ShrinePage() {
         feature="shrine"
         title="나만의 신당"
         description="사주·관상·손금이 깃든 나만의 신당을 만들고, 신위를 모셔 매일의 기운을 돌봅니다. 멤버십 회원 전용 공간입니다."
-        benefits={[
-          '나의 신당에 가족을 함께 모시기',
-          '가족 기도 액자 · 방명록 · 배치 효험',
-          ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
-        ]}
+        benefits={[...SHRINE_GATE_BENEFIT_LINES]}
       />
     )
   }
@@ -99,7 +97,7 @@ export default async function ShrinePage() {
   ])
 
   // 액자에 걸릴 한 편 — 고른 것이 있으면 그것, 없으면 최신(도메인 판정). 방은 고르지 않는다.
-  const boardPrayer = (prayerPage.featuredPrayer ?? selectBoardPrayer(prayerPage.prayers, prayerPage.featuredId))
+  const boardPrayer = prayerPage.featuredPrayer ?? selectBoardPrayer(prayerPage.prayers, prayerPage.featuredId)
 
   return (
     <div className="min-h-screen px-1 py-4">

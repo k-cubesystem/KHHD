@@ -241,7 +241,7 @@
     "tabTheme": "Shrine themes",
     "tabItems": "Relics",
     "membershipActive": "{plan} active",
-    "membershipManageHint": "Change plan, cancel or view receipts in membership settings",
+    "membershipManageHint": "Cancel or view receipts in membership settings",
     "membershipManageCta": "Manage membership",
     "themeHint": "Themes open by membership tier — usable in your own and family shrines",
     "themeOwned": "Owned · apply in shrine",

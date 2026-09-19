@@ -236,15 +236,18 @@ export async function createBillingAuthUrl(planId: string): Promise<{
     .in('status', ['ACTIVE', 'PENDING'])
     .order('created_at', { ascending: false })
 
-  const nowMs = Date.now()
-  const livePaidSub = (existingSubs ?? []).find(
-    (s) =>
-      s.status === 'ACTIVE' &&
-      !!s.billing_key &&
-      (!s.current_period_end || new Date(s.current_period_end).getTime() > nowMs)
-  )
+  // 🔴 기간이 지났어도 막는다. 갱신 결제가 실패해 재시도 중인 구독은 기간이 끝난 채 ACTIVE 로 남는데,
+  //    화면에는 비회원으로 보여 다시 가입하게 된다 — 그러면 옛 빌링키와 새 빌링키가 매달 둘 다 청구된다.
+  const livePaidSub = (existingSubs ?? []).find((s) => s.status === 'ACTIVE' && !!s.billing_key)
   if (livePaidSub) {
-    return { success: false, error: '이미 활성화된 구독이 있습니다.' }
+    const periodOver =
+      !!livePaidSub.current_period_end && new Date(livePaidSub.current_period_end).getTime() <= Date.now()
+    return {
+      success: false,
+      error: periodOver
+        ? '이전 멤버십의 갱신 결제가 진행 중입니다. 멤버십 관리에서 결제 수단을 바꾸거나 해지한 뒤 다시 시도해주세요.'
+        : '이미 활성화된 구독이 있습니다.',
+    }
   }
   const existingSub = (existingSubs ?? []).find((s) => s.status === 'PENDING') ?? null
 
@@ -417,6 +420,29 @@ export async function executeFirstPayment(customerKey: string): Promise<{
   if (existingPayment) {
     logger.warn('[Subscription] Duplicate first payment attempt blocked:', subscription.id)
     return { success: true, subscription: subscription as unknown as Subscription }
+  }
+
+  // 청구 «전에» 다시 본다 — 두 탭에서 동시에 가입하면 위의 접수 검사는 둘 다 통과한다.
+  // DB 의 부분 유니크 인덱스(유료 활성 구독은 한 사람에 하나)가 마지막 방어선인데, 그것만 믿으면
+  // «결제는 됐는데 활성화가 실패»한다.
+  const { data: otherPaid, error: otherPaidError } = await adminDb
+    .from('subscriptions')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('status', 'ACTIVE')
+    .not('billing_key', 'is', null)
+    .neq('id', subscription.id)
+    .limit(1)
+  if (otherPaidError) {
+    logger.error(new Error('[Subscription] 기존 유료 구독 확인 실패 — 청구하지 않음'), {
+      userId: user.id,
+      message: otherPaidError.message,
+    })
+    return { success: false, error: '구독 상태를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.' }
+  }
+  if ((otherPaid ?? []).length > 0) {
+    logger.warn('[Subscription] 유료 구독이 이미 있어 첫 결제를 막음:', { userId: user.id })
+    return { success: false, error: '이미 활성화된 구독이 있습니다.' }
   }
 
   // Toss API: 빌링 결제

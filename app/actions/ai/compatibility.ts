@@ -16,6 +16,7 @@ import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
 import { chargeFeature } from '@/lib/services/feature-charge'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { COMPATIBILITY_CACHE_DAYS } from '@/lib/domain/payment/cache-windows'
 
 /**
  * 궁합 분석 서버 액션 v2
@@ -42,7 +43,7 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
       return { success: false, error: '생년월일 정보가 없습니다.' }
     }
 
-    // 2. 최근 7일 이내 분석 결과 확인 (캐시) — v3 + 관계군(focusGroup) 일치 시에만 재사용
+    // 2. 최근 COMPATIBILITY_CACHE_DAYS 이내 분석 결과 확인 (캐시) — v3 + 관계군(focusGroup) 일치 시에만 재사용
     // (같은 두 사람을 다른 관계로 다시 보면 캐시를 잘못 재사용하던 문제 수정)
     const focusGroup = resolveFocusGroup(relationship)
     const recentAnalysis = await getRecentCompatibilityAnalysis(targetId1, targetId2, focusGroup)
@@ -154,7 +155,7 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
 }
 
 /**
- * 최근 7일 이내 궁합 분석 결과 조회 (캐시)
+ * 최근 COMPATIBILITY_CACHE_DAYS 이내 궁합 분석 결과 조회 (캐시)
  */
 async function getRecentCompatibilityAnalysis(
   targetId1: string,
@@ -162,14 +163,14 @@ async function getRecentCompatibilityAnalysis(
   focusGroup: FocusGroup
 ): Promise<Record<string, unknown> | null> {
   const supabase = await createClient()
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - COMPATIBILITY_CACHE_DAYS)
 
   const { data } = await supabase
     .from('analysis_history')
     .select('*')
     .eq('category', 'COMPATIBILITY')
-    .gte('created_at', sevenDaysAgo.toISOString())
+    .gte('created_at', cutoff.toISOString())
     .order('created_at', { ascending: false })
     .limit(10)
 

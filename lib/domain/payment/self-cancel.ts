@@ -13,7 +13,7 @@
  * 법적 근거(요약 — 상세는 docs/REPORTS/RESEARCH-20260811-bok-prepaid-law.md §4)
  *  - 전자상거래법 제17조 제1항·제2항 제5호 단서: 가분적 디지털콘텐츠의 «제공 미개시분»은 7일 내 철회 가능.
  *  - 약관 제7조 제2항: 7일 이내 미사용분 전액 / 7일 경과 후 미사용분의 90%(수수료 10%).
- *  - 약관 제7조 제3항: 멤버십은 이용 일수 일할 계산 후 잔여 금액 환불(위약금 규정 없음).
+ *  - 약관 제7조 제3항: 멤버십 즉시 해지는 «지난 기간 비율»과 «이번 주기 이용권 사용 비율» 중 큰 쪽을 뺀 금액 환불(위약금 규정 없음).
  *  - 콘텐츠이용자보호지침 제19조: 계속거래 임의 해지 시 기이용분 공제 + 잔여 대금 10% 이내 손해배상금.
  *    → 약관이 위약금을 두지 않았으므로 **약관(사용자 유리) 기준**으로 위약금 0을 적용한다.
  */
@@ -126,18 +126,43 @@ export function chargeRefundPolicyLine(): string {
   return `미사용 이용권은 결제일로부터 ${WITHDRAWAL_PERIOD_DAYS}일 이내 전액, 이후 ${keepRate}% 환불합니다.`
 }
 
+/**
+ * 멤버십 해지·환불 조건 안내 문구 — 결제 동의·해지·관리 화면이 같은 문장을 쓴다.
+ * 약관 제7조 제3항·`computeMembershipRefund` 의 max 산식과 어긋난 «일할 환불» 문구가 화면마다 따로 굳어 있었다.
+ */
+export function membershipRefundPolicyLine(): string {
+  return '해지하면 이번 결제 주기 끝까지 이용하며 환불은 없습니다. 즉시 해지를 고르면 지난 기간 비율과 이번 주기 이용권 사용 비율 중 큰 쪽을 뺀 금액을 환불합니다.'
+}
+
 const DAY_MS = 86_400_000
 
 export type ChargeCancelVerdict =
   /** (a) 발급 이용권이 한 장도 쓰이지 않았다 → 즉시 취소 가능 */
   | 'FULL_REFUNDABLE'
-  /** (b) 일부·전부 소진 → 기본 안내는 「취소 불가」, 2차 경로에서 손실 처리로 진행 */
+  /** (b) 일부·전부 소진 → 기본은 «쓰지 않은 장만 환불»(unusedRefund), 2차 경로에서 손실 처리 전액 취소 */
   | 'PARTIALLY_SPENT'
   /** (c) 애초에 취소 대상이 아니다(이미 취소됨·이용권 구매 결제 아님 등) */
   | 'NOT_CANCELLABLE'
 
-/** NOT_A_CHARGE = 이용권 구매 결제가 아니다(옛 복채 충전·구독 등). 코드 이름은 역사적 이유로 유지. */
-export type ChargeCancelBlockedReason = 'ALREADY_CANCELLED' | 'NOT_A_CHARGE' | 'NOT_COMPLETED' | 'NOTHING_GRANTED'
+/**
+ * NOT_A_CHARGE = 이용권 구매 결제가 아니다(옛 복채 충전·구독 등). 코드 이름은 역사적 이유로 유지.
+ * UNUSED_ALREADY_REFUNDED = 미사용분은 이미 환불됐고, 남은 금액은 쓴 이용권(과 환불 수수료)의 몫이다.
+ */
+export type ChargeCancelBlockedReason =
+  | 'ALREADY_CANCELLED'
+  | 'NOT_A_CHARGE'
+  | 'NOT_COMPLETED'
+  | 'NOTHING_GRANTED'
+  | 'UNUSED_ALREADY_REFUNDED'
+
+/** 미사용분만 환불할 때의 금액 — 약관 제7조 제2항의 기본 산식. */
+export interface UnusedRefundQuote {
+  /** 수수료 차감 전 = 결제 금액 ÷ 구매한 장 수 × 쓰지 않은 장 수 (내림) */
+  grossAmount: number
+  feeAmount: number
+  /** 토스 부분 취소의 cancelAmount */
+  refundAmount: number
+}
 
 export interface ChargeCancelInput {
   /** payments.amount — 결제 금액(원) */
@@ -185,6 +210,11 @@ export interface ChargeCancelPlan {
   lossCredits: number
   /** 손실 처리 상당 금액(원) — 회수 못 한 이용권의 결제액 환산 */
   lossAmount: number
+  /**
+   * 일부를 쓴 결제에서 «쓰지 않은 장만» 환불받는 기본 경로의 금액. 쓴 장의 값은 돌려주지 않으므로 손실이 없고,
+   * 손실 처리 상한과 무관하다. 회수할 장이 없거나 일부 사용이 아니면 null.
+   */
+  unusedRefund: UnusedRefundQuote | null
 }
 
 function toInt(value: number | null | undefined): number {
@@ -228,6 +258,14 @@ export function classifyChargeCancel(input: ChargeCancelInput): ChargeCancelPlan
   const spentCredits = Math.max(0, ledgerRemaining - recoverableCredits)
   const lossAmount = grantedCredits > 0 ? Math.floor((grossAmount * spentCredits) / grantedCredits) : 0
 
+  const unusedGross =
+    grantedCredits > 0 ? Math.min(grossAmount, Math.floor((paidAmount * recoverableCredits) / grantedCredits)) : 0
+  const unusedFee = Math.floor(unusedGross * feeRate)
+  const unusedRefund: UnusedRefundQuote | null =
+    spentCredits > 0 && recoverableCredits > 0 && unusedGross > 0
+      ? { grossAmount: unusedGross, feeAmount: unusedFee, refundAmount: unusedGross - unusedFee }
+      : null
+
   const base = {
     grantedCredits,
     recoverableCredits,
@@ -240,6 +278,7 @@ export function classifyChargeCancel(input: ChargeCancelInput): ChargeCancelPlan
     refundAmount,
     lossCredits: spentCredits,
     lossAmount,
+    unusedRefund,
   }
 
   const blocked = (reason: ChargeCancelBlockedReason): ChargeCancelPlan => ({
@@ -251,6 +290,7 @@ export function classifyChargeCancel(input: ChargeCancelInput): ChargeCancelPlan
     refundAmount: 0,
     lossCredits: 0,
     lossAmount: 0,
+    unusedRefund: null,
   })
 
   // 옛 복채 충전(charge)은 발급 이용권이 결제에 묶여 있지 않아 회수할 수 없다 — 셀프 취소 대상이 아니다.
@@ -259,6 +299,8 @@ export function classifyChargeCancel(input: ChargeCancelInput): ChargeCancelPlan
   if (input.status !== 'completed') return blocked('NOT_COMPLETED')
   if (grossAmount <= 0) return blocked('ALREADY_CANCELLED')
   if (grantedCredits <= 0) return blocked('NOTHING_GRANTED')
+  // 🔴 미사용분을 이미 돌려받은 결제에 «남은 금액 전액 취소»를 열면, 7일 경과 수수료로 뗀 돈까지 손실 경로로 돌려준다.
+  if (cancelledAmount > 0 && recoverableCredits <= 0) return blocked('UNUSED_ALREADY_REFUNDED')
 
   return {
     ...base,
@@ -409,6 +451,8 @@ export interface ChargeCancelSubmission {
   memo?: string
   /** (b) 갈래에서 「그래도 취소 요청」을 누른 경우에만 true */
   acceptLoss?: boolean
+  /** (b) 갈래의 기본 경로 — 쓰지 않은 장만 환불받는다(쓴 장은 그대로 쓴 것으로 남는다) */
+  unusedOnly?: boolean
 }
 
 export interface MembershipCancelSubmission {

@@ -11,7 +11,13 @@
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { chargeRefundPolicyLine, WITHDRAWAL_PERIOD_DAYS, LATE_CANCEL_FEE_RATE } from '../self-cancel'
+import {
+  chargeRefundPolicyLine,
+  computeMembershipRefund,
+  membershipRefundPolicyLine,
+  WITHDRAWAL_PERIOD_DAYS,
+  LATE_CANCEL_FEE_RATE,
+} from '../self-cancel'
 import { findBannedPassTerms } from '@/lib/domain/entitlement/pass'
 
 const ROOT = join(__dirname, '..', '..', '..', '..')
@@ -56,5 +62,54 @@ describe('환불 조건 문구', () => {
     const line = chargeRefundPolicyLine()
     expect(line).toContain('90%')
     expect(line).toContain('7일')
+  })
+})
+
+/**
+ * 멤버십 즉시 해지 환불은 «일할»이 아니라 max 산식이다(약관 제7조 제3항 · computeMembershipRefund).
+ *
+ * 실제 결함(2026-09-19 배포 전 리뷰): 결제 동의·해지·관리 화면이 «잔여 기간 일할 환불»을 약속했는데,
+ * 이번 주기 이용권을 날짜보다 많이 쓴 회원은 그보다 적게 돌려받는다 — 동의 문구가 실제보다 후했다.
+ */
+const MEMBERSHIP_REFUND_SCREENS = [
+  'components/payment/purchase-consent.tsx',
+  'app/protected/membership/manage/page.tsx',
+  'app/protected/membership/cancel/page.tsx',
+]
+const MEMBERSHIP_CANCEL_FORM = 'app/protected/membership/cancel/membership-cancel-form.tsx'
+
+describe('멤버십 환불 문구 — «큰 쪽» 공제', () => {
+  it('정본 문구가 두 비율 중 큰 쪽을 뺀다고 밝히고, 일할 환불을 약속하지 않는다', () => {
+    const line = membershipRefundPolicyLine()
+    expect(line).toContain('지난 기간 비율')
+    expect(line).toContain('이용권 사용 비율')
+    expect(line).toContain('큰 쪽')
+    expect(line).not.toContain('일할')
+    expect(findBannedPassTerms(line)).toEqual([])
+  })
+
+  it('문구가 산식과 같은 말을 한다 — 첫날 해지해도 이번 주기 이용권을 다 썼으면 환불은 0원', () => {
+    const plan = computeMembershipRefund({
+      price: 12_800,
+      periodStart: '2026-09-01T00:00:00Z',
+      periodEnd: '2026-10-01T00:00:00Z',
+      monthlyPasses: 5,
+      usedPasses: 5,
+      now: new Date('2026-09-01T12:00:00Z'),
+    })
+    expect(plan.usageRatio).toBe(Math.max(plan.dayUsageRatio, plan.creditUsageRatio))
+    expect(plan.refundAmount).toBe(0)
+  })
+
+  it.each(MEMBERSHIP_REFUND_SCREENS)('%s 는 정본 함수를 쓴다', (rel) => {
+    expect(read(rel)).toContain('membershipRefundPolicyLine()')
+  })
+
+  it('해지 화면의 즉시 해지 설명도 같은 산식을 말한다', () => {
+    expect(read(MEMBERSHIP_CANCEL_FORM)).toContain('큰 쪽')
+  })
+
+  it.each([...MEMBERSHIP_REFUND_SCREENS, MEMBERSHIP_CANCEL_FORM])('%s 에 «일할» 환불 약속이 남아 있지 않다', (rel) => {
+    expect(read(rel)).not.toMatch(/일할|남은 기간만큼 환불/)
   })
 })

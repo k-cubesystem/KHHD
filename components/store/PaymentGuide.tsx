@@ -8,7 +8,7 @@ import { GA } from '@/lib/analytics/ga4'
 import { logger } from '@/lib/utils/logger'
 import { MEMBER_WEEKLY_QUESTIONS } from '@/lib/domain/chat/entitlements'
 import { formatPassUnits } from '@/lib/domain/entitlement/pass'
-import { shrineLine, tierFeatureSummaryLine } from '@/lib/domain/payment/membership-benefits'
+import { shrineLine, tierFeatureSummaryLine, webtoonLine } from '@/lib/domain/payment/membership-benefits'
 import { intervalWords, type GuidePack, type PaymentGuideModel } from '@/components/store/payment-guide-model'
 
 /**
@@ -185,7 +185,7 @@ function GuestBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target:
     // 🔴 «각»을 빼면 합산 한도로 읽힌다(membership-benefits relationshipLine 과 같은 문구).
     entryPlan ? `가족관리 — 가족·지인 각 ${entryPlan.relationshipLimit}명 등록·궁합` : '가족관리 — 가족·지인 등록·궁합',
     `속풀이 — 신령님께 주 ${MEMBER_WEEKLY_QUESTIONS}문`,
-    '웹툰 — 멤버십 전용 회차 열람',
+    webtoonLine(),
     `기록 보관 — 무료는 최근 ${retentionDays}일까지, 멤버십은 기간 제한 없이`,
     tierFeatureSummaryLine(),
   ]
@@ -209,7 +209,8 @@ function GuestBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target:
       <section className="space-y-2.5 rounded-2xl border border-gold-500/25 bg-surface/40 p-4">
         <SectionHead icon={Crown} title="멤버십 — 매달 이용권과 기능" eyebrow="자주 보실 분" />
         <p className="font-sans text-[13px] leading-relaxed text-ink-light/70">
-          매달 정해진 장 수의 이용권을 쓰실 수 있고, 신당·가족관리·속풀이·웹툰 멤버십 회차가 열립니다.
+          매달 정해진 장 수의 이용권을 쓰실 수 있고, 신당·가족관리·속풀이가 열립니다. 웹툰 멤버십 회차는 연재
+          예정이에요.
         </p>
         <ul className="space-y-1.5">
           {membershipBenefits.map((b) => (
@@ -274,7 +275,7 @@ function MemberBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target
             : '멤버십 이용권은 구독 시작일을 기준으로 한 달마다 새로 열리고, 남은 장은 다음 달로 넘어가지 않아요. 그 전에 다 쓰셨다면 이용권만 따로 구매하시면 됩니다.'}
         </p>
         <p className="font-sans text-[12px] text-ink-light/55">
-          신당·가족관리·속풀이·웹툰 멤버십 회차는 이미 열려 있습니다. 이용권은 풀이를 볼 때 쓰입니다.
+          신당·가족관리·속풀이는 이미 열려 있습니다(웹툰 멤버십 회차는 연재 예정). 이용권은 풀이를 볼 때 쓰입니다.
         </p>
         <FeeTable model={model} />
         {entryPack && <EntryPackLine pack={entryPack} />}

@@ -1,9 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { FEATURE_COST, formatFeatureCost } from '@/lib/domain/payment/feature-costs'
-import { PASS_VALID_DAYS, SHAMAN_QUESTIONS_PER_PASS, formatPassUnits } from '@/lib/domain/entitlement/pass'
+import { passUsageFeatures } from '@/components/store/payment-guide-model'
+import { NARRATIVE_CACHE_DAYS } from '@/lib/domain/circle/narrative'
+import { formatFeatureCost, type FeatureCostKey } from '@/lib/domain/payment/feature-costs'
+import { PASS_VALID_DAYS, formatPassUnits } from '@/lib/domain/entitlement/pass'
+import { COMPATIBILITY_CACHE_DAYS, SAJU_CACHE_HOURS } from '@/lib/domain/payment/cache-windows'
 import { LATE_CANCEL_FEE_RATE, WITHDRAWAL_PERIOD_DAYS, chargeRefundPolicyLine } from '@/lib/domain/payment/self-cancel'
+import { THEME_CACHE_DAYS } from '@/lib/domain/theme-fortune/themes'
 import { logger } from '@/lib/utils/logger'
 
 export const metadata: Metadata = {
@@ -55,11 +59,28 @@ async function loadProducts(): Promise<{ packs: PassPackRow[]; memberships: Memb
   }
 }
 
-const DEEP_READINGS = ['재물운 심층', '종합사주풀이', '둘·셋·넷 함께 보기']
+/**
+ * 같은 풀이를 다시 요청해도 이용권을 쓰지 않는 기간 — 각 서버 액션의 캐시 판정이 보는 상수 그대로.
+ * 🔴 «이미 본 풀이는 다시 열면 무료»라고 조건 없이 적으면, 기간이 지나 이용권이 다시 나간 사람에게 거짓이 된다.
+ */
+const REUSE_WINDOW: Partial<Record<FeatureCostKey, string>> = {
+  saju: `${SAJU_CACHE_HOURS}시간`,
+  compatibility: `${COMPATIBILITY_CACHE_DAYS}일`,
+  themeFortune: `${THEME_CACHE_DAYS}일`,
+  circleNarrative: `${NARRATIVE_CACHE_DAYS}일`,
+  togetherNarrative: `${NARRATIVE_CACHE_DAYS}일`,
+}
+
+/** 저장본을 돌려주는 길이 없는 풀이 — 실행할 때마다 새로 풀고 이용권을 쓴다. */
+const ALWAYS_FRESH: readonly FeatureCostKey[] = ['face', 'palm', 'fengshui', 'wealth', 'samhap']
 
 export default async function PassPolicyPage() {
   const { packs, memberships } = await loadProducts()
   const lateRefundPercent = Math.round((1 - LATE_CANCEL_FEE_RATE) * 100)
+  // 🔴 사용처는 손으로 고르지 않는다 — 주문 확인 화면과 같은 목록(장 수·최소 등급 포함)을 그대로 그린다.
+  const usage = passUsageFeatures()
+  const reuseWindows = usage.flatMap((f) => (REUSE_WINDOW[f.key] ? [`${f.label} ${REUSE_WINDOW[f.key]}`] : []))
+  const alwaysFresh = usage.filter((f) => ALWAYS_FRESH.includes(f.key)).map((f) => f.label)
 
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
@@ -80,18 +101,29 @@ export default async function PassPolicyPage() {
         <h2>1. 이용권이란</h2>
         <ul>
           <li>
-            청담해화당이 직접 제공하는 <strong>풀이 서비스 1회를 이용할 수 있는 권리</strong>입니다.{' '}
-            {formatPassUnits(FEATURE_COST.saju.display)}으로 사주·궁합·관상·손금·풍수·테마 풀이를 한 번 볼 수 있어요.
-          </li>
-          <li>
-            {DEEP_READINGS.join(' · ')}는 {formatPassUnits(FEATURE_COST.samhap.display)}이 필요해요.
-          </li>
-          <li>
-            속풀이 질문은 {formatPassUnits(FEATURE_COST.shamanQuestions.display)}으로 {SHAMAN_QUESTIONS_PER_PASS}문을 열
-            수 있어요.
+            청담해화당이 직접 제공하는 <strong>풀이 서비스 1회를 이용할 수 있는 권리</strong>입니다. 풀이마다 쓰는 장
+            수는 아래 사용처와 같습니다.
           </li>
           <li>오늘의 운세·신년운세는 {formatFeatureCost('today')}입니다.</li>
-          <li>이미 본 풀이를 같은 조건으로 다시 열면 이용권을 쓰지 않습니다.</li>
+        </ul>
+        <h3>사용처 — 풀이별 장 수</h3>
+        <ul>
+          {usage.map((f) => (
+            <li key={f.key}>
+              {f.label} — {formatPassUnits(f.cost)}
+              {f.minTierLabel ? ` (${f.minTierLabel} 멤버십부터)` : ''}
+            </li>
+          ))}
+        </ul>
+        <h3>이용권을 쓰지 않는 경우</h3>
+        <ul>
+          <li>분석 기록에 보관된 풀이를 다시 열어 보는 데는 이용권을 쓰지 않습니다.</li>
+          <li>
+            같은 사람·같은 조건의 풀이를 정해진 기간 안에 다시 요청하면 보관된 풀이를 보여 드리고 이용권을 쓰지 않습니다
+            — {reuseWindows.join(' / ')}.
+          </li>
+          <li>그 기간이 지났거나 새 풀이를 직접 요청하면 그 풀이의 장 수만큼 씁니다.</li>
+          <li>{alwaysFresh.join(' · ')} — 실행할 때마다 새로 풀기 때문에 그때마다 이용권을 씁니다.</li>
         </ul>
 
         <h2>2. 이용권을 얻는 방법</h2>

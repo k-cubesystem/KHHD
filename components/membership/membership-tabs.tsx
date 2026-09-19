@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Check } from 'lucide-react'
+import Link from 'next/link'
+import { ArrowRight, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { GA } from '@/lib/analytics/ga4'
@@ -26,11 +27,19 @@ interface Plan {
 interface MembershipTabsProps {
   plans: Plan[]
   isGuest: boolean
+  /**
+   * 정기결제 중인 플랜 id — 서버가 새 구독 결제를 막는 조건(billing_key 가 있는 ACTIVE 구독)일 때만 준다.
+   * 🔴 이때 «지금 시작하기»를 보이면 결제 화면까지 가서야 «이미 활성화된 구독»으로 막힌다(막다른 길).
+   *    결제 없이 부여받은 구독은 서버가 막지 않으므로 넘기지 않는다.
+   */
+  payingPlanId?: string | null
 }
 
-export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
+export function MembershipTabs({ plans, isGuest, payingPlanId = null }: MembershipTabsProps) {
   const router = useRouter()
-  const [selectedPlan, setSelectedPlan] = useState(plans?.[1]?.tier || plans?.[0]?.tier || 'FAMILY')
+  const [selectedPlan, setSelectedPlan] = useState(
+    plans?.find((p) => p.id === payingPlanId)?.tier || plans?.[1]?.tier || plans?.[0]?.tier || 'FAMILY'
+  )
 
   // 플랜이 없으면 에러 방지
   if (!plans || plans.length === 0) {
@@ -135,12 +144,33 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
         </div>
 
         {/* CTA Button */}
-        <Button
-          onClick={handleSelectPlan}
-          className="tap-glow-gold w-full bg-primary hover:bg-primary/90 text-background font-serif font-bold h-14 text-base rounded-lg shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all"
-        >
-          {isGuest ? '로그인하고 시작하기' : '지금 시작하기'}
-        </Button>
+        {!payingPlanId ? (
+          <Button
+            onClick={handleSelectPlan}
+            className="tap-glow-gold w-full bg-primary hover:bg-primary/90 text-background font-serif font-bold h-14 text-base rounded-lg shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all"
+          >
+            {isGuest ? '로그인하고 시작하기' : '지금 시작하기'}
+          </Button>
+        ) : currentPlan.id === payingPlanId ? (
+          <div className="w-full h-14 rounded-lg border border-primary/30 bg-primary/10 text-primary font-serif font-bold text-base flex items-center justify-center gap-2">
+            <Check className="w-4 h-4" />
+            이용 중
+          </div>
+        ) : (
+          <div className="space-y-3 text-center">
+            <p className="text-xs text-white/60 leading-relaxed">
+              이미 멤버십을 이용 중이라 바로 바꿀 수 없습니다. 등급을 바꾸시려면 지금 멤버십을 해지한 뒤 새로 시작해
+              주세요.
+            </p>
+            <Link
+              href="/protected/membership/manage"
+              className="w-full h-12 rounded-lg border border-primary/30 text-primary font-serif font-bold text-sm flex items-center justify-center gap-1.5 hover:bg-primary/10 transition-colors"
+            >
+              해지 후 변경 — 멤버십 관리
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        )}
 
         {/* Additional Info */}
         {currentPlan.tier === 'FAMILY' && (

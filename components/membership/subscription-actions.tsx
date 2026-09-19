@@ -17,7 +17,7 @@ import {
 import { cancelSubscription, reactivateSubscription, changeBillingMethod } from '@/app/actions/payment/subscription'
 import { CreditCard, XCircle, RotateCcw, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { FREE_RETENTION_DAYS } from '@/lib/domain/payment/membership-benefits'
+import { MEMBERSHIP_LOSS_LINES } from '@/lib/domain/payment/membership-benefits'
 
 interface SubscriptionActionsProps {
   subscriptionId: string
@@ -151,13 +151,12 @@ export function SubscriptionActions({ subscriptionId: _subscriptionId, status, p
                 <div className="space-y-2 text-ink-light/55">
                   <p>해지 후에도 현재 결제 기간이 끝날 때까지 모든 멤버십 혜택을 이용할 수 있습니다.</p>
                   <p className="font-medium text-ink-light">해지 시 잃게 되는 혜택:</p>
-                  {/* 등급마다 액수가 달라 숫자는 적지 않는다 — 잃는 «것»만 정확히 적는다. */}
+                  {/* 🔴 줄을 여기서 적지 않는다 — 해지를 말리는 자리라, 없는 혜택(웹툰 멤버십 회차 0편)이 한 줄만 섞여도
+                      표시광고법 문제다. 잃는 «것»의 정본은 MEMBERSHIP_LOSS_LINES 다. */}
                   <ul className="list-disc list-inside text-sm space-y-1">
-                    <li>한 달마다 새로 열리는 멤버십 이용권 (따로 구매한 이용권은 그대로 남아요)</li>
-                    <li>신당 · 가족관리 · 속풀이 입장</li>
-                    <li>등급으로 열린 신위 · 테마와 기능</li>
-                    <li>웹툰 멤버십 전용 회차</li>
-                    <li>기록 보관 기간 제한 해제 (무료는 최근 {FREE_RETENTION_DAYS}일까지 열람)</li>
+                    {MEMBERSHIP_LOSS_LINES.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
                   </ul>
                 </div>
               </AlertDialogDescription>

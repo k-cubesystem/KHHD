@@ -37,6 +37,7 @@ import { getUserLimitsSummary } from '@/app/actions/payment/membership'
 import { TIER_LABEL, isMembershipTier } from '@/lib/domain/payment/membership-tiers'
 import { Button } from '@/components/ui/button'
 import { getSajuData } from '@/lib/domain/saju/saju'
+import { loadWornMainDeity } from '@/lib/services/shrine-wear'
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 
 // 오행 한자 → 엠블럼 에셋 슬러그 + 한글 라벨 (사주 정체성 표시용)
@@ -230,20 +231,8 @@ export default async function MyPage() {
   }
   // 좌정 主神 (프로필 아바타·정체성 연동)
   try {
-    const { data: shrine } = await supabase
-      .from('shrines')
-      .select('main_deity_id')
-      .eq('user_id', user.id)
-      .is('family_member_id', null)
-      .maybeSingle()
-    if (shrine?.main_deity_id) {
-      const { data: d } = await supabase
-        .from('shrine_deities')
-        .select('name, portrait_url')
-        .eq('id', shrine.main_deity_id)
-        .maybeSingle()
-      if (d) seatedDeity = { name: d.name, portraitUrl: d.portrait_url }
-    }
+    const worn = await loadWornMainDeity(supabase, user.id)
+    if (worn) seatedDeity = { name: worn.name, portraitUrl: worn.portraitUrl }
   } catch (error) {
     logger.error('Error fetching seated deity:', error)
   }

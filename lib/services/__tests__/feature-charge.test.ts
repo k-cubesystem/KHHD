@@ -253,7 +253,14 @@ describe('배선 — 서버가 과금하고 화면은 하지 않는다', () => {
  * 이제는 «애초에 공개 표면에 없다»로 막는다.
  */
 describe('공개 표면 — 사용·발급·회수 함수는 서버 액션이 되내보내지 않는다', () => {
-  const PRIVILEGED = ['consumePass', 'refundPass', 'grantPasses', 'revokePaymentPasses', 'chargeFeature']
+  const PRIVILEGED = [
+    'consumePass',
+    'refundPass',
+    'grantPasses',
+    'revokePaymentPasses',
+    'settlePassPurchase',
+    'chargeFeature',
+  ]
 
   it('서버 액션 파일에 사용·발급 함수의 re-export 가 없다', () => {
     const offenders = scanSources(['app', 'lib'])
@@ -261,7 +268,7 @@ describe('공개 표면 — 사용·발급·회수 함수는 서버 액션이 �
       .filter(({ source }) => {
         const reexports = source.match(/export\s*(?:type\s*)?\{[^}]*\}\s*from\s*['"][^'"]+['"]/g) ?? []
         const star =
-          /export\s*\*\s*(?:as\s+\w+\s*)?from\s*['"]@\/lib\/services\/(entitlement|feature-charge|pass-revoke)['"]/.test(
+          /export\s*\*\s*(?:as\s+\w+\s*)?from\s*['"]@\/lib\/services\/(entitlement|feature-charge|pass-revoke|pass-purchase)['"]/.test(
             source
           )
         return star || reexports.some((line) => PRIVILEGED.some((name) => new RegExp(`\\b${name}\\b`).test(line)))
@@ -274,11 +281,12 @@ describe('공개 표면 — 사용·발급·회수 함수는 서버 액션이 �
    * re-export 만 막으면 «userId 를 받아 grantPasses 를 부르는 얇은 서버 액션»이 새 공개 발급 창구가 된다.
    * 발급·회수를 직접 부르는 서버 액션은 둘뿐이다 — 둘 다 본인 결제를 서버가 확인한 뒤에만 부른다.
    * 새 경로가 필요하면 이 목록을 고치는 일이 곧 보안 검토 요청이다.
+   * (결제 승인은 발급을 직접 부르지 않고 확정 함수 settlePassPurchase 에 맡긴다 — 웹훅과 같은 길이다.)
    */
   it('발급·회수를 직접 부르는 서버 액션은 결제 승인·셀프 취소 둘뿐이다', () => {
     const callers = scanSources(['app', 'lib'])
       .filter(({ source }) => isServerAction(source))
-      .filter(({ source }) => /\b(grantPasses|revokePaymentPasses)\s*\(/.test(source))
+      .filter(({ source }) => /\b(grantPasses|revokePaymentPasses|settlePassPurchase)\s*\(/.test(source))
       .map(({ rel }) => rel)
       .sort()
     expect(callers).toEqual(['app/actions/payment/cancel-request.ts', 'app/actions/payment/payment.ts'])
@@ -289,6 +297,7 @@ describe('공개 표면 — 사용·발급·회수 함수는 서버 액션이 �
       'lib/services/entitlement.ts',
       'lib/services/feature-charge.ts',
       'lib/services/pass-revoke.ts',
+      'lib/services/pass-purchase.ts',
     ]) {
       expect(`${rel}: ${read(rel).startsWith("import 'server-only'")}`).toBe(`${rel}: true`)
     }

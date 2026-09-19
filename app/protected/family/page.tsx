@@ -4,7 +4,7 @@ import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/acti
 import { getCirclesOverview, type CirclesOverview } from '@/app/actions/circle/circles'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
-import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
+import { FAMILY_GATE_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
 import { baseFromBirth } from '@/lib/domain/shrine/energy-born'
 import { highestElement, lowestElement } from '@/lib/domain/shrine/energy-map'
 import type { MemberEnergyHint } from '@/components/family/member-row'
@@ -46,12 +46,8 @@ export default async function FamilyPage() {
         <MembershipGate
           feature="family"
           title="가족·인연 관리"
-          description="소중한 인연들의 사주를 한곳에서 관리하고, 가족별 신당·궁합·미션을 이어갑니다. 멤버십 회원 전용 기능입니다."
-          benefits={[
-            '가족별 사주 · 신당 · 궁합 관리',
-            '가족 미션과 인연 네트워크',
-            ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
-          ]}
+          description="가족의 사주를 등록해 구성원별 풀이 미션과 종합사주풀이까지 이어갑니다. 멤버십 회원 전용입니다."
+          benefits={[...FAMILY_GATE_BENEFIT_LINES]}
         />
       </div>
     )

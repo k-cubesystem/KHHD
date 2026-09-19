@@ -4,11 +4,12 @@ import { redirect } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getMembershipCancelOverview } from '@/app/actions/payment/cancel-request'
+import { membershipRefundPolicyLine } from '@/lib/domain/payment/self-cancel'
 import { MembershipCancelForm } from './membership-cancel-form'
 
 export const metadata: Metadata = {
   title: '멤버십 해지',
-  description: '멤버십을 직접 해지하고 잔여기간을 일할 환불받으실 수 있습니다.',
+  description: `멤버십을 직접 해지할 수 있습니다. ${membershipRefundPolicyLine()}`,
 }
 
 export const dynamic = 'force-dynamic'

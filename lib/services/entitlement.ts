@@ -30,6 +30,8 @@ interface PassContext {
   bypass: boolean
   window: PassWindow | null
   quota: number
+  /** 이번 창이 끝나면 월 몫이 다시 채워지는가 */
+  renews: boolean
 }
 
 async function readRole(userId: string): Promise<string | null> {
@@ -43,9 +45,12 @@ async function readRole(userId: string): Promise<string | null> {
 }
 
 /** 이 사용자의 이번 달 멤버십 몫 — 창과 장수. 비회원이면 window=null, quota=0. */
-async function readMembershipQuota(userId: string, nowMs: number): Promise<{ window: PassWindow | null; quota: number }> {
+async function readMembershipQuota(
+  userId: string,
+  nowMs: number
+): Promise<{ window: PassWindow | null; quota: number; renews: boolean }> {
   const membership = await getActiveMembership(userId, 'admin')
-  if (!membership || membership.isMaster || !membership.planId) return { window: null, quota: 0 }
+  if (!membership || membership.isMaster || !membership.planId) return { window: null, quota: 0, renews: false }
 
   const admin = createAdminClient()
   const { data: plan, error } = await admin
@@ -55,21 +60,24 @@ async function readMembershipQuota(userId: string, nowMs: number): Promise<{ win
     .maybeSingle()
   if (error) {
     logger.error('[Entitlement] 멤버십 월 장수 조회 실패', { userId, message: error.message })
-    return { window: null, quota: 0 }
+    return { window: null, quota: 0, renews: false }
   }
   const quota = (plan as { monthly_passes?: number } | null)?.monthly_passes ?? 0
-  if (quota <= 0 || !membership.currentPeriodStart) return { window: null, quota: 0 }
+  if (quota <= 0 || !membership.currentPeriodStart) return { window: null, quota: 0, renews: false }
 
   const startMs = new Date(membership.currentPeriodStart).getTime()
   const endMs = membership.currentPeriodEnd ? new Date(membership.currentPeriodEnd).getTime() : null
-  return { window: membershipWindow(startMs, endMs, nowMs), quota }
+  const window = membershipWindow(startMs, endMs, nowMs)
+  // 창 끝이 기간 안의 월 경계면 구독이 어떻든 다시 채워진다. 기간 끝과 같으면 갱신 결제가 예정돼 있어야 한다.
+  const endsInsidePeriod = !!window && (endMs === null || new Date(window.endIso).getTime() < endMs)
+  return { window, quota, renews: endsInsidePeriod || membership.renews }
 }
 
 async function readPassContext(userId: string): Promise<PassContext> {
   const role = await readRole(userId)
-  if (hasPassBypass(role)) return { bypass: true, window: null, quota: 0 }
-  const { window, quota } = await readMembershipQuota(userId, Date.now())
-  return { bypass: false, window, quota }
+  if (hasPassBypass(role)) return { bypass: true, window: null, quota: 0, renews: false }
+  const { window, quota, renews } = await readMembershipQuota(userId, Date.now())
+  return { bypass: false, window, quota, renews }
 }
 
 // ────────────────────────────────────────────────────────────
@@ -98,7 +106,11 @@ function toStringArray(value: unknown): string[] {
  * 이용권 사용 — 멤버십 이번 달 몫과 보유 이용권을 만료가 가까운 순으로 쓴다(DB 한 트랜잭션).
  * 모자라면 아무것도 쓰지 않고 INSUFFICIENT.
  */
-export async function consumePass(params: { userId: string; featureKey: string; units: number }): Promise<ConsumePassResult> {
+export async function consumePass(params: {
+  userId: string
+  featureKey: string
+  units: number
+}): Promise<ConsumePassResult> {
   const { userId, featureKey, units } = params
   if (!Number.isInteger(units) || units <= 0) {
     logger.error('[Entitlement] 잘못된 사용 장수', { userId, featureKey, units })
@@ -135,7 +147,12 @@ export async function consumePass(params: { userId: string; featureKey: string; 
   }
   return {
     ok: false,
-    reason: payload.reason === 'INSUFFICIENT' ? 'INSUFFICIENT' : payload.reason === 'INVALID_INPUT' ? 'INVALID_INPUT' : 'ERROR',
+    reason:
+      payload.reason === 'INSUFFICIENT'
+        ? 'INSUFFICIENT'
+        : payload.reason === 'INVALID_INPUT'
+          ? 'INVALID_INPUT'
+          : 'ERROR',
     memberAvailable: payload.member_available ?? 0,
     passAvailable: payload.pass_available ?? 0,
   }
@@ -274,6 +291,7 @@ export async function getPassSummary(userId: string): Promise<PassSummary> {
       used,
       remaining: Math.max(0, ctx.quota - used),
       resetsAt: ctx.window.endIso,
+      renews: ctx.renews,
     }
   }
 

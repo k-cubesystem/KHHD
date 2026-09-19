@@ -4,8 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import { getDestinyTargets, type DestinyTarget } from '@/app/actions/user/destiny'
 import { getUserTierLimits } from '@/app/actions/payment/membership'
 import { getPassSummary } from '@/lib/services/entitlement'
+import { loadWornMainDeity } from '@/lib/services/shrine-wear'
 import type { PassSummary } from '@/lib/domain/entitlement/pass'
 import { TIER_LABEL, isMembershipTier } from '@/lib/domain/payment/membership-tiers'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * 상단 바 「내 명식 바로보기」(태극 팝업)가 쓰는 요약 한 벌.
@@ -34,23 +36,17 @@ export async function getManseSummary(): Promise<ManseSummary | null> {
   } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [targets, tierLimits, passes, { data: shrine }] = await Promise.all([
+  const [targets, tierLimits, passes, deity] = await Promise.all([
     getDestinyTargets(),
     getUserTierLimits(),
     getPassSummary(user.id),
-    // 좌정 신위 — 본인 신당의 主神. 테이블은 `shrines`(신당) + `shrine_deities`(신위 카탈로그)다.
-    // 🔴 2026-08-25 신당 단일화로 가족별 신당이 사라졌지만 컬럼은 남아 있어, 본인 신당은
-    //    `family_member_id is null` 로 계속 집는다(listDeities 와 같은 계보).
-    supabase
-      .from('shrines')
-      .select('main_deity_id, shrine_deities(name, portrait_url)')
-      .eq('user_id', user.id)
-      .is('family_member_id', null)
-      .maybeSingle(),
+    // 좌정 신위 — 등급이 끊겨 신당에서 풀린 主神은 여기서도 풀려 보여야 한다(판정은 shrine-wear 한 곳).
+    // 신위는 부가 정보 — 실패해도 팝업의 본체(명식·이용권·등급)는 성립한다.
+    loadWornMainDeity(supabase, user.id).catch((e: unknown) => {
+      logger.warn('[getManseSummary] seated deity skipped:', e)
+      return null
+    }),
   ])
-
-  // 신위는 부가 정보 — 실패해도 팝업의 본체(명식·이용권·등급)는 성립한다.
-  const deity = toDeity(shrine)
 
   return {
     targets,
@@ -69,16 +65,4 @@ function planNameOf(limits: Awaited<ReturnType<typeof getUserTierLimits>>): stri
   if (limits.tier === 'MASTER') return '관리자'
   if (limits.tier === 'TESTER') return '테스터'
   return '멤버십 회원'
-}
-
-/** 조인 결과는 배열로 올 수도 단건으로 올 수도 있다 — 양쪽을 흡수한다(타입 가드). */
-function toDeity(row: unknown): { name: string; portraitUrl: string | null } | null {
-  if (typeof row !== 'object' || row === null) return null
-  const raw = (row as { shrine_deities?: unknown }).shrine_deities
-  const one = Array.isArray(raw) ? raw[0] : raw
-  if (typeof one !== 'object' || one === null) return null
-  const name = (one as { name?: unknown }).name
-  const portrait = (one as { portrait_url?: unknown }).portrait_url
-  if (typeof name !== 'string' || !name) return null
-  return { name, portraitUrl: typeof portrait === 'string' ? portrait : null }
 }

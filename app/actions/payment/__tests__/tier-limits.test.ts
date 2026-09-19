@@ -30,6 +30,7 @@ function membership(overrides: Partial<ActiveMembership> = {}): ActiveMembership
     currentPeriodEnd: '2026-10-18T00:00:00.000Z',
     currentPeriodStart: '2026-09-18T00:00:00.000Z',
     isMaster: false,
+    renews: true,
     ...overrides,
   }
 }

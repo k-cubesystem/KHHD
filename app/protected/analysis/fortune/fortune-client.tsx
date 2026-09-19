@@ -3,8 +3,6 @@
 import { useRouter } from 'next/navigation'
 import { AddRelationInline } from '@/components/destiny/add-relation-inline'
 import { useState } from 'react'
-import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
-import { PaywallModal } from '@/components/shared/paywall-modal'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -169,7 +167,6 @@ function FortuneResultView({ result }: { result: FortuneResult }) {
 
 function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | null }) {
   const config = TAB_CONFIG.find((t) => t.value === type)!
-  const { checkQuota, paywallProps } = useAnalysisQuota()
   const [state, setState] = useState<
     | { status: 'idle' }
     | { status: 'loading' }
@@ -181,10 +178,10 @@ function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | nu
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  // 🔴 «무료 분석 N회» 페이월을 앞에 세우지 않는다. 운세는 계약상 무료이고(FEATURE_COST.today) 서버도
+  //    과금하지 않는다 — 화면만 세 번 뒤에 막으면 무료 표시가 거짓이 된다. 표시가 정본이다.
   async function handleAnalyze() {
     if (!targetId) return
-    const canProceed = await checkQuota()
-    if (!canProceed) return
     setState({ status: 'loading' })
     const res = await analyzeFortuneAction(targetId, type)
     if (res.success && res.data) {
@@ -282,34 +279,31 @@ function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | nu
 
   // idle
   return (
-    <>
-      <motion.div initial="initial" animate="animate" variants={fadeInUp}>
-        <Card className="bg-surface/20 border-primary/20 card-glass-manse">
-          <CardContent className="p-8 flex flex-col items-center gap-5">
-            <div className="w-14 h-14 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-              {config.icon}
-            </div>
-            <div className="text-center space-y-1">
-              <h3 className="text-lg font-serif font-light text-ink-light">{config.emptyTitle}</h3>
-              <p className="text-sm text-ink-light/50 font-light">{config.emptyDesc}</p>
-            </div>
-            {!targetId ? (
-              <p className="text-xs text-ink-light/40 font-light">사주 정보를 먼저 입력해주세요.</p>
-            ) : (
-              <Button
-                onClick={handleAnalyze}
-                className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 font-light text-sm"
-                variant="outline"
-              >
-                <Sparkles className="w-4 h-4 mr-2" strokeWidth={1.5} />
-                분석하기
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-      <PaywallModal {...paywallProps} />
-    </>
+    <motion.div initial="initial" animate="animate" variants={fadeInUp}>
+      <Card className="bg-surface/20 border-primary/20 card-glass-manse">
+        <CardContent className="p-8 flex flex-col items-center gap-5">
+          <div className="w-14 h-14 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+            {config.icon}
+          </div>
+          <div className="text-center space-y-1">
+            <h3 className="text-lg font-serif font-light text-ink-light">{config.emptyTitle}</h3>
+            <p className="text-sm text-ink-light/50 font-light">{config.emptyDesc}</p>
+          </div>
+          {!targetId ? (
+            <p className="text-xs text-ink-light/40 font-light">사주 정보를 먼저 입력해주세요.</p>
+          ) : (
+            <Button
+              onClick={handleAnalyze}
+              className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 font-light text-sm"
+              variant="outline"
+            >
+              <Sparkles className="w-4 h-4 mr-2" strokeWidth={1.5} />
+              분석하기
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
   )
 }
 

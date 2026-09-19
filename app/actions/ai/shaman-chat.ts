@@ -19,6 +19,7 @@ import { computeEnergy, indexCatalog, ELEMENTS, EL_KO } from '@/lib/domain/shrin
 import { awardDeityBondForUser } from '@/lib/services/deity-bond'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
 import { chargeFeature } from '@/lib/services/feature-charge'
+import { loadWornMainDeity } from '@/lib/services/shrine-wear'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { SHAMAN_QUESTIONS_PER_PASS, formatPassUnits, type PassErrorType } from '@/lib/domain/entitlement/pass'
 import { bondProgress, BOND_LEVEL_NAMES, type BondLevel } from '@/lib/domain/shrine/deities'
@@ -978,20 +979,7 @@ export async function getChatOpening(
     let deityName: string | null = null
     let devotionLevel: number | null = null
     try {
-      const { data: shrine } = await supabase
-        .from('shrines')
-        .select('main_deity_id')
-        .eq('user_id', user.id)
-        .is('family_member_id', null)
-        .maybeSingle()
-      if (shrine?.main_deity_id) {
-        const { data: deity } = await supabase
-          .from('shrine_deities')
-          .select('name')
-          .eq('id', shrine.main_deity_id)
-          .maybeSingle()
-        deityName = deity?.name ?? null
-      }
+      deityName = (await loadWornMainDeity(supabase, user.id))?.name ?? null
     } catch (e) {
       logger.warn('[getChatOpening] deity skipped:', e)
     }

@@ -32,6 +32,8 @@ export interface ActiveMembership {
   currentPeriodStart: string | null
   /** 마스터(admin) 무제한 여부. */
   isMaster: boolean
+  /** 이 기간이 끝나면 정기결제로 이어지는가 — 해지했거나 결제 수단 없이 부여된 멤버십이면 false. */
+  renews: boolean
 }
 
 interface ActiveSubscriptionCore {
@@ -40,6 +42,7 @@ interface ActiveSubscriptionCore {
   status: string
   currentPeriodEnd: string | null
   currentPeriodStart: string | null
+  renews: boolean
 }
 
 interface SubscriptionRow {
@@ -49,7 +52,19 @@ interface SubscriptionRow {
   end_date: string | null
   current_period_start: string | null
   start_date: string | null
+  next_billing_date: string | null
+  retry_count: number | null
 }
+
+/**
+ * 갱신 유예 — 기간 끝과 갱신 크론(10분 간격) 사이의 틈을 메운다.
+ *
+ * 기간은 가입한 «그 시각»에 끝나는데 갱신 결제는 그 뒤 크론이 돌아야 일어난다. 그 사이에 멤버십이 끊긴 것으로 보면
+ * 돈을 내고 있는 회원이 매달 같은 시각에 게이트와 월 몫을 잃는다. 갱신이 예정돼 있고 아직 실패한 적 없는 구독만
+ * 유예한다 — 결제가 한 번이라도 실패하면(retry_count > 0) 바로 끊긴다.
+ * 🔴 크론 주기(vercel.json `/api/cron/billing`)보다 길어야 한다. 너무 길면 결제가 안 될 카드로 다음 달 몫을 쓴다.
+ */
+export const RENEWAL_GRACE_MS = 30 * 60_000
 
 /**
  * 활성 구독 핵심 판정 — 마스터 우선, 없으면 ACTIVE + 미만료 구독을 찾는다(tier 미조회, 경량).
@@ -75,7 +90,14 @@ async function resolveActiveSubscription(
   // 1) 마스터(admin) 무제한 — privileges 단일 기준. 항상 통과.
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
   if (hasUnlimitedAccess((profile as { role?: string } | null)?.role)) {
-    return { isMaster: true, planId: null, status: 'ACTIVE', currentPeriodEnd: null, currentPeriodStart: null }
+    return {
+      isMaster: true,
+      planId: null,
+      status: 'ACTIVE',
+      currentPeriodEnd: null,
+      currentPeriodStart: null,
+      renews: false,
+    }
   }
 
   // 2) 활성 구독 — 기간 미만료.
@@ -84,7 +106,9 @@ async function resolveActiveSubscription(
   //    즉시 해지(일할 환불)는 current_period_end 를 지금으로 닫으므로 아래 만료 검사에서 저절로 빠진다.
   const { data } = await supabase
     .from('subscriptions')
-    .select('plan_id, status, current_period_end, end_date, current_period_start, start_date')
+    .select(
+      'plan_id, status, current_period_end, end_date, current_period_start, start_date, next_billing_date, retry_count'
+    )
     .in('status', ['ACTIVE', 'CANCELLED'])
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
@@ -97,7 +121,24 @@ async function resolveActiveSubscription(
   const periodEnd = row.current_period_end ?? row.end_date ?? null
   // 해지된 구독은 «남은 기간»이 있을 때만 유효하다. 기간을 모르면 무기한 통과시키지 않는다.
   if (row.status === 'CANCELLED' && !periodEnd) return null
-  if (periodEnd && new Date(periodEnd).getTime() < Date.now()) return null
+
+  const renews = row.status === 'ACTIVE' && !!row.next_billing_date
+  const nowMs = Date.now()
+  const periodEndMs = periodEnd ? new Date(periodEnd).getTime() : null
+
+  if (periodEnd && periodEndMs !== null && periodEndMs < nowMs) {
+    const graceEndMs = periodEndMs + RENEWAL_GRACE_MS
+    if (!renews || (row.retry_count ?? 0) > 0 || nowMs >= graceEndMs) return null
+    // 유예 중 — 크론이 곧 쓸 새 주기(옛 기간 끝에서 시작)를 미리 연다. 월 몫 창의 앵커가 갱신 뒤와 같아진다.
+    return {
+      isMaster: false,
+      planId: row.plan_id ?? null,
+      status: 'ACTIVE',
+      currentPeriodEnd: new Date(graceEndMs).toISOString(),
+      currentPeriodStart: periodEnd,
+      renews,
+    }
+  }
 
   return {
     isMaster: false,
@@ -105,6 +146,7 @@ async function resolveActiveSubscription(
     status: row.status ?? 'ACTIVE',
     currentPeriodEnd: periodEnd,
     currentPeriodStart: row.current_period_start ?? row.start_date ?? null,
+    renews,
   }
 }
 
@@ -128,13 +170,19 @@ export async function getActiveMembership(
       currentPeriodEnd: null,
       currentPeriodStart: null,
       isMaster: true,
+      renews: false,
     }
   }
 
   let tier = 'MEMBER'
   if (core.planId) {
-    const supabase = await readerClient(reader)
-    const { data: plan } = await supabase.from('membership_plans').select('tier').eq('id', core.planId).maybeSingle()
+    // 🔴 플랜은 서비스 권한으로 읽는다. membership_plans 의 RLS 는 «판매 중(is_active)» 행만 보여 줘서,
+    //    판매를 내린 플랜의 구독자는 세션으로 읽으면 등급이 MEMBER 로 떨어진다(등급 기능이 닫힌다).
+    const { data: plan } = await createAdminClient()
+      .from('membership_plans')
+      .select('tier')
+      .eq('id', core.planId)
+      .maybeSingle()
     const planTier = (plan as { tier?: string } | null)?.tier
     if (planTier) tier = planTier
   }
@@ -146,6 +194,7 @@ export async function getActiveMembership(
     currentPeriodEnd: core.currentPeriodEnd,
     currentPeriodStart: core.currentPeriodStart,
     isMaster: false,
+    renews: core.renews,
   }
 }
 

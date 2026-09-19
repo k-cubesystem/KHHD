@@ -3,7 +3,7 @@
 import { useId, useState } from 'react'
 import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
-import { chargeRefundPolicyLine } from '@/lib/domain/payment/self-cancel'
+import { chargeRefundPolicyLine, membershipRefundPolicyLine } from '@/lib/domain/payment/self-cancel'
 
 /**
  * 「구매조건 확인 및 결제진행 동의」 — 결제 직전에 **판매자가** 받아야 하는 동의.
@@ -89,8 +89,8 @@ export function PurchaseConsent({
             <div className="flex gap-2">
               <dt className="w-16 shrink-0 text-ink-light/40">청약철회</dt>
               <dd className="min-w-0 flex-1">
-                {interval ? '해지 시 잔여 기간을 일할 계산하여 환불합니다.' : chargeRefundPolicyLine()} 이미 사용한 분은
-                「전자상거래법」 제17조 제2항에 따라 청약철회가 제한됩니다.
+                {interval ? membershipRefundPolicyLine() : chargeRefundPolicyLine()} 이미 사용한 분은 「전자상거래법」
+                제17조 제2항에 따라 청약철회가 제한됩니다.
               </dd>
             </div>
             <p className="pt-1">

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { loadWornMainDeity } from '@/lib/services/shrine-wear'
 import { logger } from '@/lib/utils/logger'
 
 export interface GuideAnnouncement {
@@ -76,8 +77,9 @@ export async function getGuideData(): Promise<GuideData> {
     } = await supabase.auth.getUser()
     if (!user) return empty
 
-    const [{ data: shrine }, { data: notice }, { data: personal }, { data: profile }, { count: chatCount }] =
+    const [{ data: shrine }, { data: notice }, { data: personal }, { data: profile }, { count: chatCount }, worn] =
       await Promise.all([
+        // 온보딩 체크리스트용 — «한 번이라도 모셨는가»는 좌정 기록 그대로 본다(등급이 끊겨도 마친 단계다).
         supabase
           .from('shrines')
           .select('main_deity_id')
@@ -101,24 +103,19 @@ export async function getGuideData(): Promise<GuideData> {
           .maybeSingle(),
         supabase.from('profiles').select('birth_date, guide_progress').eq('id', user.id).maybeSingle(),
         supabase.from('chat_sessions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+        // 말을 거는 神 — 등급이 끊겨 신당에서 풀린 主神은 가이드에서도 풀려야 한다(판정은 shrine-wear 한 곳).
+        // 신위는 부가 정보 — 실패해도 공지·알림·온보딩은 성립한다(해화지기 폴백).
+        loadWornMainDeity(supabase, user.id).catch((e: unknown) => {
+          logger.warn('[guide] seated deity skipped:', e)
+          return null
+        }),
       ])
 
-    let deityName: string | null = null
-    let portraitUrl: string | null = null
     let accent: string | null = null
-    if (shrine?.main_deity_id) {
-      const { data: deity } = await supabase
-        .from('shrine_deities')
-        .select('name, portrait_url, aura')
-        .eq('id', shrine.main_deity_id)
-        .maybeSingle()
-      if (deity) {
-        deityName = deity.name
-        portraitUrl = deity.portrait_url
-        const aura =
-          typeof deity.aura === 'object' && deity.aura !== null ? (deity.aura as Record<string, unknown>) : {}
-        accent = typeof aura.accent === 'string' ? aura.accent : null
-      }
+    if (worn) {
+      const { data: deity } = await supabase.from('shrine_deities').select('aura').eq('id', worn.id).maybeSingle()
+      const aura = typeof deity?.aura === 'object' && deity.aura !== null ? (deity.aura as Record<string, unknown>) : {}
+      accent = typeof aura.accent === 'string' ? aura.accent : null
     }
 
     const cta = personal ? NOTICE_CTA[personal.type] : undefined
@@ -171,8 +168,8 @@ export async function getGuideData(): Promise<GuideData> {
       : null
 
     return {
-      deityName,
-      portraitUrl,
+      deityName: worn?.name ?? null,
+      portraitUrl: worn?.portraitUrl ?? null,
       accent,
       announcement: notice ? { id: notice.id, title: notice.title, body: notice.body } : null,
       personalNotice: personal

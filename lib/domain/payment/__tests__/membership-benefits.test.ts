@@ -1,7 +1,9 @@
 import {
+  FAMILY_GATE_BENEFIT_LINES,
   FREE_RETENTION_DAYS,
   FREE_TIER_LIMITS,
   GENERIC_MEMBERSHIP_BENEFIT_LINES,
+  SHRINE_GATE_BENEFIT_LINES,
   UNLIMITED_STORAGE_LIMIT,
   intervalWords,
   membershipBenefitLines,
@@ -13,8 +15,12 @@ import {
   tierFeatureLines,
   tierFeatureSummaryLine,
   toPlanFacts,
+  webtoonLine,
   type MembershipPlanFacts,
 } from '../membership-benefits'
+import { FEATURE_MIN_TIER, TIER_LABEL } from '../membership-tiers'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { MEMBER_WEEKLY_QUESTIONS } from '@/lib/domain/chat/entitlements'
 import { findBannedPassTerms } from '@/lib/domain/entitlement/pass'
 
@@ -173,6 +179,54 @@ describe('게이트 공통 문구 — 플랜 없이도 정확하다', () => {
     for (const line of GENERIC_MEMBERSHIP_BENEFIT_LINES) {
       expect(line).not.toMatch(/\d/)
     }
+  })
+})
+
+/**
+ * 2026-09-19 배포 전 리뷰 — 구현되지 않았거나 폐지된 혜택이 문구에 남아 있었다.
+ *   ① 웹툰 멤버십 전용 회차(라이브 0편)를 «열람»한다고 적음
+ *   ② 가족별 신당(2026-08-25 폐지)을 게이트가 약속
+ *   ③ 가족 기운 지도(패밀리부터)를 등급 없이 모든 멤버십에 약속
+ */
+describe('없는 혜택을 팔지 않는다', () => {
+  it('웹툰 멤버십 회차는 «연재 예정»이라고 밝힌다 — 열람·입장을 약속하지 않는다', () => {
+    const lines = [webtoonLine(), ...membershipBenefitLines(SINGLE), ...GENERIC_MEMBERSHIP_BENEFIT_LINES].filter(
+      (line) => line.includes('웹툰')
+    )
+    expect(lines).toHaveLength(3)
+    for (const line of lines) {
+      expect(line).toContain('연재 예정')
+      expect(line).not.toMatch(/웹툰[^·]*(열람|입장|전용 회차)/)
+    }
+  })
+
+  it.each([
+    ['신당', SHRINE_GATE_BENEFIT_LINES],
+    ['가족관리', FAMILY_GATE_BENEFIT_LINES],
+  ])('%s 게이트는 폐지된 가족별 신당을 약속하지 않는다', (_label, lines) => {
+    for (const line of lines) {
+      expect(line).not.toMatch(/가족별 신당|가족 신당/)
+    }
+    expectNoBannedClaims(lines)
+  })
+
+  it.each([
+    ['신당', SHRINE_GATE_BENEFIT_LINES],
+    ['가족관리', FAMILY_GATE_BENEFIT_LINES],
+  ])('%s 게이트가 기운 지도를 말할 때는 여는 등급을 함께 적는다', (_label, lines) => {
+    const mapLines = lines.filter((line) => line.includes('기운 지도'))
+    expect(mapLines).toEqual([tierFeatureSummaryLine()])
+    expect(mapLines[0]).toContain(`${TIER_LABEL[FEATURE_MIN_TIER.familyMap]}부터`)
+  })
+
+  it('게이트 화면은 단일 출처 상수를 쓴다 — 레이아웃·페이지가 문구를 따로 적지 않는다', () => {
+    const root = join(__dirname, '..', '..', '..', '..')
+    const source = (rel: string) => readFileSync(join(root, rel), 'utf8')
+    expect(source('app/protected/shrine/layout.tsx')).toContain('SHRINE_GATE_BENEFIT_LINES')
+    expect(source('app/protected/shrine/page.tsx')).toContain('SHRINE_GATE_BENEFIT_LINES')
+    const familyGate = source('app/protected/family/layout.tsx')
+    expect(familyGate).toContain('FAMILY_GATE_BENEFIT_LINES')
+    expect(familyGate).not.toContain('기운 지도')
   })
 })
 

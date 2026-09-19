@@ -10,7 +10,7 @@ import { AnimAuditBadge } from '@/components/shrine/scene/AnimAuditBadge'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
-import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
+import { SHRINE_GATE_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
 
 /**
  * 신당 계열 전체(deities·shop·setup·chat 포함) 멤버십 게이트.
@@ -31,12 +31,7 @@ export default async function ShrineLayout({ children }: { children: React.React
         feature="shrine"
         title="나만의 신당"
         description="사주·관상·손금이 깃든 나만의 신당을 만들고, 신위를 모셔 매일의 기운을 돌봅니다. 멤버십 회원 전용 공간입니다."
-        benefits={[
-          '나·가족별 신당과 신위 모시기',
-          '소원 기원 · 방명록 · 배치 효험',
-          '가족관리 입장 포함',
-          ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
-        ]}
+        benefits={[...SHRINE_GATE_BENEFIT_LINES]}
       />
     )
   }

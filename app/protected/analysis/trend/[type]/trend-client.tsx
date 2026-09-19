@@ -23,8 +23,6 @@ import {
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import type { DestinyTarget } from '@/app/actions/user/destiny'
 import { analyzeTrendAction, type TrendType, type TrendResult } from '@/app/actions/ai/trend'
-import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
-import { PaywallModal } from '@/components/shared/paywall-modal'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 
@@ -219,12 +217,11 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
   >({ status: 'idle' })
 
   const showSelect = targets.length > 1
-  const { checkQuota, paywallProps } = useAnalysisQuota()
 
+  // 🔴 «무료 분석 N회» 페이월을 앞에 세우지 않는다. 흐름 풀이는 테마 카드가 «무료»로 걸고(themes.ts costKey: null)
+  //    서버도 과금하지 않는다 — 화면만 세 번 뒤에 막으면 무료 표시가 거짓이 된다. 표시가 정본이다.
   async function handleAnalyze() {
     if (!selectedId) return
-    const canProceed = await checkQuota()
-    if (!canProceed) return
     setState({ status: 'loading' })
     const res = await analyzeTrendAction(selectedId, trendType)
     if (res.success && res.data) {
@@ -236,7 +233,6 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden py-12 px-4">
-      <PaywallModal {...paywallProps} />
       <div className="absolute inset-0 z-[1] pointer-events-none opacity-[0.03] mix-blend-multiply bg-[url('/texture/hanji_noise.png')] bg-repeat" />
 
       <div className="relative z-10 max-w-md mx-auto space-y-8">

@@ -117,11 +117,11 @@ export function MembershipCancelForm({ overview }: { overview: MembershipCancelO
             <div className="space-y-1">
               <p className="text-sm font-medium text-ink-light flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-primary/70" strokeWidth={1.5} />
-                지금 해지하고 남은 기간만큼 환불받기
+                지금 해지하고 이용분을 뺀 금액 환불받기
               </p>
               <p className="text-xs font-light text-ink-light/60 leading-relaxed">
-                이용약관 제7조 제3항에 따라 이용하신 일수를 뺀 잔여 금액을 일할 계산해 환불합니다. 위약금은 받지
-                않습니다. 이번 달 멤버십 이용권도 바로 쓸 수 없게 됩니다.
+                이용약관 제7조 제3항에 따라 지난 기간 비율과 이번 주기 이용권 사용 비율 중 큰 쪽을 뺀 금액을 환불합니다.
+                위약금은 받지 않습니다. 이번 달 멤버십 이용권도 바로 쓸 수 없게 됩니다.
               </p>
             </div>
           </div>

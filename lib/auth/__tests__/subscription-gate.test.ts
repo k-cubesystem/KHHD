@@ -8,9 +8,11 @@
 import { createClient } from '@/lib/supabase/server'
 
 jest.mock('@/lib/supabase/server', () => ({ createClient: jest.fn() }))
+jest.mock('@/lib/supabase/admin', () => ({ createAdminClient: jest.fn() }))
 jest.mock('@/lib/auth/privileges', () => ({ hasUnlimitedAccess: jest.fn(() => false) }))
 
-import { hasActiveMembership } from '../subscription'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getActiveMembership, hasActiveMembership, RENEWAL_GRACE_MS } from '../subscription'
 
 const mockCreateClient = createClient as jest.MockedFunction<typeof createClient>
 
@@ -20,6 +22,10 @@ interface SubscriptionFixture {
   status: string
   current_period_end: string | null
   end_date?: string | null
+  current_period_start?: string | null
+  next_billing_date?: string | null
+  retry_count?: number | null
+  plan_id?: string | null
 }
 
 interface CallLog {
@@ -96,5 +102,104 @@ describe('hasActiveMembership — 해지 예약 구독', () => {
 
     const statusFilter = stub.calls.find((call) => call.table === 'subscriptions' && call.method === 'in')
     expect(statusFilter?.args).toEqual(['status', ['ACTIVE', 'CANCELLED']])
+  })
+})
+
+describe('갱신 유예 — 기간 끝과 갱신 크론 사이의 틈', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  const justEnded = () => new Date(Date.now() - 5 * 60_000).toISOString()
+
+  it('🔴 갱신이 예정된 구독은 기간이 막 끝났어도 끊기지 않는다 — 돈을 내는 회원이 매달 같은 시각에 막히면 안 된다', async () => {
+    const ended = justEnded()
+    supabaseStub({ status: 'ACTIVE', current_period_end: ended, next_billing_date: ended, retry_count: 0 })
+
+    await expect(hasActiveMembership('user-1')).resolves.toBe(true)
+  })
+
+  it('유예 중에는 크론이 곧 쓸 새 주기를 미리 연다 — 월 몫 창의 앵커가 갱신 뒤와 같아야 같은 사용량 행에 쌓인다', async () => {
+    const ended = justEnded()
+    supabaseStub({
+      status: 'ACTIVE',
+      current_period_end: ended,
+      current_period_start: new Date(Date.now() - 30 * DAY).toISOString(),
+      next_billing_date: ended,
+      retry_count: 0,
+    })
+
+    const membership = await getActiveMembership('user-1')
+
+    expect(membership?.currentPeriodStart).toBe(ended)
+    expect(membership?.currentPeriodEnd).toBe(new Date(new Date(ended).getTime() + RENEWAL_GRACE_MS).toISOString())
+    expect(membership?.renews).toBe(true)
+  })
+
+  it('🔴 갱신 결제가 한 번이라도 실패했으면 유예하지 않는다 — 안 되는 카드로 다음 달 몫을 쓰게 두지 않는다', async () => {
+    const ended = justEnded()
+    supabaseStub({ status: 'ACTIVE', current_period_end: ended, next_billing_date: ended, retry_count: 1 })
+
+    await expect(hasActiveMembership('user-1')).resolves.toBe(false)
+  })
+
+  it('유예는 짧다 — 시한이 지나면 끊긴다', async () => {
+    const ended = new Date(Date.now() - RENEWAL_GRACE_MS - 60_000).toISOString()
+    supabaseStub({ status: 'ACTIVE', current_period_end: ended, next_billing_date: ended, retry_count: 0 })
+
+    await expect(hasActiveMembership('user-1')).resolves.toBe(false)
+  })
+
+  it('해지했거나 결제 수단 없이 부여된 구독(다음 결제일 없음)은 유예 대상이 아니다', async () => {
+    supabaseStub({ status: 'CANCELLED', current_period_end: justEnded(), next_billing_date: null })
+    await expect(hasActiveMembership('user-1')).resolves.toBe(false)
+
+    supabaseStub({ status: 'ACTIVE', current_period_end: justEnded(), next_billing_date: null })
+    await expect(hasActiveMembership('user-1')).resolves.toBe(false)
+  })
+
+  it('유예는 크론 주기(10분)보다 길고 한 시간을 넘지 않는다', () => {
+    expect(RENEWAL_GRACE_MS).toBeGreaterThan(10 * 60_000)
+    expect(RENEWAL_GRACE_MS).toBeLessThanOrEqual(60 * 60_000)
+  })
+})
+
+describe('getActiveMembership — 등급·갱신 여부', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  function planStub(plan: { tier: string } | null) {
+    const builder: Record<string, unknown> = {}
+    for (const method of ['select', 'eq']) builder[method] = () => builder
+    builder.maybeSingle = () => Promise.resolve({ data: plan, error: null })
+    const from = jest.fn(() => builder)
+    ;(createAdminClient as jest.MockedFunction<typeof createAdminClient>).mockReturnValue({
+      from,
+    } as unknown as ReturnType<typeof createAdminClient>)
+    return { from }
+  }
+
+  it('🔴 플랜 등급은 서비스 권한으로 읽는다 — 판매를 내린 플랜의 구독자가 세션 RLS 에 막혀 MEMBER 로 떨어지면 안 된다', async () => {
+    supabaseStub({
+      status: 'ACTIVE',
+      plan_id: 'plan-family',
+      current_period_end: new Date(Date.now() + 5 * DAY).toISOString(),
+      next_billing_date: new Date(Date.now() + 5 * DAY).toISOString(),
+    })
+    const admin = planStub({ tier: 'FAMILY' })
+
+    const membership = await getActiveMembership('user-1')
+
+    expect(membership?.tier).toBe('FAMILY')
+    expect(admin.from).toHaveBeenCalledWith('membership_plans')
+  })
+
+  it('해지 예약 구독은 다시 채워지지 않는다(renews=false) — 요약 문구가 «다시 N장»을 약속하지 않게', async () => {
+    supabaseStub({
+      status: 'CANCELLED',
+      plan_id: 'plan-single',
+      current_period_end: new Date(Date.now() + 5 * DAY).toISOString(),
+      next_billing_date: null,
+    })
+    planStub({ tier: 'SINGLE' })
+
+    await expect(getActiveMembership('user-1')).resolves.toMatchObject({ renews: false })
   })
 })

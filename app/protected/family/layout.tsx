@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
-import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
+import { FAMILY_GATE_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
 
 /**
  * 가족·인연 관리 계열 전체(map·print 포함) 멤버십 게이트. 가짜 점수 궁합 매트릭스는 2026-09-07 삭제.
@@ -22,13 +22,8 @@ export default async function FamilyLayout({ children }: { children: React.React
       <MembershipGate
         feature="family"
         title="가족·인연 관리"
-        description="가족의 사주를 등록해 기운 지도를 보고, 구성원별 풀이 미션과 종합사주풀이까지 이어갑니다. 멤버십 회원 전용입니다."
-        benefits={[
-          '가족 구성원 등록 · 기운 지도',
-          '구성원별 5대 풀이 미션 & 종합사주풀이',
-          '가족 신당 · 닮은꼴 운세',
-          ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
-        ]}
+        description="가족의 사주를 등록해 구성원별 풀이 미션과 종합사주풀이까지 이어갑니다. 멤버십 회원 전용입니다."
+        benefits={[...FAMILY_GATE_BENEFIT_LINES]}
       />
     )
   }

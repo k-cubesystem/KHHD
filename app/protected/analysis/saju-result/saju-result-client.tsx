@@ -88,7 +88,7 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
     }
   }, [apiDone, isLoading])
 
-  async function runAnalysis() {
+  async function runAnalysis(fresh = false) {
     setIsLoading(true)
     setProgress(0)
     setApiDone(false)
@@ -100,8 +100,10 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
     //    실패 시 되돌리는 것도 액션이 한다 — 화면이 환급을 부르면 그 자체가 어뷰즈 경로가 된다.
     // 🔴 «무료 분석 N회» 페이월(useAnalysisQuota)을 앞에 세우지 않는다 — 이용권 판정은 서버(NO_PASS)가 하고,
     //    화면이 먼저 막으면 무료인 캐시 적중까지 막히고 «무료 분석»이라는 없는 약속을 말하게 된다.
+    // 🔴 skipCache 의 기본은 false 다. 늘 true 로 부르던 때에는 24시간 캐시가 있어도 «다시 시도»·뒤로 가기마다
+    //    이용권이 또 나갔다. 캐시를 건너뛰는 길은 장 수를 밝힌 «새로 분석하기» 하나뿐이다.
     try {
-      const result = await analyzeCheonjiinAction(target.id, null, false, true)
+      const result = await analyzeCheonjiinAction(target.id, null, false, fresh)
       if (result.success && result.data) {
         void refreshPasses()
         setData(result.data as AnalysisData)
@@ -140,7 +142,7 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
                 </Button>
               </Link>
             ) : (
-              <Button onClick={runAnalysis} variant="outline" size="sm" className="gap-2">
+              <Button onClick={() => runAnalysis()} variant="outline" size="sm" className="gap-2">
                 <RefreshCw className="w-4 h-4" />
                 다시 시도
               </Button>
@@ -159,7 +161,7 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
         <div className="text-center space-y-4">
           <p className="text-ink-light/60 text-sm">사주 풀이에는 {formatFeatureCost('saju')}이 필요해요.</p>
           <div className="flex gap-2 justify-center">
-            <Button onClick={runAnalysis} variant="outline" size="sm" className="gap-2">
+            <Button onClick={() => runAnalysis()} variant="outline" size="sm" className="gap-2">
               <RefreshCw className="w-4 h-4" />
               다시 시도
             </Button>
@@ -207,11 +209,11 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
           )}
           {isCached && (
             <button
-              onClick={runAnalysis}
+              onClick={() => runAnalysis(true)}
               className="mt-3 inline-flex items-center gap-1 text-[11px] text-ink-light/30 hover:text-gold-500/60 transition-colors"
             >
               <RefreshCw className="w-3 h-3" />
-              새로 분석하기
+              새로 분석하기 · {formatFeatureCost('saju')}
             </button>
           )}
         </header>

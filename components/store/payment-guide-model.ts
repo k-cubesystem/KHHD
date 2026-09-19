@@ -20,7 +20,7 @@ import { FEATURE_COST, type FeatureCostKey } from '@/lib/domain/payment/feature-
 import { PASS_VALID_DAYS, SHAMAN_QUESTIONS_PER_PASS } from '@/lib/domain/entitlement/pass'
 import { PURCHASE_EXPIRE_DAYS } from '@/lib/domain/chat/entitlements'
 import { intervalWords } from '@/lib/domain/payment/membership-benefits'
-import { FEATURE_MIN_TIER, TIER_LABEL, type TierFeature } from '@/lib/domain/payment/membership-tiers'
+import { FEATURE_MIN_TIER, TIER_LABEL, type MembershipTier } from '@/lib/domain/payment/membership-tiers'
 
 // 주기 표기는 멤버십 혜택 문구와 한 곳에서 나온다 — 여기선 다시 정의하지 않고 통과시킨다.
 export { intervalWords }
@@ -51,10 +51,13 @@ const FEATURE_LABEL = {
 /**
  * 이용권만으로는 열리지 않는 풀이 — 서버 입구가 등급으로 먼저 막는다(app/actions/circle/narrative.ts KIND_META).
  * 🔴 안내표에 «2장»만 적으면 비회원·싱글이 이용권을 사서 쓸 수 있는 것처럼 읽힌다 → 최소 등급을 함께 싣는다.
+ * 🔴 오방기는 신당 안에 있다 — 신당은 등급을 가리지 않는 멤버십 게이트(app/protected/shrine/layout.tsx)라
+ *    가장 낮은 등급을 적는다. «싱글 멤버십부터» = 멤버십이면 누구나.
  */
-const FEATURE_TIER: Partial<Record<FeatureCostKey, TierFeature>> = {
-  circleNarrative: 'familyMap',
-  togetherNarrative: 'togetherView',
+const GUIDE_MIN_TIER: Partial<Record<FeatureCostKey, MembershipTier>> = {
+  circleNarrative: FEATURE_MIN_TIER.familyMap,
+  togetherNarrative: FEATURE_MIN_TIER.togetherView,
+  obangkiDraw: 'SINGLE',
 }
 
 /** 플랜을 못 찾았을 때의 등급 표기(마스터 등 DB 플랜이 없는 경우). */
@@ -177,12 +180,12 @@ function resolveMembership(membership: PaymentGuideInput['membership'], plans: G
 
 function allGuideFeatures(): GuideFeature[] {
   return (Object.keys(FEATURE_LABEL) as FeatureCostKey[]).map((key): GuideFeature => {
-    const tierFeature = FEATURE_TIER[key]
+    const minTier = GUIDE_MIN_TIER[key]
     return {
       key,
       label: FEATURE_LABEL[key],
       cost: FEATURE_COST[key].display,
-      minTierLabel: tierFeature ? TIER_LABEL[FEATURE_MIN_TIER[tierFeature]] : null,
+      minTierLabel: minTier ? TIER_LABEL[minTier] : null,
     }
   })
 }

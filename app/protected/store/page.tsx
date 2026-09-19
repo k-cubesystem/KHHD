@@ -141,7 +141,13 @@ async function MembershipTab({ plans }: { plans: MembershipPlan[] }) {
             {t('membershipManageCta')} <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
-        <MembershipTabs plans={sorted} isGuest={false} />
+        {/* 정기결제 중이면 서버가 새 구독 결제를 막는다(createBillingAuthUrl) — 다른 등급의 «지금 시작하기»는 막다른 길이다.
+            결제 없이 부여받은 구독(billing_key 없음)은 막지 않으므로 그대로 시작할 수 있게 둔다. */}
+        <MembershipTabs
+          plans={sorted}
+          isGuest={false}
+          payingPlanId={sub.subscription.billing_key ? sub.subscription.plan_id : null}
+        />
       </div>
     )
   }

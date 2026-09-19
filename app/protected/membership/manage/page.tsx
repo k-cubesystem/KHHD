@@ -7,7 +7,7 @@ import { getSubscriptionStatus } from '@/app/actions/payment/subscription'
 import { getMyPassSummary } from '@/app/actions/payment/passes'
 import { SubscriptionActions } from '@/components/membership/subscription-actions'
 import { EMPTY_PASS_SUMMARY, passSummaryLines } from '@/lib/domain/entitlement/pass'
-import { chargeRefundPolicyLine } from '@/lib/domain/payment/self-cancel'
+import { chargeRefundPolicyLine, membershipRefundPolicyLine } from '@/lib/domain/payment/self-cancel'
 
 export const metadata: Metadata = {
   title: '결제 · 구독 관리',
@@ -211,9 +211,7 @@ export default async function MembershipManagePage() {
             <Crown className="h-3.5 w-3.5 text-gold-500/70" aria-hidden />
             멤버십 해지
           </p>
-          <p className="font-sans text-[11.5px] leading-relaxed text-ink-light/45">
-            기간 끝까지 쓰고 해지 · 또는 남은 기간 일할 환불
-          </p>
+          <p className="font-sans text-[11.5px] leading-relaxed text-ink-light/45">{membershipRefundPolicyLine()}</p>
         </Link>
       </section>
 

@@ -6,6 +6,9 @@
  *  2. 멱등키는 `PAYMENT_CANCEL:<paymentKey>:<취소거래키>` 로 취소 거래마다 고유하다.
  *  3. 전액/부분 취소가 각각 올바른 회수 목표를 RPC 에 넘긴다.
  *  4. 이미 써서 회수 못 한 몫(shortfall)은 Error 를 첫 인자로 한 logger.error → Sentry 경보로 나간다.
+ *  5. 셀프 취소의 회수량은 금액 비율이 아니라 «접수 때 확정한 장 수»다 — 웹훅도 접수 기록에서 같은 의도를 읽는다.
+ *  6. 셀프 취소와 웹훅은 멱등키가 갈린다(:self) — 먼저 온 쪽이 덜 회수해도 뒤에 온 쪽이 마저 회수한다.
+ *  7. 옛 복채 충전 결제는 회수 RPC 를 타지 않는다(만냥 ≠ 장).
  */
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
@@ -32,6 +35,9 @@ interface PaymentRow {
   amount: number
   credits_purchased: number
   credits_remaining: number
+  bokchae_type: string
+  cancelled_amount: number | null
+  cancelled_at: string | null
 }
 
 /** 이용권 10장(39,800원) 구매 — 아직 아무것도 회수되지 않은 상태 */
@@ -42,30 +48,59 @@ const PAYMENT: PaymentRow = {
   amount: 39_800,
   credits_purchased: 10,
   credits_remaining: 10,
+  bokchae_type: 'pass',
+  cancelled_amount: 0,
+  cancelled_at: null,
 }
 
 type RpcResult = { data: unknown; error: { message: string } | null }
 
-/** payments 조회 + 회수 RPC 만 흉내 내는 admin 대역. */
+interface CancelRequestRow {
+  verdict: string
+  accepted_loss: boolean
+  granted_credits: number
+  ledger_remaining: number
+  recoverable_credits: number
+}
+
+/** payments 조회 · 셀프 취소 접수 기록 조회 · 회수 RPC 를 흉내 내는 admin 대역. */
 function adminStub(options: {
   payment?: PaymentRow | null
   lookupError?: { message: string } | null
+  /** 이 결제의 셀프 취소 접수 기록(없으면 상담원 콘솔 취소로 본다) */
+  cancelRequest?: CancelRequestRow | null
   rpc?: RpcResult
 }) {
-  const maybeSingle = jest.fn().mockResolvedValue({
-    data: options.payment === undefined ? PAYMENT : options.payment,
-    error: options.lookupError ?? null,
+  const updates: Array<{ table: string; patch: unknown }> = []
+  const eq = jest.fn()
+  const from = jest.fn((table: string) => {
+    const builder: Record<string, unknown> = {}
+    for (const method of ['select', 'in', 'order', 'limit']) builder[method] = () => builder
+    builder.eq = (...args: unknown[]) => {
+      eq(...args)
+      return builder
+    }
+    builder.update = (patch: unknown) => {
+      updates.push({ table, patch })
+      return builder
+    }
+    builder.maybeSingle = () =>
+      Promise.resolve(
+        table === 'payments'
+          ? { data: options.payment === undefined ? PAYMENT : options.payment, error: options.lookupError ?? null }
+          : { data: options.cancelRequest ?? null, error: null }
+      )
+    builder.then = (resolve: (value: { data: null; error: null }) => unknown) =>
+      Promise.resolve({ data: null, error: null }).then(resolve)
+    return builder
   })
-  const eq = jest.fn(() => ({ maybeSingle }))
-  const select = jest.fn(() => ({ eq }))
-  const from = jest.fn(() => ({ select }))
   const rpc = jest
     .fn()
     .mockResolvedValue(
       options.rpc ?? { data: { applied: true, reason: 'OK', revoked: 0, shortfall: 0, user_id: 'user-1' }, error: null }
     )
 
-  return { client: { from, rpc } as unknown as ReturnType<typeof createAdminClient>, from, eq, rpc }
+  return { client: { from, rpc } as unknown as ReturnType<typeof createAdminClient>, from, eq, rpc, updates }
 }
 
 function rpcOk(revoked: number, shortfall = 0): RpcResult {
@@ -116,8 +151,154 @@ describe('revokePaymentPasses — 전액 취소', () => {
 
     await revokePaymentPasses(CANCEL_WITHOUT_RECORDS)
 
-    expect(admin.from).toHaveBeenCalledTimes(1)
-    expect(admin.from).toHaveBeenCalledWith('payments')
+    const tables = admin.from.mock.calls.map((call) => call[0])
+    expect(tables).not.toContain('entitlement_grants')
+    expect(tables).not.toContain('entitlement_ledger')
+    expect(tables).not.toContain('subscription_usage')
+    expect(admin.updates).toEqual([])
+  })
+})
+
+describe('revokePaymentPasses — 셀프 취소의 회수량은 접수 때 확정한 장 수', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  /** 7일 경과 전체 취소 — 수수료 10% 를 뗀 35,820원만 환불돼 토스 상태는 PARTIAL_CANCELED 다 */
+  const LATE_FULL_CANCEL = {
+    orderId: 'PASS_order-1',
+    tossStatus: 'PARTIAL_CANCELED',
+    totalAmount: 39_800,
+    balanceAmount: 3_980,
+    cancels: [{ cancelAmount: 35_820, cancelStatus: 'DONE', transactionKey: 'tk-late' }],
+  }
+
+  it('🔴 7일 경과 전체 취소 — 환불액은 90% 여도 발급 전량을 회수하고 refunded 로 닫는다', async () => {
+    const admin = adminStub({ rpc: rpcOk(10) })
+    mockCreateAdminClient.mockReturnValue(admin.client)
+
+    await revokePaymentPasses({ ...LATE_FULL_CANCEL, selfCancel: { fullRevoke: true, targetRevoked: 10 } })
+
+    expect(admin.rpc).toHaveBeenCalledWith(
+      'ent_revoke_for_payment',
+      expect.objectContaining({ p_target_revoked: 10, p_fully_cancelled: true, p_cancelled_amount: 35_820 })
+    )
+  })
+
+  it('🔴 미사용분 환불(10장 중 1장 사용, 7일 경과) — 금액 비율(8장)이 아니라 미사용 9장을 회수하고 결제는 닫지 않는다', async () => {
+    const admin = adminStub({ rpc: rpcOk(9) })
+    mockCreateAdminClient.mockReturnValue(admin.client)
+
+    await revokePaymentPasses({
+      orderId: 'PASS_order-1',
+      tossStatus: 'PARTIAL_CANCELED',
+      totalAmount: 39_800,
+      balanceAmount: 7_562,
+      cancels: [{ cancelAmount: 32_238, cancelStatus: 'DONE', transactionKey: 'tk-unused' }],
+      selfCancel: { fullRevoke: false, targetRevoked: 9 },
+    })
+
+    expect(admin.rpc).toHaveBeenCalledWith(
+      'ent_revoke_for_payment',
+      expect.objectContaining({ p_target_revoked: 9, p_fully_cancelled: false, p_cancelled_amount: 32_238 })
+    )
+  })
+
+  it('셀프 취소와 웹훅은 멱등키가 갈린다 — 같은 취소 거래여도 :self 가 붙는다', async () => {
+    const admin = adminStub({ rpc: rpcOk(10) })
+    mockCreateAdminClient.mockReturnValue(admin.client)
+
+    await revokePaymentPasses({ ...LATE_FULL_CANCEL, selfCancel: { fullRevoke: true, targetRevoked: 10 } })
+    await revokePaymentPasses(LATE_FULL_CANCEL)
+
+    const keys = admin.rpc.mock.calls.map((call) => (call[1] as { p_idempotency_key: string }).p_idempotency_key)
+    expect(keys).toEqual(['PAYMENT_CANCEL:pk_live_1:tk-late:self', 'PAYMENT_CANCEL:pk_live_1:tk-late'])
+  })
+
+  it('🔴 웹훅이 먼저 와도 접수 기록에서 같은 의도를 읽는다 — 전체 취소면 발급 전량', async () => {
+    const admin = adminStub({
+      rpc: rpcOk(10),
+      cancelRequest: {
+        verdict: 'FULL_REFUNDABLE',
+        accepted_loss: false,
+        granted_credits: 10,
+        ledger_remaining: 10,
+        recoverable_credits: 10,
+      },
+    })
+    mockCreateAdminClient.mockReturnValue(admin.client)
+
+    await revokePaymentPasses(LATE_FULL_CANCEL)
+
+    expect(admin.rpc).toHaveBeenCalledWith(
+      'ent_revoke_for_payment',
+      expect.objectContaining({ p_target_revoked: 10, p_fully_cancelled: true })
+    )
+  })
+
+  it('웹훅 — 접수 기록이 «미사용분 환불»이면 그때의 미사용 장 수를 목표로 삼는다', async () => {
+    const admin = adminStub({
+      rpc: rpcOk(9),
+      cancelRequest: {
+        verdict: 'PARTIALLY_SPENT',
+        accepted_loss: false,
+        granted_credits: 10,
+        ledger_remaining: 10,
+        recoverable_credits: 9,
+      },
+    })
+    mockCreateAdminClient.mockReturnValue(admin.client)
+
+    await revokePaymentPasses({
+      orderId: 'PASS_order-1',
+      tossStatus: 'PARTIAL_CANCELED',
+      totalAmount: 39_800,
+      balanceAmount: 7_562,
+      cancels: [{ cancelAmount: 32_238, cancelStatus: 'DONE', transactionKey: 'tk-unused' }],
+    })
+
+    expect(admin.rpc).toHaveBeenCalledWith(
+      'ent_revoke_for_payment',
+      expect.objectContaining({ p_target_revoked: 9, p_fully_cancelled: false })
+    )
+  })
+
+  it('접수 기록이 없으면(상담원 콘솔 취소) 금액 비율로 회수한다', async () => {
+    const admin = adminStub({ rpc: rpcOk(9) })
+    mockCreateAdminClient.mockReturnValue(admin.client)
+
+    await revokePaymentPasses(LATE_FULL_CANCEL)
+
+    expect(admin.rpc).toHaveBeenCalledWith(
+      'ent_revoke_for_payment',
+      expect.objectContaining({ p_target_revoked: 9, p_fully_cancelled: false })
+    )
+  })
+})
+
+describe('revokePaymentPasses — 옛 복채 충전 결제', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('🔴 회수 RPC 를 타지 않는다(만냥을 장 수로 회수하지 않는다) — 취소 사실만 적는다', async () => {
+    const admin = adminStub({
+      payment: { ...PAYMENT, bokchae_type: 'charge', amount: 200_000, credits_purchased: 33, credits_remaining: 33 },
+    })
+    mockCreateAdminClient.mockReturnValue(admin.client)
+
+    const result = await revokePaymentPasses({
+      orderId: 'BOKCHAE_1',
+      tossStatus: 'CANCELED',
+      totalAmount: 200_000,
+      balanceAmount: 0,
+      cancels: [{ cancelAmount: 200_000, cancelStatus: 'DONE', transactionKey: 'tk-legacy' }],
+    })
+
+    expect(result).toEqual({ applied: false, reason: 'NOTHING_TO_REVOKE', revoked: 0, shortfall: 0, userId: 'user-1' })
+    expect(admin.rpc).not.toHaveBeenCalled()
+    expect(admin.updates).toHaveLength(1)
+    expect(admin.updates[0]).toMatchObject({
+      table: 'payments',
+      patch: { cancelled_amount: 200_000, status: 'refunded' },
+    })
+    expect(mockLogger.error).not.toHaveBeenCalled()
   })
 })
 

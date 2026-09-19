@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { getShrineEffects } from '@/lib/services/shrine-effects'
+import { loadWornMainDeity } from '@/lib/services/shrine-wear'
 import { sendPushToUser } from '@/lib/services/webpush'
 import { AI_DISCLOSURE_MARK } from '@/components/shared/ServiceDisclaimer'
 import { oracleVoiceFor } from '@/lib/domain/shrine/oracle-voice'
@@ -131,14 +132,10 @@ export async function getRoomOracle(): Promise<DeityOracle | null> {
       return { id: unseen.id, message: unseen.message, emotion: unseen.emotion, deityCode: d.code, deityName: d.name }
     }
 
-    // 2) 좌정 主神 확인 (신탁은 본인 신당 스코프)
-    const { data: shrine } = await supabase
-      .from('shrines')
-      .select('main_deity_id')
-      .eq('user_id', user.id)
-      .is('family_member_id', null)
-      .maybeSingle()
-    if (!shrine?.main_deity_id) return null
+    // 2) 좌정 主神 확인 (신탁은 본인 신당 스코프) — 등급이 끊겨 좌정이 풀린 主神은 신탁을 내리지 않는다.
+    //    이 액션은 공개 엔드포인트라, 화면이 主神을 안 그리는 것과 별개로 여기서도 막는다.
+    const worn = await loadWornMainDeity(supabase, user.id)
+    if (!worn) return null
 
     // 3) 빈도 상한 판정 (최근 7일 이력) — 향로 배치 시 완화
     const [{ data: recent }, effects] = await Promise.all([
@@ -159,7 +156,7 @@ export async function getRoomOracle(): Promise<DeityOracle | null> {
     const { data: deity } = await admin
       .from('shrine_deities')
       .select('code, name, personality, tone')
-      .eq('id', shrine.main_deity_id)
+      .eq('id', worn.id)
       .maybeSingle()
     if (!deity) return null
 
@@ -206,7 +203,7 @@ export async function getRoomOracle(): Promise<DeityOracle | null> {
 
     const { data: inserted, error } = await admin
       .from('deity_oracles')
-      .insert({ user_id: user.id, deity_id: shrine.main_deity_id, message, emotion })
+      .insert({ user_id: user.id, deity_id: worn.id, message, emotion })
       .select('id')
       .single()
     if (error || !inserted) {

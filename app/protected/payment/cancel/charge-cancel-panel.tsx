@@ -33,6 +33,7 @@ const BLOCKED_TEXT: Readonly<Record<string, string>> = {
   NOT_A_CHARGE: '이용권 구매 결제가 아닙니다.',
   NOT_COMPLETED: '결제가 완료되지 않아 취소 대상이 아닙니다.',
   NOTHING_GRANTED: '발급된 이용권이 없어 자동 취소 대상이 아닙니다.',
+  UNUSED_ALREADY_REFUNDED: '쓰지 않은 이용권은 이미 환불되었습니다. 남은 금액은 사용하신 이용권의 몫입니다.',
 }
 
 /**
@@ -75,11 +76,16 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
 
   const blocked = plan.verdict === 'NOT_CANCELLABLE'
   const spent = plan.verdict === 'PARTIALLY_SPENT'
-  // 손실이 나는 취소만 상한 대상이다. 이용권을 안 쓴 정상 취소는 이 값과 무관하다.
+  // 일부를 쓴 결제의 기본 경로 — 쓰지 않은 장만 환불(약관 제7조 제2항). 전부 썼으면 이 경로가 없다.
+  const unusedRefund = spent ? plan.unusedRefund : null
+  // 「결제 전체 취소」를 고르기 전까지는 미사용분 환불이 제출 대상이다.
+  const unusedMode = !!unusedRefund && !showLossPath
+  // 손실이 나는 취소만 상한 대상이다. 이용권을 안 쓴 정상 취소·미사용분 환불은 이 값과 무관하다.
   const lossCapMessage = capMessage ?? (spent && !lossCap.available ? (lossCap.message ?? null) : null)
   const lossPathOpen = spent && !lossCapMessage
-  // (b) 갈래는 손실 처리 동의 없이는 버튼이 열리지 않는다.
-  const canSubmit = !!reasonCode && !pending && (!spent || lossAcknowledged)
+  // 손실 처리 경로는 동의 없이는 버튼이 열리지 않는다.
+  const canSubmit = !!reasonCode && !pending && (!spent || unusedMode || lossAcknowledged)
+  const submitAmount = unusedMode && unusedRefund ? unusedRefund.refundAmount : plan.refundAmount
 
   const handleSubmit = () => {
     if (!reasonCode) {
@@ -91,7 +97,8 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
         paymentId: item.paymentId,
         reasonCode,
         memo,
-        acceptLoss: spent ? lossAcknowledged : undefined,
+        unusedOnly: unusedMode ? true : undefined,
+        acceptLoss: spent && !unusedMode ? lossAcknowledged : undefined,
       })
 
       if (result.success) {
@@ -139,12 +146,12 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
           className={`shrink-0 text-[11px] px-2 py-1 border font-medium ${
             blocked
               ? 'border-ink-light/20 text-ink-light/40'
-              : spent
+              : spent && !unusedRefund
                 ? 'border-red-light/40 text-red-light'
                 : 'border-primary/40 text-primary'
           }`}
         >
-          {blocked ? '취소 불가' : spent ? '자동 취소 불가' : '취소 가능'}
+          {blocked ? '취소 불가' : unusedRefund ? '일부 환불 가능' : spent ? '자동 취소 불가' : '취소 가능'}
         </span>
       </header>
 
@@ -174,30 +181,60 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
 
         {spent && (
           <div className="space-y-3">
-            <div className="border border-red-light/30 bg-red-light/5 p-3 space-y-1.5">
-              <p className="flex items-start gap-2 text-sm font-medium text-red-light">
-                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" strokeWidth={1.5} />
-                자동 취소가 어렵습니다
-              </p>
-              <p className="text-sm font-light text-ink-light/80 leading-relaxed">
-                구매하신 이용권 중 <strong className="text-ink-light">{plan.spentCredits}장</strong>을 이미 쓰셔서 결제
-                전체를 되돌릴 수 없습니다. 지금 남아 있는 이용권은 {plan.recoverableCredits}장입니다.
-              </p>
-              <p className="text-[11px] text-ink-light/50 font-light leading-relaxed">
-                이미 분석 결과를 받아보신 부분은 「전자상거래 등에서의 소비자보호에 관한 법률」 제17조 제2항에 따라
-                청약철회가 제한됩니다.
-              </p>
-            </div>
+            {unusedRefund ? (
+              <div className="space-y-2">
+                <p className="flex items-start gap-2 text-sm font-light text-ink-light/85 leading-relaxed">
+                  <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-primary" strokeWidth={1.5} />
+                  <span>
+                    구매하신 이용권 중 <strong className="text-ink-light">{plan.spentCredits}장</strong>을 쓰셨습니다.
+                    쓰지 않은 <strong className="text-ink-light">{plan.recoverableCredits}장</strong>은 지금 환불받으실
+                    수 있고, 환불하면 그 {plan.recoverableCredits}장은 회수됩니다.
+                  </span>
+                </p>
+                {unusedMode && (
+                  <RefundBreakdown
+                    grossLabel={`쓰지 않은 ${formatPassUnits(plan.recoverableCredits)} 금액`}
+                    gross={unusedRefund.grossAmount}
+                    fee={unusedRefund.feeAmount}
+                    refund={unusedRefund.refundAmount}
+                    within={plan.withinWithdrawalPeriod}
+                    elapsedDays={plan.elapsedDays}
+                    partial
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="border border-red-light/30 bg-red-light/5 p-3 space-y-1.5">
+                <p className="flex items-start gap-2 text-sm font-medium text-red-light">
+                  <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" strokeWidth={1.5} />
+                  자동 취소가 어렵습니다
+                </p>
+                <p className="text-sm font-light text-ink-light/80 leading-relaxed">
+                  구매하신 이용권 <strong className="text-ink-light">{plan.spentCredits}장</strong>을 모두 쓰셔서
+                  돌려드릴 이용권이 남아 있지 않습니다.
+                </p>
+                <p className="text-[11px] text-ink-light/50 font-light leading-relaxed">
+                  이미 분석 결과를 받아보신 부분은 「전자상거래 등에서의 소비자보호에 관한 법률」 제17조 제2항에 따라
+                  청약철회가 제한됩니다.
+                </p>
+              </div>
+            )}
 
             {lossCapMessage ? (
-              <LossCapNotice message={lossCapMessage} />
+              // 미사용분 환불은 손실이 없어 상한과 무관하다 — 그 경로가 있으면 막힘 안내를 앞세우지 않는다.
+              unusedRefund && !capMessage ? null : (
+                <LossCapNotice message={lossCapMessage} />
+              )
             ) : !showLossPath ? (
               <button
                 type="button"
-                onClick={() => setShowLossPath(true)}
+                onClick={() => {
+                  setShowLossPath(true)
+                  setOpen(false)
+                }}
                 className="text-xs text-ink-light/60 underline underline-offset-4 hover:text-ink-light transition-colors"
               >
-                그래도 취소를 요청하고 싶어요
+                {unusedRefund ? '쓴 이용권까지 결제 전체를 취소하고 싶어요' : '그래도 취소를 요청하고 싶어요'}
               </button>
             ) : (
               <div className="border border-primary/20 bg-surface/30 p-3 space-y-2">
@@ -222,12 +259,25 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
                   />
                   위 내용을 확인했으며, 남은 이용권이 회수되는 것에 동의합니다.
                 </label>
+                {unusedRefund && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLossPath(false)
+                      setLossAcknowledged(false)
+                      setOpen(false)
+                    }}
+                    className="text-xs text-ink-light/60 underline underline-offset-4 hover:text-ink-light transition-colors"
+                  >
+                    쓰지 않은 이용권만 환불받을게요
+                  </button>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {!blocked && (plan.verdict === 'FULL_REFUNDABLE' || (showLossPath && lossPathOpen)) && (
+        {!blocked && (plan.verdict === 'FULL_REFUNDABLE' || unusedMode || (showLossPath && lossPathOpen)) && (
           <div className="pt-1">
             {!open ? (
               <button
@@ -263,7 +313,7 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
                     className="flex-1 py-2.5 bg-primary/90 text-[#16140F] text-sm font-medium hover:bg-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                   >
                     {pending && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {won(plan.refundAmount)} 환불 요청
+                    {won(submitAmount)} 환불 요청
                   </button>
                 </div>
               </div>
@@ -276,6 +326,10 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
 }
 
 interface RefundBreakdownProps {
+  /** 첫 줄 이름 — 기본은 결제 금액 */
+  grossLabel?: string
+  /** 결제 일부만 환불하는 경우 — «전액 환불» 문구를 쓰지 않는다 */
+  partial?: boolean
   gross: number
   fee: number
   refund: number
@@ -283,11 +337,11 @@ interface RefundBreakdownProps {
   elapsedDays: number
 }
 
-function RefundBreakdown({ gross, fee, refund, within, elapsedDays }: RefundBreakdownProps) {
+function RefundBreakdown({ grossLabel, partial, gross, fee, refund, within, elapsedDays }: RefundBreakdownProps) {
   return (
     <div className="border border-primary/15 bg-surface/20 p-3 space-y-1 text-sm font-light">
       <div className="flex justify-between text-ink-light/60">
-        <span>결제 금액</span>
+        <span>{grossLabel ?? '결제 금액'}</span>
         <span className="tabular-nums">{won(gross)}</span>
       </div>
       {fee > 0 && (
@@ -302,7 +356,7 @@ function RefundBreakdown({ gross, fee, refund, within, elapsedDays }: RefundBrea
       </div>
       <p className="text-[11px] text-ink-light/45 leading-relaxed pt-1">
         {within
-          ? `결제일로부터 ${elapsedDays}일 지났습니다. ${WITHDRAWAL_PERIOD_DAYS}일 이내라 수수료 없이 전액 환불됩니다.`
+          ? `결제일로부터 ${elapsedDays}일 지났습니다. ${WITHDRAWAL_PERIOD_DAYS}일 이내라 수수료 없이 ${partial ? '' : '전액 '}환불됩니다.`
           : `결제일로부터 ${elapsedDays}일 지나 이용약관 제7조 제2항에 따라 환불 수수료 ${LATE_FEE_PERCENT}%가 차감됩니다.`}
       </p>
     </div>

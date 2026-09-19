@@ -90,8 +90,9 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', '본인 추천은 불가합니다.');
   END IF;
 
-  INSERT INTO public.referral_uses (referrer_id, referee_id, code, bonus_amount)
-  VALUES (v_referrer_id, p_referee_id, upper(p_code), v_passes);
+  -- 🔴 referral_uses 에는 code 열이 없다 — 열 목록에 넣으면 매번 실패해 추천 선물이 한 번도 나가지 않는다.
+  INSERT INTO public.referral_uses (referrer_id, referee_id, bonus_amount)
+  VALUES (v_referrer_id, p_referee_id, v_passes);
 
   PERFORM public.ent_grant(p_referee_id, 'referral', v_passes, v_expires, NULL,
                            'REFERRAL_REFEREE:' || p_referee_id::text, '친구 추천으로 가입');
@@ -101,6 +102,10 @@ BEGIN
   RETURN jsonb_build_object('success', true, 'referrerId', v_referrer_id, 'bonus', v_passes);
 END;
 $function$;
+
+-- 발급 함수다 — 가입 콜백(service_role)만 부른다. CREATE OR REPLACE 는 옛 ACL(authenticated EXECUTE)을 그대로 둔다.
+REVOKE ALL ON FUNCTION public.process_referral_bonus(uuid, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.process_referral_bonus(uuid, text) TO service_role;
 
 
 -- ── 5. 초하루 의례 — 복채 보상 제거(기원 누적만) ──────────────────────
@@ -154,6 +159,12 @@ DROP POLICY IF EXISTS wallet_tx_insert_own ON public.wallet_transactions;
 DROP POLICY IF EXISTS attendance_logs_insert_own ON public.attendance_logs;
 DROP POLICY IF EXISTS "Users can insert own attendance" ON public.attendance_logs;
 
+-- 결제 기록은 서버(service_role)만 쓴다. 정책을 다시 여는 실수가 생겨도 표 권한에서 막히게 권한까지 뺀다.
+DROP POLICY IF EXISTS payments_insert_own ON public.payments;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON public.payments FROM anon, authenticated;
+CREATE UNIQUE INDEX IF NOT EXISTS payments_payment_key_uidx
+  ON public.payments (payment_key) WHERE payment_key IS NOT NULL;
+
 -- 출석은 이제 재화를 주지 않는다 — 기본값이 1 이면 다른 경로로 쌓인 행에 준 적 없는 보상이 기록된다.
 ALTER TABLE public.attendance_logs ALTER COLUMN bokchae_awarded SET DEFAULT 0;
 
@@ -183,11 +194,18 @@ COMMENT ON COLUMN public.energy_gifts.price_bokchae IS '선물은 무료 — 옛
 -- 대상: 일반 회원(role 이 admin·tester 가 아닌 계정) 중 잔액이 있는 계정.
 -- 제외: QA 테스트 계정(초기 지급 기록에 «QA 테스트 계정»이 적힌 계정) — 심사 촬영용이며 멤버십으로 쓴다.
 -- 멱등: 'MIGRATION:<user_id>' — 두 번 돌려도 한 번만 발급된다.
+-- 🔴 배포~이 파일 적용 사이에 가입한 사람은 새 코드의 가입 선물(이용권)과 옛 트리거의 가입 복채를 둘 다 받는다.
+--    새 가입 선물이 처음 나간 시각 이후의 가입·추천 복채는 이관 대상에서 뺀다(같은 선물을 두 번 바꿔 주지 않는다).
 DO $$
 DECLARE
   r record;
   v_passes integer;
+  v_cut timestamptz;
+  v_excess integer;
 BEGIN
+  SELECT min(issued_at) INTO v_cut
+    FROM public.entitlement_grants WHERE source IN ('onboarding', 'referral');
+
   FOR r IN
     SELECT w.user_id, w.balance
       FROM public.wallets w
@@ -200,7 +218,15 @@ BEGIN
        )
        AND EXISTS (SELECT 1 FROM auth.users u WHERE u.id = w.user_id)
   LOOP
-    v_passes := CEIL(r.balance / 2.0)::int;
+    v_excess := 0;
+    IF v_cut IS NOT NULL THEN
+      SELECT COALESCE(SUM(t.amount), 0) INTO v_excess
+        FROM public.wallet_transactions t
+       WHERE t.user_id = r.user_id AND t.created_at >= v_cut AND t.amount > 0
+         AND (t.description = '회원가입 축하 복채' OR t.feature_key IN ('REFERRAL_BONUS', 'REFERRAL_REWARD'));
+    END IF;
+
+    v_passes := CEIL(GREATEST(r.balance - v_excess, 0) / 2.0)::int;
     IF v_passes > 0 THEN
       PERFORM public.ent_grant(r.user_id, 'migration', v_passes, NULL, NULL,
                                'MIGRATION:' || r.user_id::text, '이전 보유분 전환');

@@ -7,6 +7,7 @@ import { logger } from '@/lib/utils/logger'
 import { sendPushToUser } from '@/lib/services/webpush'
 import { isElement, type Element } from '@/lib/domain/shrine/types'
 import { EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
+import { SHOP_CLAIM_MAX_QTY } from '@/lib/domain/shrine/shop-sections'
 import {
   GIFT_DAILY_LIMIT,
   giftDelivery,
@@ -38,6 +39,7 @@ export type GiftError =
   | 'SELF'
   | 'ITEM_NOT_GIFTABLE'
   | 'DAILY_LIMIT'
+  | 'MAX_QTY'
   | 'GRANT_FAILED'
   | 'DB_ERROR'
 
@@ -137,6 +139,21 @@ export async function giftItem(input: {
 
   const delivery = giftDelivery(linkedUserId)
   const message = normalizeGiftMessage(input.message)
+  const grantTo = delivery === 'inventory_recipient' && linkedUserId ? linkedUserId : user.id
+
+  // 받는 사람이 계정이 없으면 살림은 보낸 사람의 신당에 놓인다. 선물이 무료가 된 뒤로는 값이 막이가 아니라서,
+  // 이 길로 상점의 보유 상한을 넘겨 쌓을 수 있다 — 상점 받기와 같은 상한을 건다.
+  if (grantTo === user.id) {
+    const { data: owned } = await admin
+      .from('user_shrine_inventory')
+      .select('qty')
+      .eq('user_id', user.id)
+      .eq('catalog_item_id', item.id)
+      .maybeSingle()
+    if (((owned as { qty?: number } | null)?.qty ?? 0) >= SHOP_CLAIM_MAX_QTY) {
+      return { success: false, error: 'MAX_QTY' }
+    }
+  }
 
   const { data: giftRow, error: insertError } = await admin
     .from('energy_gifts')
@@ -164,7 +181,6 @@ export async function giftItem(input: {
     return { success: false, error: 'DB_ERROR' }
   }
 
-  const grantTo = delivery === 'inventory_recipient' && linkedUserId ? linkedUserId : user.id
   const { error: grantError } = await admin.rpc('grant_shrine_item', {
     p_user_id: grantTo,
     p_item_id: item.id,

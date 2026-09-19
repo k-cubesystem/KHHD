@@ -2,7 +2,9 @@ import { ShamanChatInterface, type SeatedDeityInfo } from '@/components/ai/shama
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { getShamanQuestionStatus } from '@/app/actions/ai/shaman-chat'
+import { getMyPassSummary } from '@/app/actions/payment/passes'
 import { AdGateCta } from '@/components/ai/chat/ad-gate-cta'
+import { PassGateCta } from '@/components/ai/chat/pass-gate-cta'
 import { MembershipGate } from '@/components/shared/membership-gate'
 import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
 import {
@@ -11,7 +13,9 @@ import {
   PURCHASE_QUESTIONS,
   PURCHASE_EXPIRE_DAYS,
 } from '@/lib/domain/chat/entitlements'
-import { formatFeatureCost } from '@/lib/domain/payment/feature-costs'
+import { heldPassCount } from '@/lib/domain/entitlement/pass'
+import { FEATURE_COST, formatFeatureCost } from '@/lib/domain/payment/feature-costs'
+import { loadWornMainDeity } from '@/lib/services/shrine-wear'
 import { logger } from '@/lib/utils/logger'
 import { Metadata } from 'next'
 
@@ -29,20 +33,8 @@ async function loadSeatedDeity(): Promise<SeatedDeityInfo | null> {
     } = await supabase.auth.getUser()
     if (!user) return null
 
-    const { data: shrine } = await supabase
-      .from('shrines')
-      .select('main_deity_id')
-      .eq('user_id', user.id)
-      .is('family_member_id', null)
-      .maybeSingle()
-    if (!shrine?.main_deity_id) return null
-
-    const { data: deity } = await supabase
-      .from('shrine_deities')
-      .select('code, name')
-      .eq('id', shrine.main_deity_id)
-      .maybeSingle()
-    return deity ? { code: deity.code, name: deity.name } : null
+    const worn = await loadWornMainDeity(supabase, user.id)
+    return worn ? { code: worn.code, name: worn.name } : null
   } catch (e) {
     logger.warn('[AIShamanPage] seated deity seed skipped:', e)
     return null
@@ -63,6 +55,10 @@ export default async function AIShamanPage({
   //    이제 잔여가 곧 입장권이다. 잔여 0인 사람에게는 게이트가 광고·이용권 두 길을 함께 보여준다.
   const [membership, status] = await Promise.all([getCurrentUserMembership(), getShamanQuestionStatus()])
   if (!membership && status.totalRemaining <= 0) {
+    // 보유 이용권으로 질문을 열 수 있는지는 여기서 읽어 버튼 모양만 고른다 — 정본 판정은 여는 순간의 서버(NO_PASS)다.
+    const passes = await getMyPassSummary()
+    const canOpenWithPass =
+      passes !== null && (passes.unlimited || heldPassCount(passes) >= FEATURE_COST.shamanQuestions.display)
     return (
       <MembershipGate
         feature="counsel"
@@ -75,7 +71,12 @@ export default async function AIShamanPage({
           '신당 · 가족관리 입장 포함',
           ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
         ]}
-        footerSlot={<AdGateCta />}
+        footerSlot={
+          <>
+            <PassGateCta canOpen={canOpenWithPass} />
+            <AdGateCta />
+          </>
+        }
       />
     )
   }

@@ -19,6 +19,7 @@
  *  - 등급 기능(가족 기운 지도·처방전 · 함께 보기)의 정본은 membership-tiers.ts 다.
  */
 
+import { FAMILY_MISSION_TOTAL } from '@/lib/domain/analysis/family-missions'
 import { MEMBER_WEEKLY_QUESTIONS } from '@/lib/domain/chat/entitlements'
 import {
   FEATURE_MIN_TIER,
@@ -110,6 +111,16 @@ export function shrineLine(): string {
   return '신당 — 등급에 맞는 신위·테마 모시기'
 }
 
+/**
+ * 웹툰 멤버십 회차 — 게이트(lib/domain/webtoon/episode.ts)는 있지만 라이브에 멤버십 전용 회차가 아직 한 편도 없다.
+ * 🔴 «열람»·«입장»·«열립니다»로 적으면 없는 혜택을 파는 문구가 된다(표시광고법). 첫 회차가 나간 뒤 이 상태어만 고친다.
+ */
+const WEBTOON_MEMBER_EPISODE_STATUS = '연재 예정'
+
+export function webtoonLine(): string {
+  return `웹툰 — 멤버십 회차 (${WEBTOON_MEMBER_EPISODE_STATUS})`
+}
+
 /** 이 등급이 여는 기능 줄 — 「가족 기운 지도·처방전 이용」. 싱글이면 빈 배열. */
 export function tierFeatureLines(tier: string | null | undefined): string[] {
   return (Object.keys(FEATURE_MIN_TIER) as TierFeature[])
@@ -138,7 +149,7 @@ export function membershipBenefitLines(plan: MembershipPlanFacts | null): string
     shrineLine(),
     relationshipLine(plan),
     `속풀이 — 신령님께 주 ${MEMBER_WEEKLY_QUESTIONS}문 (다 쓰면 광고·이용권으로 이어가기)`,
-    '웹툰 — 멤버십 전용 회차 열람',
+    webtoonLine(),
     recordKeepingLine(plan),
     ...featureLines,
   ]
@@ -152,9 +163,47 @@ export const GENERIC_MEMBERSHIP_BENEFIT_LINES: readonly string[] = [
   '이용권 — 매달 등급별 장 수만큼 (이월 없음 · 풀이는 회원도 이용권으로 봅니다)',
   // 🔴 이 묶음에는 숫자를 넣지 않는다(회귀 테스트가 강제). 플랜·정책이 바뀌어도 어긋날 자리를 없앤다 —
   //    구체적 횟수가 필요한 화면은 entitlements 상수를 직접 인용해 자기 줄을 만든다.
-  '속풀이 입장 · 웹툰 멤버십 회차 입장',
+  `속풀이 입장 · 웹툰 멤버십 회차(${WEBTOON_MEMBER_EPISODE_STATUS})`,
   '기록 보관 — 기간 제한 없이 (개수는 등급별)',
   tierFeatureSummaryLine(),
+]
+
+/**
+ * 신당 게이트(비회원 업셀)의 혜택 줄 — 레이아웃 게이트와 인덱스 페이지 게이트가 같은 줄을 쓴다.
+ * 🔴 가족별 신당은 2026-08-25 폐지됐다(나의 신당에 가족을 함께 모신다). 두 게이트가 문구를 따로 적다가
+ *    비회원이 실제로 보는 레이아웃 쪽에만 폐지된 «나·가족별 신당»이 남아 있었다.
+ */
+export const SHRINE_GATE_BENEFIT_LINES: readonly string[] = [
+  '나의 신당에 가족을 함께 모시기',
+  '가족 기도 액자 · 방명록 · 배치 효험',
+  '가족관리 입장 포함',
+  ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
+]
+
+/**
+ * 가족관리 게이트(비회원 업셀)의 혜택 줄.
+ * 🔴 가족 기운 지도는 패밀리부터다 — 등급 없이 적으면 싱글 가입자에게 없는 기능을 약속한다.
+ *    지도 안내는 공통 묶음의 등급 기능 줄(tierFeatureSummaryLine)이 등급과 함께 진다.
+ */
+export const FAMILY_GATE_BENEFIT_LINES: readonly string[] = [
+  '가족 구성원 등록',
+  `구성원별 ${FAMILY_MISSION_TOTAL}대 풀이 미션 & 종합사주풀이`,
+  '나의 신당에 가족 함께 모시기 · 닮은꼴 운세',
+  ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
+]
+
+/**
+ * 해지하면 «잃는 것» — 해지 확인창이 쓴다. 등급을 모르는 자리라 등급마다 다른 숫자는 적지 않는다.
+ * 🔴 아직 없는 것은 잃을 수 없다 — 웹툰 멤버십 회차(연재 예정)를 여기 넣지 않는다.
+ *    해지를 말리는 자리에 없는 혜택을 적으면 표시광고법 문제다.
+ * 🔴 속풀이는 «입장»을 잃지 않는다(광고·이용권으로 계속 묻는다) — 잃는 것은 주간 몫이다.
+ */
+export const MEMBERSHIP_LOSS_LINES: readonly string[] = [
+  '한 달마다 새로 열리는 멤버십 이용권 (따로 구매한 이용권은 그대로 남아요)',
+  '신당 · 가족관리 입장',
+  `속풀이 주 ${MEMBER_WEEKLY_QUESTIONS}문 (광고·이용권으로는 계속 여쭐 수 있어요)`,
+  '등급으로 열린 신위 · 테마와 기능',
+  `기록 보관 — 무료는 최근 ${FREE_RETENTION_DAYS}일까지 열람 · 최대 ${FREE_TIER_LIMITS.storageLimit}개 (넘으면 오래된 기록부터 정리돼요)`,
 ]
 
 /** membership_plans 행(스네이크 케이스) → 혜택 문구용 사실. */

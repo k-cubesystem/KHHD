@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/utils/logger'
 import { revokePaymentPasses } from '@/lib/services/pass-revoke'
+import { settlePassPurchase } from '@/lib/services/pass-purchase'
 import { computeCancelClawback, type TossCancelRecord } from '@/lib/domain/payment/cancel-clawback'
 import { formatPassUnits } from '@/lib/domain/entitlement/pass'
 import { tossWebhookSecretKeys } from '@/lib/config/toss-keys'
@@ -165,15 +166,20 @@ async function handlePaymentDone(data: TossWebhookEvent['data']) {
     logger.log('[Webhook] Subscription payment confirmed:', orderId)
     await recordPurchaseAnalytics(orderId, 'subscription')
   } else {
-    // 일반 결제. 이미 취소·회수된 결제는 되살리지 않는다 — 지난 DONE 웹훅이 재전송돼도
-    // refunded 가 completed 로 뒤집히면 매출·원장이 어긋난다.
-    // 발급 실패(grant_failed)도 덮지 않는다 — 덮으면 수동 발급 대상이 목록에서 사라진다.
-    await getSupabaseAdmin()
-      .from('payments')
-      .update({ status: 'completed' })
-      .eq('order_id', orderId)
-      .neq('status', 'refunded')
-      .neq('status', 'grant_failed')
+    // 이용권 구매. 승인 액션과 같은 확정 함수를 탄다 — 사용자가 승인 직후 창을 닫았거나 서버가 죽어
+    // 기록이 pending 으로 남았어도 여기서 확정·발급된다(발급은 멱등 키가 한 번으로 묶는다).
+    // 🔴 상태만 completed 로 올리면 안 된다 — 이용권 없이 «완료된 결제»가 된다.
+    //    취소(refunded)·실패(failed)·수동 발급 대기(grant_failed)는 확정 함수가 되살리지 않는다.
+    if (typeof data.totalAmount !== 'number') {
+      logger.error(new Error('[Webhook] 결제 완료 웹훅에 금액이 없어 확정하지 못함'), { orderId })
+      return
+    }
+    const settled = await settlePassPurchase({ orderId, approvedAmount: data.totalAmount })
+    if (!settled.ok) {
+      // NO_PAYMENT = 앱 밖에서 만들어진 주문, NOT_SETTLEABLE = 이미 닫힌 결제. 나머지는 확정 함수가 경보했다.
+      logger.warn('[Webhook] 결제 완료 웹훅 — 확정하지 않음:', { orderId, reason: settled.reason })
+      return
+    }
 
     logger.log('[Webhook] Payment confirmed:', orderId)
     await recordPurchaseAnalytics(orderId, 'pass')
