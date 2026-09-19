@@ -19,6 +19,9 @@ const REQUIRED_RPCS = [
   'ent_refund',
   'ent_revoke_for_payment',
   'ent_admin_adjust',
+  // 결제 취소 접수 (없으면 셀프 취소·멤버십 즉시 해지가 전부 «접수하지 못했습니다»로 막힌다)
+  'open_charge_cancel_request',
+  'open_membership_cancel_request',
   // 속풀이 질문권
   'add_shaman_credits',
   'consume_shaman_credit',
