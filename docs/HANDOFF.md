@@ -8,22 +8,27 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-19(45차 — 배포 전) · 라이브 브랜치 `claude/determined-yonath`(`ccff58e7`) · 작업 브랜치 `feature/voucher-system`
+마지막 갱신: 2026-09-19(45차) · 라이브 브랜치 `claude/determined-yonath`(`1f5a925e` · 배포 `hhd-evlhweacl`)
 
-**(45차 · 2026-09-18~19) 복채 → 이용권 전면 전환 — 🚧 구현·리뷰 결함 수정 완료, 아직 배포 전:**
+**(45차 · 2026-09-18~19) 복채 → 이용권 전면 전환 — ✅ 프로덕션 라이브(`1f5a925e` · 배포 `hhd-evlhweacl` · 직전 정상 배포 `hhd-o2c5coipw`):**
 
 CEO 지시(09-18) «전부 진행하고 배포». 토스가 «구독이 잔액형 재화를 지급하는 구조»를 이유로 빌링을 거절해 복채(잔액)를
 없애고 이용권(발급 1건 = 행 1개)으로 바꿨다. 상품·설계의 두 축은 `CLAUDE.md` 「이용권 시스템」 절이 정본이다.
 
-- 워크트리 `.claude/worktrees/voucher-system` · 커밋 `3d4247f9`(코어) → `d94911e5`(8구역 이관) → `7eb6a471`·`3c4113e3`(리뷰 결함 수정) → 2차 리뷰 반영·대표 결정 3건.
-  게이트 tsc 0 · jest 232 스위트 5,295건 · eslint 0/0 · next build ✓. **push·프로덕션 배포·전환 SQL 은 아직 하지 않았다.**
-- **라이브 DB 에 이미 적용된 것**: `20260918_voucher_system.sql`(표·RPC·열 추가, 옛 코드와 공존) · `20260919_profiles_role_guard.sql`
-  (역할 칸 보호 트리거). **아직 적용 안 한 것**: `20260919b_voucher_review_fixes.sql`(배포 «전») · `20260918b_voucher_cutover.sql`(배포 «직후»).
-  두 파일 모두 라이브에서 «되돌림 DO 블록»(마이그레이션 + 동작 시험 + 끝에 RAISE EXCEPTION)으로 검증했다 — 이관 대상 3명 13장.
-- 🔴 **배포 순서(고정)**: ① `20260919b` 적용 → ② `git fetch`, 라이브 tip 이 `ccff58e7` 인지 확인(다르면 rebase) →
-  ③ `git push -u origin feature/voucher-system:claude/determined-yonath` → ④ 워크트리에서 `vercel deploy --prod --yes` →
-  ⑤ **즉시** `20260918b` 적용(먼저 적용하면 옛 결제 승인이 이용권 팩 가격에 복채를 지급한다) → ⑥ 실측(상점 이용권 탭·팩 3종·
-  주문 확인·결제창(테스트 키)·풀이 1회 소비·요약·이관 3명 13장·가입 맛보기·헬스체크).
+- 워크트리 `.claude/worktrees/voucher-system`(브랜치 `feature/voucher-system` → `claude/determined-yonath` 로 fast-forward push).
+  커밋 `3d4247f9`(코어) → `d94911e5`(8구역 이관) → `7eb6a471`·`3c4113e3`(1차 리뷰 결함) → `f9365ebb`(2차 리뷰 + 대표 결정 3건) → `1f5a925e`.
+  게이트 tsc 0 · jest 232 스위트 5,295건 · eslint 0/0 · next build ✓.
+- **라이브 DB 적용 순서(전부 완료)**: `20260918_voucher_system`(배포 전, 09-18) → `20260919_profiles_role_guard`(09-19) →
+  `20260919b_voucher_review_fixes`(배포 직전) → 코드 배포 → `20260918b_voucher_cutover`(배포 직후 즉시). 뒤의 둘은 적용 전에 라이브에서
+  «되돌림 DO 블록»(마이그레이션 + 동작 시험 + 끝에 RAISE EXCEPTION)으로 검증했다. 🔴 옛 객체(wallets·복채 RPC·복채 팩 행)는 지우지 않았다
+  — 되돌리기 레버. DROP 은 관찰 기간(최소 2주) 뒤 별도 파일로.
+- **라이브 실측**: 복채 팩 4종 비활성 · 이용권 팩 3종 활성(4,800 / 19,800 / 38,800원) · 멤버십 5/15/50장 · 이관 3명 13장(기한 없음) ·
+  추천 RPC service_role 전용 · payments 쓰기 정책 제거 · 공지 1건 + 알림 10건 · 공개 화면 8곳 200 · 약관 시행일·개정 사유·종전 약관 링크 ·
+  랜딩 공지 띠 · 프로덕션 상점 스모크(`e2e/prod/store.spec.ts`) 데스크톱·모바일 통과(페이지 오류 0) · 멤버십 탭의 첫 달 할인 문구.
+  🔴 실측하지 못한 것: 실제 결제(테스트 키 결제창)·일반 회원의 이용권 1장 소비·가입 맛보기 발급 — QA 계정은 tester 라 이용권 없이 통과하고,
+  계정 생성은 자동화하지 않았다. RPC 동작은 라이브 DB 에서 되돌림 시험으로 확인했다. 대표 실기기 검수 때 같이 볼 것.
+- 되돌리기: `vercel alias set hhd-o2c5coipw-cubesystems-projects.vercel.app k-haehwadang.com` 으로 코드는 즉시 돌아가지만, 옛 코드는 비활성이 된
+  복채 팩을 못 본다 — 코드를 되돌리면 `price_plans` 의 활성 행도 함께 되돌려야 한다(bokchae=true · pass=false).
 - **대표 결정(2026-09-19) — 전부 반영됨**: ① 약관 **B안** — 제품 전환은 바로 배포하되 공지일 2026-09-19 · 시행일 2026-09-26
   (날짜·개정 사유의 정본 `lib/domain/legal/terms-revision.ts`). 종전 약관은 `/terms/2026-03-03` 에 보존 게시, 랜딩에 공지 띠
   (`components/legal/terms-revision-notice.tsx` — 시행 + 7일 뒤 스스로 사라진다), 회원에게는 전환 SQL 이 공지·알림을 넣는다.

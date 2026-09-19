@@ -84,9 +84,10 @@ test.describe('통합 상점', () => {
     // 6) 신당 테마 탭 — 8종 카드 (테마는 등급으로 열린다 — 적용 버튼은 누르지 않는다)
     await page.getByRole('link', { name: '신당 테마', exact: true }).click()
     await expect(page).toHaveURL(/tab=theme/)
-    await expect(page.getByText('설빛 서고')).toBeVisible({ timeout: 15_000 })
+    // 카드 설명문에도 테마 이름이 나온다(«…조선 반가의 안채…») — 이름표만 정확히 집는다.
+    await expect(page.getByText('설빛 서고', { exact: true })).toBeVisible({ timeout: 15_000 })
     for (const name of ['초가 신당', '조선 반가', '용궁', '도깨비 불', '달집 마당', '홍살문 안뜰', '별밭 천문각']) {
-      await expect(page.getByText(name)).toBeVisible()
+      await expect(page.getByText(name, { exact: true }).first()).toBeVisible()
     }
     await page.screenshot({ path: SHOT('4-themes'), fullPage: true })
     console.log('[PASS] 테마 8종 노출')
@@ -113,6 +114,8 @@ test.describe('통합 상점', () => {
 
     // 10) 속풀이 — 지난 대화 패널
     await page.goto('/protected/ai-shaman')
+    // 지난 대화는 헤더의 더보기 시트 안에 있다(속풀이 개편 때 관리 UI 를 시트로 내렸다).
+    await page.getByRole('button', { name: '대화 설정 열기' }).click({ timeout: 20_000 })
     const historyBtn = page.getByRole('button', { name: '지난 대화 열람' })
     await expect(historyBtn).toBeVisible({ timeout: 20_000 })
     await historyBtn.click()
