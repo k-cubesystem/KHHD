@@ -86,7 +86,7 @@ const BLOCKED_MESSAGES: Readonly<Record<string, string>> = {
   UNUSED_ALREADY_REFUNDED: `쓰지 않은 이용권은 이미 환불되었습니다. 남은 금액은 사용하신 이용권의 몫입니다. ${SUPPORT_ASK}`,
 }
 
-const STATE_CHANGED_MESSAGE = '방금 이용권 사용 내역이 바뀌었습니다. 화면을 새로고침한 뒤 금액을 다시 확인해주세요.'
+const STATE_CHANGED_MESSAGE = '방금 이용권 사용 내역이 바뀌었습니다. 금액을 다시 확인해주세요.'
 
 interface PaymentRow {
   id: string
@@ -362,9 +362,24 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
     return { success: false, error: BLOCKED_MESSAGES.NOTHING_GRANTED }
   }
 
+  // 🔴 앞선 취소의 환불은 나갔는데 이용권 회수가 끝나지 않은 결제 — DB 의 남은 장 수·취소 금액이 실제와 다르다.
+  //    이 상태로 다시 접수하면 같은 장을 근거로 환불이 한 번 더 나간다. 사람이 맞춘 뒤에 연다.
+  const { data: unsettled } = await admin
+    .from('payment_cancel_requests')
+    .select('id')
+    .eq('payment_id', payment.id)
+    .eq('kind', 'CHARGE')
+    .eq('status', 'SUCCEEDED')
+    .eq('toss_error_code', 'REVOKE_PENDING')
+    .limit(1)
+    .maybeSingle()
+  if (unsettled) {
+    return { success: false, error: `앞선 취소를 마무리하고 있습니다. ${SUPPORT_ASK}` }
+  }
+
   const unusedQuote = plan.verdict === 'PARTIALLY_SPENT' && input.unusedOnly === true ? plan.unusedRefund : null
   if (plan.verdict === 'PARTIALLY_SPENT' && input.unusedOnly === true && !unusedQuote) {
-    return { success: false, error: STATE_CHANGED_MESSAGE }
+    return { success: false, stateChanged: true, error: STATE_CHANGED_MESSAGE }
   }
 
   // (b) 갈래 — 손실이 나는 취소. 상한을 먼저 보고, 그다음 2차 동의를 받는다.
@@ -390,6 +405,7 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
   if (plan.verdict === 'PARTIALLY_SPENT' && !unusedQuote && input.acceptLoss !== true) {
     return {
       success: false,
+      stateChanged: true,
       requiresLossAcknowledgement: true,
       lossCredits: plan.lossCredits,
       error: `구매하신 이용권 중 ${plan.spentCredits}장을 이미 사용하셔서 자동 취소가 어렵습니다.`,
@@ -403,6 +419,10 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
     grossAmount: plan.grossAmount,
     feeAmount: plan.feeAmount,
     refundAmount: plan.refundAmount,
+  }
+  // 화면이 보여 준 금액과 서버가 다시 계산한 금액이 다르면(그 사이 이용권이 쓰였다) 동의한 적 없는 금액이다.
+  if (typeof input.expectedRefundAmount === 'number' && input.expectedRefundAmount !== amounts.refundAmount) {
+    return { success: false, stateChanged: true, error: STATE_CHANGED_MESSAGE }
   }
   const plannedLossCredits = unusedQuote ? 0 : plan.lossCredits
   const plannedLossAmount = unusedQuote ? 0 : plan.lossAmount
@@ -465,7 +485,7 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
     }
     if (opened.blockedReason === 'STATE_CHANGED') {
       // 판정을 읽은 뒤 접수하기 전에 이용권이 쓰였다 — 잠금 아래에서 다시 센 값이 다르다.
-      return { success: false, error: STATE_CHANGED_MESSAGE }
+      return { success: false, stateChanged: true, error: STATE_CHANGED_MESSAGE }
     }
     logger.warn('[PaymentCancel] 취소 요청 접수 거절:', {
       userId: user.id,
@@ -483,6 +503,22 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
     cancelAmount: amounts.refundAmount,
     idempotencyKey,
   })
+
+  if (!outcome.ok && outcome.outcomeUnknown) {
+    // 환불이 나갔는지 모른다 — 접수를 닫지 않는다. 열려 있는 동안 이 결제의 이용권은 쓰이지 않고,
+    // 환불이 실제로 나갔다면 웹훅이 이 접수 기록의 의도대로 회수한다. 안 나갔다면 10분 뒤 굳은 요청으로 정리된다.
+    await admin
+      .from('payment_cancel_requests')
+      .update({ toss_error_code: outcome.code, toss_error_message: outcome.message })
+      .eq('id', requestId)
+    logger.error(new Error('[PaymentCancel] 토스 취소 결과 미확인 — 접수를 열어 둠(웹훅 대기)'), {
+      userId: user.id,
+      requestId,
+      paymentId: payment.id,
+      code: outcome.code,
+    })
+    return { success: false, error: outcome.message }
+  }
 
   if (!outcome.ok) {
     await admin
@@ -853,6 +889,22 @@ export async function submitMembershipCancel(input: MembershipCancelSubmission):
       cancelAmount: refundAmount,
       idempotencyKey,
     })
+
+    if (!outcome.ok && outcome.outcomeUnknown) {
+      // 환불이 나갔는지 모른다 — 접수를 닫지 않고(월 몫 동결 유지) 사람이 확인하게 올린다. 닫으면 재시도가
+      // 같은 환불을 한 번 더 내보낼 수 있다.
+      await admin
+        .from('payment_cancel_requests')
+        .update({ toss_error_code: outcome.code, toss_error_message: outcome.message })
+        .eq('id', requestId)
+      logger.error(new Error('[MembershipCancel] 토스 환불 결과 미확인 — 수동 확인 필요'), {
+        userId: user.id,
+        requestId,
+        subscriptionId: subscription.id,
+        code: outcome.code,
+      })
+      return { success: false, error: outcome.message }
+    }
 
     if (!outcome.ok) {
       await admin

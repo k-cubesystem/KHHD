@@ -24,8 +24,10 @@ export function PurchaseConsent({
   onChange,
   /** 주문 상품명. 「무엇을」 샀는지 동의 문구 안에서 다시 확인시킨다. */
   orderName,
-  /** 결제 금액(원). */
+  /** 결제 금액(원). 첫 달 할인 대상이면 «첫 결제» 금액. */
   amount,
+  /** 첫 결제가 할인된 경우의 정가(원) — 다음 결제부터 자동 결제되는 금액. 동의 전에 반드시 보여 준다. */
+  regularAmount,
   /** 정기결제면 「매월」 같은 주기어. 일반결제면 비운다. */
   interval,
 }: {
@@ -33,6 +35,7 @@ export function PurchaseConsent({
   onChange: (next: boolean) => void
   orderName: string
   amount: number
+  regularAmount?: number
   interval?: string
 }) {
   const [open, setOpen] = useState(false)
@@ -79,7 +82,9 @@ export function PurchaseConsent({
             <div className="flex gap-2">
               <dt className="w-16 shrink-0 text-ink-light/40">결제 금액</dt>
               <dd className="min-w-0 flex-1 tabular-nums text-ink-light/80">
-                {amount.toLocaleString('ko-KR')}원{interval ? ` · ${interval} 자동 결제` : ''}
+                {regularAmount !== undefined && interval
+                  ? `첫 결제 ${amount.toLocaleString('ko-KR')}원 · 다음 결제부터 ${interval} ${regularAmount.toLocaleString('ko-KR')}원 자동 결제`
+                  : `${amount.toLocaleString('ko-KR')}원${interval ? ` · ${interval} 자동 결제` : ''}`}
               </dd>
             </div>
             <div className="flex gap-2">

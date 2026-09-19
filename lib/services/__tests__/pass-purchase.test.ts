@@ -2,7 +2,8 @@
  * settlePassPurchase — 이용권 구매 확정(승인 액션 · 웹훅 공용).
  *
  * 못 박는 것:
- *  1. pending → completed 는 `status='pending'` 조건부로만 올린다(취소·실패를 되살리지 않는다).
+ *  1. 확정은 조건부 UPDATE 로만 올린다. 취소(refunded)는 되살리지 않는다. failed·grant_failed 는 확정한다 —
+ *     호출자는 토스 DONE 을 확인한 뒤에만 들어오고, 성공 화면이 두 번 열리면 뒤쪽 호출이 앞쪽의 행을 failed 로 닫을 수 있다.
  *  2. 발급은 결제 1건 = 1번 — 멱등 키 PURCHASE:<paymentId>. 이미 발급됐으면 성공으로 본다.
  *  3. 승인 금액이 기록과 다르면 확정도 발급도 하지 않는다.
  *  4. 발급이 실패하면 grant_failed 로 표시하고 Sentry 로 올린다(수동 발급 대상).
@@ -44,11 +45,11 @@ const PAYMENT = {
   bokchae_type: 'pass',
 }
 
-function adminStub(options: { payment?: unknown; plan?: unknown } = {}) {
+function adminStub(options: { payment?: unknown; plan?: unknown; issuedGrant?: unknown } = {}) {
   const calls: CallLog[] = []
   const from = jest.fn((table: string) => {
     const builder: Record<string, unknown> = {}
-    for (const method of ['select', 'update', 'eq', 'order', 'limit']) {
+    for (const method of ['select', 'update', 'eq', 'in', 'order', 'limit']) {
       builder[method] = (...args: unknown[]) => {
         calls.push({ table, method, args })
         return builder
@@ -58,7 +59,9 @@ function adminStub(options: { payment?: unknown; plan?: unknown } = {}) {
       Promise.resolve(
         table === 'payments'
           ? { data: options.payment === undefined ? PAYMENT : options.payment, error: null }
-          : { data: options.plan === undefined ? { name: '이용권 5장', valid_days: 90 } : options.plan, error: null }
+          : table === 'entitlement_grants'
+            ? { data: options.issuedGrant ?? null, error: null }
+            : { data: options.plan === undefined ? { name: '이용권 5장', valid_days: 90 } : options.plan, error: null }
       )
     builder.then = (resolve: (value: { data: null; error: null }) => unknown) =>
       Promise.resolve({ data: null, error: null }).then(resolve)
@@ -82,8 +85,8 @@ describe('settlePassPurchase — 확정', () => {
     expect(result).toEqual({ ok: true, paymentId: 'pay-1', userId: 'user-1', passes: 5, validDays: 90 })
     const update = admin.calls.find((call) => call.table === 'payments' && call.method === 'update')
     expect(update?.args[0]).toEqual({ status: 'completed' })
-    const filters = admin.calls.filter((call) => call.table === 'payments' && call.method === 'eq')
-    expect(filters.map((call) => call.args)).toEqual(expect.arrayContaining([['status', 'pending']]))
+    const guard = admin.calls.find((call) => call.table === 'payments' && call.method === 'in')
+    expect(guard?.args).toEqual(['status', ['pending', 'failed', 'grant_failed']])
     expect(mockGrant).toHaveBeenCalledTimes(1)
     expect(mockGrant).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -116,7 +119,31 @@ describe('settlePassPurchase — 확정', () => {
 })
 
 describe('settlePassPurchase — 확정하지 않는 경우', () => {
-  it.each(['refunded', 'failed', 'grant_failed'])('🔴 %s 결제는 되살리지 않는다', async (status) => {
+  it.each(['failed', 'grant_failed'])(
+    '🔴 %s 로 닫힌 결제도 토스가 승인했으면 확정한다 — 두 번 열린 성공 화면이 앞쪽 호출의 행을 닫았을 수 있다',
+    async (status) => {
+      const admin = adminStub({ payment: { ...PAYMENT, status } })
+
+      await expect(settlePassPurchase({ orderId: 'PASS_1', approvedAmount: 19_800 })).resolves.toMatchObject({
+        ok: true,
+        passes: 5,
+      })
+      const update = admin.calls.find((call) => call.table === 'payments' && call.method === 'update')
+      expect(update?.args[0]).toEqual({ status: 'completed' })
+      expect(mockGrant).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it('발급 호출이 실패해도 발급 행이 이미 있으면 성공이다 — 동시에 들어온 다른 확정이 발급했다', async () => {
+    const admin = adminStub({ issuedGrant: { id: 'grant-1' } })
+    mockGrant.mockResolvedValue({ granted: false, reason: 'ERROR' })
+
+    await expect(settlePassPurchase({ orderId: 'PASS_1', approvedAmount: 19_800 })).resolves.toMatchObject({ ok: true })
+    const updates = admin.calls.filter((call) => call.table === 'payments' && call.method === 'update')
+    expect(updates.map((call) => call.args[0])).not.toContainEqual({ status: 'grant_failed' })
+  })
+
+  it.each(['refunded'])('🔴 %s 결제는 되살리지 않는다', async (status) => {
     const admin = adminStub({ payment: { ...PAYMENT, status } })
 
     await expect(settlePassPurchase({ orderId: 'PASS_1', approvedAmount: 19_800 })).resolves.toEqual({

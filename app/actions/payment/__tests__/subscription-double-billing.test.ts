@@ -13,6 +13,11 @@
 import { createClient } from '@/lib/supabase/server'
 
 jest.mock('@/lib/supabase/server', () => ({ createClient: jest.fn() }))
+// 자동 환불은 시크릿 키가 비면 토스를 부르지 않는다 — 테스트 환경에는 키가 없다.
+jest.mock('@/lib/config/toss-keys', () => ({
+  tossBillingSecretKey: 'test_sk_billing',
+  tossGeneralSecretKey: 'test_sk',
+}))
 jest.mock('@/lib/services/membership-deity', () => ({ grantMembershipDeity: jest.fn() }))
 jest.mock('@/lib/utils/rate-limit', () => ({ rateLimit: jest.fn(async () => ({ success: true })) }))
 jest.mock('@/lib/utils/logger', () => ({
@@ -28,6 +33,8 @@ interface CallLog {
 const adminCalls: CallLog[] = []
 /** 서비스 권한 조회가 돌려줄 값 — «다른 유료 구독» 목록(subscriptions) · 플랜(membership_plans) */
 let adminOtherPaid: unknown[] = []
+/** 구독 활성화 UPDATE 의 결과 — null 이면 활성화 실패(예: 유료 구독 유니크 인덱스 충돌) */
+let adminActivated: unknown = { id: 'sub-new', status: 'ACTIVE' }
 
 jest.mock('@supabase/ssr', () => ({
   createServerClient: () => ({
@@ -40,7 +47,12 @@ jest.mock('@supabase/ssr', () => ({
         }
       }
       const plan = { id: 'plan-single', name: '싱글 멤버십', tier: 'SINGLE', price: 12_800, interval: 'MONTH' }
-      builder.single = () => Promise.resolve({ data: table === 'membership_plans' ? plan : null, error: null })
+      builder.single = () =>
+        Promise.resolve(
+          table === 'membership_plans'
+            ? { data: plan, error: null }
+            : { data: adminActivated, error: adminActivated ? null : { message: 'duplicate key value' } }
+        )
       builder.maybeSingle = () => Promise.resolve({ data: null, error: null })
       builder.then = (resolve: (value: { data: unknown; error: null }) => unknown) =>
         Promise.resolve({ data: table === 'subscriptions' ? adminOtherPaid : null, error: null }).then(resolve)
@@ -79,6 +91,7 @@ const fetchSpy = jest.fn()
 beforeEach(() => {
   adminCalls.length = 0
   adminOtherPaid = []
+  adminActivated = { id: 'sub-new', status: 'ACTIVE' }
   jest.clearAllMocks()
   global.fetch = fetchSpy as unknown as typeof fetch
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co'
@@ -182,5 +195,32 @@ describe('executeFirstPayment — 청구 전 재확인', () => {
 
     expect(result.success).toBe(true)
     expect(fetchSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('🔴 돈은 나갔는데 활성화가 실패하면 성공으로 답하지 않는다 — 방금 결제를 자동 환불한다', async () => {
+    userClient({ single: PENDING })
+    adminActivated = null
+    fetchSpy
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ paymentKey: 'pk_sub_1' }),
+      } as unknown as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ status: 'CANCELED', totalAmount: 12_800, balanceAmount: 0, cancels: [] }),
+      } as unknown as Response)
+
+    const result = await executeFirstPayment('HHD_user-123_1')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('결제를 취소했습니다')
+    expect(String(fetchSpy.mock.calls[1][0])).toContain('/v1/payments/pk_sub_1/cancel')
+    const refundMark = adminCalls.find(
+      (call) =>
+        call.table === 'subscription_payments' &&
+        call.method === 'update' &&
+        (call.args[0] as { status?: string }).status === 'CANCELLED'
+    )
+    expect(refundMark).toBeDefined()
   })
 })

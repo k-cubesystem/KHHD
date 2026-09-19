@@ -261,6 +261,49 @@ describe('confirmPayment — 같은 주문으로 다시 들어왔을 때', () =>
     expect(mockSettle).not.toHaveBeenCalled()
   })
 
+  it('🔴 뒤늦게 들어온 호출은 토스에 거절당해도 기록을 닫지 않는다 — 앞쪽 호출이 승인을 받는 중일 수 있다', async () => {
+    const admin = adminStub({ insertError: DUPLICATE, existing: EXISTING })
+    fetchSpy
+      .mockImplementationOnce(() =>
+        tossResponse(false, { code: 'FAILED_PAYMENT_INTERNAL_SYSTEM_PROCESSING', message: '결제 처리 중' })
+      )
+      .mockImplementationOnce(() => tossResponse(true, { status: 'IN_PROGRESS', orderId: 'PASS_1' }))
+
+    await expect(confirmPayment('pk_1', 'PASS_1', 5)).rejects.toThrow('결제 처리 중')
+    expect(admin.calls.some((call) => call.table === 'payments' && call.method === 'update')).toBe(false)
+    expect(mockSettle).not.toHaveBeenCalled()
+  })
+
+  it('거절 코드가 무엇이든 토스가 승인 완료(DONE)라고 답하면 확정한다', async () => {
+    adminStub({ insertError: DUPLICATE, existing: { ...EXISTING, status: 'failed' } })
+    fetchSpy
+      .mockImplementationOnce(() =>
+        tossResponse(false, { code: 'FAILED_PAYMENT_INTERNAL_SYSTEM_PROCESSING', message: '결제 처리 중' })
+      )
+      .mockImplementationOnce(() => tossResponse(true, { status: 'DONE', orderId: 'PASS_1', totalAmount: 19_800 }))
+
+    await expect(confirmPayment('pk_1', 'PASS_1', 5)).resolves.toMatchObject({ grantedPasses: 5 })
+  })
+
+  it('이미 확정된 결제(성공 화면 새로고침)는 토스를 다시 부르지 않고 발급 확인만 멱등으로 한다', async () => {
+    adminStub({ insertError: DUPLICATE, existing: { ...EXISTING, status: 'completed' } })
+
+    await expect(confirmPayment('pk_1', 'PASS_1', 5)).resolves.toMatchObject({
+      grantedPasses: 5,
+      totalAmount: 19_800,
+    })
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(mockSettle).toHaveBeenCalledWith({ orderId: 'PASS_1', approvedAmount: 19_800 })
+  })
+
+  it('이미 취소된 결제는 다시 승인하지 않는다', async () => {
+    adminStub({ insertError: DUPLICATE, existing: { ...EXISTING, status: 'refunded' } })
+
+    await expect(confirmPayment('pk_1', 'PASS_1', 5)).rejects.toThrow('이미 취소된 결제입니다.')
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(mockSettle).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['남의 주문', { ...EXISTING, user_id: 'user-2' }],
     ['다른 결제키', { ...EXISTING, payment_key: 'pk_other' }],

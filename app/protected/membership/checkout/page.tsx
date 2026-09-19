@@ -2,7 +2,13 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { getMembershipPlan, createBillingAuthUrl, type MembershipPlan } from '@/app/actions/payment/subscription'
+import {
+  getMembershipPlan,
+  getFirstMonthOffer,
+  createBillingAuthUrl,
+  type MembershipPlan,
+} from '@/app/actions/payment/subscription'
+import { firstMonthEligibilityLine } from '@/lib/domain/payment/membership-intro'
 import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
 import { Button } from '@/components/ui/button'
 import { Crown, Loader2, ArrowLeft, Check } from 'lucide-react'
@@ -23,6 +29,8 @@ function CheckoutContent() {
   const planId = searchParams.get('plan')
 
   const [plan, setPlan] = useState<MembershipPlan | null>(null)
+  // 첫 결제 금액 — 첫 구독 첫 달 할인 대상이면 정가보다 작다. 판정은 서버가 하고, 결제 단계가 같은 판정을 다시 한다.
+  const [firstPrice, setFirstPrice] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState('')
@@ -34,9 +42,12 @@ function CheckoutContent() {
       router.replace('/protected/membership')
       return
     }
-    getMembershipPlan(planId).then((p) => {
+    Promise.all([getMembershipPlan(planId), getFirstMonthOffer(planId)]).then(([p, offer]) => {
       if (!p) router.replace('/protected/membership')
-      else setPlan(p)
+      else {
+        setPlan(p)
+        setFirstPrice(offer?.eligible ? offer.firstPrice : null)
+      }
       setLoading(false)
     })
   }, [planId, router])
@@ -98,6 +109,9 @@ function CheckoutContent() {
 
   const tierName = isMembershipTier(plan.tier) ? TIER_LABEL[plan.tier] : plan.name
   const facts = toPlanFacts(plan)
+  const words = intervalWords(plan.interval)
+  const discounted = firstPrice !== null && firstPrice < plan.price
+  const payNow = discounted ? firstPrice : plan.price
 
   return (
     <div className="min-h-screen bg-background">
@@ -121,12 +135,24 @@ function CheckoutContent() {
         {/* 플랜 요약 */}
         <div className="bg-surface/30 border border-primary/20 rounded-xl p-6 mb-6">
           <div className="text-center mb-4 pb-4 border-b border-primary/10">
-            <div className="text-3xl font-serif font-bold text-primary">
-              {intervalWords(plan.interval).price} {plan.price.toLocaleString()}원
-            </div>
-            <p className="text-white/50 text-xs mt-1">
-              {intervalWords(plan.interval).every}마다 자동 결제 · 언제든 해지 가능
-            </p>
+            {discounted ? (
+              <>
+                <div className="text-3xl font-serif font-bold text-primary">첫 달 {payNow.toLocaleString()}원</div>
+                {/* 🔴 자동결제 금액이 바뀐다 — 첫 결제 금액 옆에 정가를 반드시 함께 적는다. */}
+                <p className="text-white/80 text-sm mt-1.5">
+                  다음 결제부터 {words.price} {plan.price.toLocaleString()}원
+                </p>
+                <p className="text-white/50 text-xs mt-1">{words.every}마다 자동 결제 · 언제든 해지 가능</p>
+                <p className="text-white/40 text-[11px] mt-2 leading-relaxed">{firstMonthEligibilityLine()}</p>
+              </>
+            ) : (
+              <>
+                <div className="text-3xl font-serif font-bold text-primary">
+                  {words.price} {plan.price.toLocaleString()}원
+                </div>
+                <p className="text-white/50 text-xs mt-1">{words.every}마다 자동 결제 · 언제든 해지 가능</p>
+              </>
+            )}
           </div>
           {/* 상점 멤버십 탭과 같은 목록 — 결제 직전에 혜택이 줄거나 달라 보이지 않게(membership-benefits.ts 가 정본). */}
           <ul className="space-y-2">
@@ -150,8 +176,9 @@ function CheckoutContent() {
             checked={agreed}
             onChange={setAgreed}
             orderName={`${tierName} 멤버십`}
-            amount={plan.price}
-            interval={`${intervalWords(plan.interval).every}마다`}
+            amount={payNow}
+            regularAmount={discounted ? plan.price : undefined}
+            interval={`${words.every}마다`}
           />
         </div>
 
@@ -167,8 +194,10 @@ function CheckoutContent() {
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               결제 준비 중...
             </>
+          ) : discounted ? (
+            `첫 달 ${payNow.toLocaleString()}원 결제하기`
           ) : (
-            `${intervalWords(plan.interval).price} ${plan.price.toLocaleString()}원 결제하기`
+            `${words.price} ${plan.price.toLocaleString()}원 결제하기`
           )}
         </Button>
 

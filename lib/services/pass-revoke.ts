@@ -94,18 +94,26 @@ interface CancelRequestIntentRow {
   recoverable_credits: number | null
 }
 
-/** 셀프 취소 접수 기록 → 회수 의도. 접수 기록이 없으면(상담원 콘솔 취소 등) null — 금액 비율로 회수한다. */
+/**
+ * 셀프 취소 접수 기록 → 회수 의도. 맞는 접수 기록이 없으면(상담원 콘솔 취소 등) null — 금액 비율로 회수한다.
+ *
+ * 🔴 «이 취소 거래의 금액»과 접수 기록의 환불 금액이 같을 때만 의도를 쓴다. 결제에 접수 기록이 있다는 것만으로 쓰면,
+ *    토스 호출 전에 죽어 굳은 접수나 예전에 끝난 접수가 며칠 뒤 상담원의 소액 부분 환불을 «전량 회수»로 바꿔 버린다.
+ *    금액이 맞으면 상태는 가리지 않는다 — 응답을 잃어 실패·굳음으로 닫힌 접수도 실제로는 환불이 나간 취소다.
+ */
 async function readSelfCancelIntent(
   admin: ReturnType<typeof createAdminClient>,
   paymentId: string,
-  grantedCredits: number
+  grantedCredits: number,
+  cancelAmount: number
 ): Promise<SelfCancelIntent | null> {
+  if (cancelAmount <= 0) return null
   const { data, error } = await admin
     .from('payment_cancel_requests')
     .select('verdict, accepted_loss, granted_credits, ledger_remaining, recoverable_credits')
     .eq('payment_id', paymentId)
     .eq('kind', 'CHARGE')
-    .in('status', ['REQUESTED', 'SUCCEEDED'])
+    .eq('refund_amount', cancelAmount)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -193,7 +201,16 @@ export async function revokePaymentPasses(input: PaymentRevokeInput): Promise<Pa
     return { applied: false, reason: 'NOTHING_TO_REVOKE', revoked: 0, shortfall: 0, userId: payment.user_id }
   }
 
-  const intent = input.selfCancel ?? (await readSelfCancelIntent(admin, payment.id, payment.credits_purchased))
+  // 이번 취소 거래의 금액 — 확정된 마지막 취소 기록, 없으면 누적 취소액의 증가분.
+  const settledCancels = (input.cancels ?? []).filter(
+    (record) => !!record && (!record.cancelStatus || record.cancelStatus === 'DONE')
+  )
+  const lastCancelAmount =
+    settledCancels[settledCancels.length - 1]?.cancelAmount ??
+    Math.max(0, plan.cancelledAmount - (payment.cancelled_amount ?? 0))
+  const intent =
+    input.selfCancel ??
+    (await readSelfCancelIntent(admin, payment.id, payment.credits_purchased, lastCancelAmount ?? 0))
   const fullyCancelled = plan.fullyCancelled || intent?.fullRevoke === true
   const targetRevoked = Math.min(
     payment.credits_purchased,

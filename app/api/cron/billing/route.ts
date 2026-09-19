@@ -31,15 +31,20 @@ function renewalOrderId(subscriptionId: string, periodStart: Date, retryCount: n
   return `SUB_${subscriptionId}_${day}_${retryCount}`
 }
 
-/** 주문번호로 이미 승인된 결제를 찾는다(겹쳐 돈 크론이 먼저 청구한 경우). 승인 완료가 아니면 null. */
-async function findApprovedPayment(orderId: string): Promise<Record<string, unknown> | null> {
+/** 다시 승인될 일이 없는 결제 상태 — 이 주문번호의 시도는 끝났고 실패했다. */
+const DEAD_ORDER_STATUSES: ReadonlySet<string> = new Set(['ABORTED', 'EXPIRED', 'CANCELED'])
+
+/** 겹친 실행이 같은 주문을 처리하고 있을 때 다음 확인까지 기다리는 시간. */
+const IN_FLIGHT_RECHECK_MS = 60 * 60_000
+
+/** 주문번호로 결제를 찾는다(겹쳐 돈 크론이 먼저 청구한 경우). 못 찾으면 null. */
+async function findOrderPayment(orderId: string): Promise<Record<string, unknown> | null> {
   try {
     const response = await fetch(`https://api.tosspayments.com/v1/payments/orders/${encodeURIComponent(orderId)}`, {
       headers: { Authorization: `Basic ${basicAuth}` },
     })
     if (!response.ok) return null
-    const body = (await response.json()) as Record<string, unknown>
-    return body.status === 'DONE' ? body : null
+    return (await response.json()) as Record<string, unknown>
   } catch (err) {
     logger.error(err instanceof Error ? err : new Error('[Billing Cron] 주문 조회 실패'), { orderId })
     return null
@@ -115,14 +120,31 @@ export async function GET(req: NextRequest) {
 
       if (!approved && typeof result.code === 'string' && DUPLICATE_ORDER_CODES.has(result.code)) {
         // 같은 주기를 다른 실행이 이미 청구했다 — 다시 청구하지 않는다. 승인됐으면 기록만 맞춘다.
-        const existing = await findApprovedPayment(orderId)
-        if (!existing) {
+        const existing = await findOrderPayment(orderId)
+        const existingStatus = typeof existing?.status === 'string' ? existing.status : null
+        if (existing && existingStatus === 'DONE') {
+          result = existing
+          approved = true
+        } else if (existingStatus && DEAD_ORDER_STATUSES.has(existingStatus)) {
+          // 그 주문번호의 시도는 끝났고 실패했다 — 아래 실패 분기로 보내 재시도 차수(=새 주문번호)를 올린다.
+          result = { code: `ORDER_${existingStatus}`, message: '앞선 청구 시도가 승인되지 않았습니다.' }
+        } else {
+          // 겹친 실행이 아직 처리 중이거나 조회가 안 된다 — 실패로 적지 않는다(적으면 성공한 쪽의 기록을 덮는다).
+          // 🔴 그렇다고 그대로 두면 10분마다 같은 호출을 영원히 되풀이한다. 다음 확인을 한 시간 뒤로 민다.
+          //    기간 끝이 읽은 값 그대로일 때만 — 그사이 다른 실행이 갱신에 성공했으면 건드리지 않는다.
+          await supabase
+            .from('subscriptions')
+            .update({ next_billing_date: new Date(now.getTime() + IN_FLIGHT_RECHECK_MS).toISOString() })
+            .eq('id', subscription.id)
+            .eq('current_period_end', subscription.current_period_end)
           results.skipped++
-          logger.warn('[Billing Cron] 이미 처리 중인 주문 — 건너뜀:', { subscriptionId: subscription.id, orderId })
+          logger.error(new Error('[Billing Cron] 쓰인 주문번호인데 승인 여부를 모름 — 한 시간 뒤 다시 확인'), {
+            subscriptionId: subscription.id,
+            orderId,
+            status: existingStatus,
+          })
           continue
         }
-        result = existing
-        approved = true
       }
 
       if (!approved) {
@@ -138,11 +160,14 @@ export async function GET(req: NextRequest) {
           failure_reason: result.message,
         })
 
+        // 기간 끝이 읽은 값 그대로일 때만 실패를 적는다 — 겹친 실행이 그사이 갱신에 성공했으면, 새 주기의
+        // 다음 결제일을 «내일»로 당겨 한 달 이른 청구를 만들면 안 된다.
         if (nextRetryCount >= 3) {
           await supabase
             .from('subscriptions')
             .update({ status: 'PAYMENT_FAILED', retry_count: nextRetryCount })
             .eq('id', subscription.id)
+            .eq('current_period_end', subscription.current_period_end)
         } else {
           const nextRetry = new Date()
           nextRetry.setDate(nextRetry.getDate() + 1)
@@ -150,6 +175,7 @@ export async function GET(req: NextRequest) {
             .from('subscriptions')
             .update({ retry_count: nextRetryCount, next_billing_date: nextRetry.toISOString() })
             .eq('id', subscription.id)
+            .eq('current_period_end', subscription.current_period_end)
         }
 
         results.failed++

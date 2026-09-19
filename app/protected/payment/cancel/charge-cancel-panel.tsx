@@ -99,6 +99,7 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
         memo,
         unusedOnly: unusedMode ? true : undefined,
         acceptLoss: spent && !unusedMode ? lossAcknowledged : undefined,
+        expectedRefundAmount: submitAmount,
       })
 
       if (result.success) {
@@ -123,9 +124,15 @@ function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
         return
       }
 
-      if (result.requiresLossAcknowledgement) {
-        setShowLossPath(true)
-        toast.error(result.error ?? '이미 쓰신 이용권이 있어 자동 취소가 어렵습니다.')
+      if (result.stateChanged) {
+        // 화면이 들고 있던 판정이 낡았다(다른 탭에서 이용권을 썼다). 낡은 판정 위에서 경로만 바꾸면
+        // 동의 칸도 금액도 그려지지 않는 막다른 화면이 된다 — 처음으로 돌리고 서버에서 새로 읽는다.
+        setOpen(false)
+        setShowLossPath(false)
+        setLossAcknowledged(false)
+        toast.error(result.error ?? '이용권 사용 내역이 바뀌었습니다. 금액을 다시 확인해주세요.')
+        void refreshPasses()
+        router.refresh()
         return
       }
       toast.error(result.error ?? '취소에 실패했습니다.')

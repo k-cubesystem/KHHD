@@ -174,7 +174,7 @@ describe('갱신 크론 — 이중 청구 방지', () => {
     expect(insert?.args[0]).toMatchObject({ status: 'SUCCESS', payment_key: 'pk_first' })
   })
 
-  it('중복 주문인데 승인 기록이 없으면 건너뛴다 — 실패로 적지도, 재시도를 당기지도 않는다', async () => {
+  it('중복 주문인데 승인 여부를 모르면 건너뛴다 — 실패로 적지 않고, 다음 확인만 한 시간 뒤로 민다', async () => {
     fetchSpy.mockImplementation((url: string) =>
       String(url).includes('/v1/payments/orders/')
         ? jsonResponse(false, { code: 'NOT_FOUND_PAYMENT' })
@@ -187,7 +187,28 @@ describe('갱신 크론 — 이중 청구 방지', () => {
 
     expect(body.stats).toMatchObject({ skipped: 1, failed: 0 })
     expect(admin.calls.some((call) => call.table === 'subscription_payments' && call.method === 'insert')).toBe(false)
-    expect(admin.calls.some((call) => call.table === 'subscriptions' && call.method === 'update')).toBe(false)
+    // 🔴 크론이 10분마다 돈다 — 상태를 그대로 두면 같은 호출을 영원히 되풀이한다. 재시도 차수는 건드리지 않는다.
+    const updates = admin.calls.filter((call) => call.table === 'subscriptions' && call.method === 'update')
+    expect(updates).toHaveLength(1)
+    const patchBody = updates[0].args[0] as Record<string, unknown>
+    expect(Object.keys(patchBody)).toEqual(['next_billing_date'])
+    expect(new Date(String(patchBody.next_billing_date)).getTime()).toBeGreaterThan(Date.now() + 50 * 60_000)
+  })
+
+  it('중복 주문의 앞선 시도가 끝났고 실패했으면(ABORTED) 실패로 세어 재시도 차수를 올린다 — 주문번호가 바뀌어야 다시 청구된다', async () => {
+    fetchSpy.mockImplementation((url: string) =>
+      String(url).includes('/v1/payments/orders/')
+        ? jsonResponse(true, { status: 'ABORTED' })
+        : jsonResponse(false, { code: 'DUPLICATED_ORDER_ID', message: '중복된 주문번호' })
+    )
+    const admin = adminStub()
+
+    const response = await GET(cronRequest())
+    const body = (await response.json()) as { stats: { skipped: number; failed: number } }
+
+    expect(body.stats).toMatchObject({ failed: 1 })
+    const update = admin.calls.find((call) => call.table === 'subscriptions' && call.method === 'update')
+    expect(update?.args[0]).toMatchObject({ retry_count: 1 })
   })
 
   it('이미 성공 기록이 있으면 결제 기록을 두 번 남기지 않는다', async () => {

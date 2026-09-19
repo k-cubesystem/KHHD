@@ -453,6 +453,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_one_paid_active_uidx
   ON public.subscriptions (user_id) WHERE status = 'ACTIVE' AND billing_key IS NOT NULL;
 
 
+-- ── 5-2. 10장 팩 가격 — 큰 묶음이 장당 더 비싸던 역전 해소 (CEO 결정 2026-09-19) ──
+-- 5장 19,800원(장당 3,960) 인데 10장이 39,800원(장당 3,980)이었다 → 38,800원(장당 3,880).
+UPDATE public.price_plans SET price = 38800, updated_at = now()
+ WHERE product_kind = 'pass' AND credits = 10 AND price = 39800;
+
+
 -- ── 6. 이용권 팩 — 1회 결제 상한 ──────────────────────────────────────
 -- 옛 복채 팩 행(20만·30만원)은 보존용이라 조건에서 뺀다.
 ALTER TABLE public.price_plans DROP CONSTRAINT IF EXISTS price_plans_pass_price_cap_check;

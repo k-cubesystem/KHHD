@@ -233,3 +233,29 @@ BEGIN
     END IF;
   END LOOP;
 END $$;
+
+
+-- ── 8. 약관 개정 공지 — 회원 알림함·가이드 말풍선 ────────────────────
+-- 약관 제3조 제3항: 적용일자 7일 전부터 공지. 날짜의 정본은 lib/domain/legal/terms-revision.ts (공지 2026-09-19 · 시행 2026-09-26).
+-- 비로그인 초기 화면(랜딩)의 공지 띠는 코드(components/legal/terms-revision-notice.tsx)가 맡는다. 두 번 돌려도 한 번만 들어간다.
+INSERT INTO public.announcements (title, body, is_active, starts_at)
+SELECT '이용약관 개정 안내 (2026년 9월 26일 시행)',
+       '서비스 이용 단위가 이용권(풀이 1회 = 1장)으로 바뀝니다. 보유하시던 분은 이용권으로 전환해 전액 보전했습니다. '
+       || '개별 이용권의 유효기간(결제일로부터 90일)·양도 금지, 멤버십 이용권의 이월 없음, 환불 기준이 약관에 명시됩니다. '
+       || '자세한 내용과 종전 약관은 이용약관 화면에서 함께 보실 수 있습니다.',
+       true, now()
+ WHERE NOT EXISTS (
+   SELECT 1 FROM public.announcements WHERE title = '이용약관 개정 안내 (2026년 9월 26일 시행)'
+ );
+
+INSERT INTO public.notifications (user_id, title, message, type, is_read)
+SELECT p.id,
+       '이용약관 개정 안내 (2026년 9월 26일 시행)',
+       '서비스 이용 단위가 이용권(풀이 1회 = 1장)으로 바뀝니다. 보유하시던 분은 이용권으로 전환해 전액 보전했습니다. 자세한 내용은 이용약관에서 확인해 주세요.',
+       'admin_announcement', false
+  FROM public.profiles p
+ WHERE EXISTS (SELECT 1 FROM auth.users u WHERE u.id = p.id)
+   AND NOT EXISTS (
+     SELECT 1 FROM public.notifications n
+      WHERE n.user_id = p.id AND n.title = '이용약관 개정 안내 (2026년 9월 26일 시행)'
+   );

@@ -15,9 +15,6 @@ const secretKey = tossGeneralSecretKey
 /** 이용권 주문번호 접두사 — 결제창(pass-checkout-client)이 만든다. 구독(SUB_)과 섞이면 웹훅 분기가 틀어진다. */
 const PASS_ORDER_PREFIX = 'PASS_'
 
-/** 토스가 «이 결제는 이미 승인됐다»고 알리는 코드 — 앞선 시도가 승인까지 가고 그 뒤에 끊긴 경우다. */
-const ALREADY_APPROVED_CODES: ReadonlySet<string> = new Set(['ALREADY_PROCESSED_PAYMENT'])
-
 const UNIQUE_VIOLATION = '23505'
 
 interface PassPlanRow {
@@ -37,7 +34,10 @@ interface ExistingPaymentRow {
   status: string
 }
 
-/** 이미 승인된 결제를 토스에서 다시 읽는다. 승인 완료(DONE)이고 주문번호가 같을 때만 돌려준다. */
+/**
+ * 승인된 결제를 토스에서 다시 읽는다. 승인 완료(DONE)이고 주문번호가 같을 때만 돌려준다.
+ * 승인 호출이 거절됐다고 승인이 안 된 것은 아니다 — 같은 결제를 다른 호출이 먼저(또는 동시에) 승인했을 수 있다.
+ */
 async function readApprovedPayment(
   paymentKey: string,
   orderId: string,
@@ -122,6 +122,10 @@ export async function confirmPayment(paymentKey: string, orderId: string, passes
     bokchae_type: 'pass',
   })
 
+  // 이 호출이 기록을 열었는가 — 승인 실패 때 기록을 닫을 자격은 연 쪽에만 있다.
+  const openedHere = !insertError
+  let alreadySettled = false
+
   if (insertError) {
     if (insertError.code !== UNIQUE_VIOLATION) {
       // 토스를 부르기 전이다 — 돈은 나가지 않았다.
@@ -150,38 +154,44 @@ export async function confirmPayment(paymentKey: string, orderId: string, passes
       logger.warn('[Payment] 이미 쓰인 주문번호·결제키로 승인 시도:', { userId: user.id, orderId })
       throw new Error('잘못된 주문번호입니다.')
     }
+    if (existing.status === 'refunded') throw new Error('이미 취소된 결제입니다.')
+    alreadySettled = existing.status === 'completed'
   }
 
   const basicAuth = Buffer.from(`${secretKey}:`).toString('base64')
+  let result: Record<string, unknown> = { totalAmount: expectedAmount }
 
-  const response = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${basicAuth}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      paymentKey,
-      orderId,
-      amount: expectedAmount,
-    }),
-  })
+  // 이미 확정된 결제(성공 화면 새로고침)는 토스를 다시 부르지 않는다 — 발급 확인만 멱등으로 한 번 더 한다.
+  if (!alreadySettled) {
+    const response = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${basicAuth}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        paymentKey,
+        orderId,
+        amount: expectedAmount,
+      }),
+    })
 
-  let result = (await response.json()) as Record<string, unknown>
+    result = (await response.json()) as Record<string, unknown>
 
-  if (!response.ok) {
-    const approved =
-      typeof result.code === 'string' && ALREADY_APPROVED_CODES.has(result.code)
-        ? await readApprovedPayment(paymentKey, orderId, basicAuth)
-        : null
-
-    if (!approved) {
-      logger.error('[Payment] Toss confirm failed:', { code: result.code, message: result.message, orderId })
-      // 승인되지 않은 주문은 닫는다. 이미 확정된 행(completed)은 건드리지 않는다.
-      await admin.from('payments').update({ status: 'failed' }).eq('order_id', orderId).eq('status', 'pending')
-      throw new Error(typeof result.message === 'string' ? result.message : '결제 승인에 실패했습니다.')
+    if (!response.ok) {
+      // 🔴 거절 코드를 가리지 않고 토스에 실제 상태를 묻는다. 성공 화면이 두 번 열리면 뒤쪽 호출은
+      //    «이미 처리됨»뿐 아니라 «처리 중» 류의 오류로도 거절된다 — 그때 기록을 failed 로 닫으면
+      //    승인을 받고 있는 앞쪽 호출이 확정하지 못한다.
+      const approved = await readApprovedPayment(paymentKey, orderId, basicAuth)
+      if (!approved) {
+        logger.error('[Payment] Toss confirm failed:', { code: result.code, message: result.message, orderId })
+        if (openedHere) {
+          await admin.from('payments').update({ status: 'failed' }).eq('order_id', orderId).eq('status', 'pending')
+        }
+        throw new Error(typeof result.message === 'string' ? result.message : '결제 승인에 실패했습니다.')
+      }
+      result = approved
     }
-    result = approved
   }
 
   if (result.totalAmount !== expectedAmount) {

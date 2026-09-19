@@ -12,6 +12,7 @@ import {
   membershipBenefitLines,
   toPlanFacts,
 } from '@/lib/domain/payment/membership-benefits'
+import { firstMonthEligibilityLine, firstMonthOfferLine } from '@/lib/domain/payment/membership-intro'
 
 interface Plan {
   id: string
@@ -33,9 +34,16 @@ interface MembershipTabsProps {
    *    결제 없이 부여받은 구독은 서버가 막지 않으므로 넘기지 않는다.
    */
   payingPlanId?: string | null
+  /** 첫 구독 첫 달 할인 대상인가(서버 판정). 비로그인은 가입하면 누구나 대상이므로 true 로 준다. */
+  firstMonthEligible?: boolean
 }
 
-export function MembershipTabs({ plans, isGuest, payingPlanId = null }: MembershipTabsProps) {
+export function MembershipTabs({
+  plans,
+  isGuest,
+  payingPlanId = null,
+  firstMonthEligible = false,
+}: MembershipTabsProps) {
   const router = useRouter()
   const [selectedPlan, setSelectedPlan] = useState(
     plans?.find((p) => p.id === payingPlanId)?.tier || plans?.[1]?.tier || plans?.[0]?.tier || 'FAMILY'
@@ -111,6 +119,9 @@ export function MembershipTabs({ plans, isGuest, payingPlanId = null }: Membersh
           <div className="text-4xl md:text-5xl font-serif font-bold text-primary mb-2">
             {intervalWords(currentPlan.interval).price} {(currentPlan.price || 0).toLocaleString()}원
           </div>
+          {firstMonthEligible && !payingPlanId && (
+            <p className="text-sm text-white/85">{firstMonthOfferLine(currentPlan.price || 0)}</p>
+          )}
           <div className="flex items-center justify-center gap-2 mt-3">
             <Check className="w-4 h-4 text-primary" />
             <span className="text-sm text-white/60">
@@ -142,6 +153,10 @@ export function MembershipTabs({ plans, isGuest, payingPlanId = null }: Membersh
             뒤에는 이용권을 따로 구매해 이어 보실 수 있습니다.
           </p>
         </div>
+
+        {firstMonthEligible && !payingPlanId && (
+          <p className="text-[11px] text-white/45 leading-relaxed text-center mb-3">{firstMonthEligibilityLine()}</p>
+        )}
 
         {/* CTA Button */}
         {!payingPlanId ? (

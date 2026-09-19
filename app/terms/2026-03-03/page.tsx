@@ -1,30 +1,15 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
-import { PASS_VALID_DAYS } from '@/lib/domain/entitlement/pass'
-import { LATE_CANCEL_FEE_RATE, WITHDRAWAL_PERIOD_DAYS } from '@/lib/domain/payment/self-cancel'
-import {
-  PREVIOUS_TERMS_DATE,
-  TERMS_EFFECTIVE_DATE,
-  TERMS_NOTICE_DATE,
-  TERMS_REVISION_REASONS,
-  formatTermsDate,
-} from '@/lib/domain/legal/terms-revision'
 
+// 종전 약관 보존 게시(약관 제3조 제3항 — 개정 약관은 «현행 약관과 함께» 공지한다). 본문은 2026-03-03 시행본 그대로다.
+// 🔴 이 파일의 문구는 고치지 않는다. 옛 이용 단위 이름이 그대로 남아 있는 것이 맞다 — 기록이다.
 export const metadata: Metadata = {
-  title: '이용약관',
-  description: '청담해화당 서비스 이용약관',
+  title: '이용약관 (종전 — 2026년 3월 3일 시행)',
+  description: '청담해화당 종전 이용약관(2026년 3월 3일 시행본) 보존 게시',
+  robots: { index: false, follow: false },
 }
 
-const LATE_FEE_PERCENT = Math.round(LATE_CANCEL_FEE_RATE * 100)
-const LATE_REFUND_PERCENT = 100 - LATE_FEE_PERCENT
-
-// 🔴 제3조 제3항: 개정 약관은 적용일자 7일 전부터 공지한다. 날짜·개정 사유의 정본은 lib/domain/legal/terms-revision.ts.
-const EFFECTIVE_DATE = formatTermsDate(TERMS_EFFECTIVE_DATE)
-const NOTICE_DATE = formatTermsDate(TERMS_NOTICE_DATE)
-const PREVIOUS_DATE = formatTermsDate(PREVIOUS_TERMS_DATE)
-
-export default function TermsOfServicePage() {
+export default function PreviousTermsPage() {
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
       <article className="prose prose-invert prose-sm sm:prose-base mx-auto max-w-3xl prose-headings:text-gold-200 prose-strong:text-gold-300 prose-a:text-gold-500 hover:prose-a:text-gold-300">
@@ -35,22 +20,12 @@ export default function TermsOfServicePage() {
           ← 홈으로 돌아가기
         </Link>
 
-        <h1>이용약관</h1>
+        <h1>이용약관 (종전)</h1>
         <p className="text-muted-foreground">
-          시행일: {EFFECTIVE_DATE} · 공지일: {NOTICE_DATE} ·{' '}
-          <Link href={`/terms/${PREVIOUS_TERMS_DATE}`}>종전 약관({PREVIOUS_DATE} 시행) 보기</Link>
+          이 문서는 2026년 3월 3일부터 시행된 종전 약관입니다. 개정 약관은 <Link href="/terms">이용약관</Link>에서 보실
+          수 있습니다.
         </p>
-
-        <h2>개정 안내</h2>
-        <p>
-          이 약관은 {NOTICE_DATE}에 공지하여 {EFFECTIVE_DATE}부터 시행합니다. 개정 사유와 주요 변경 내용은 다음과
-          같습니다.
-        </p>
-        <ul>
-          {TERMS_REVISION_REASONS.map((reason) => (
-            <li key={reason}>{reason}</li>
-          ))}
-        </ul>
+        <p className="text-muted-foreground">시행일: 2026년 3월 3일</p>
 
         <hr />
 
@@ -72,14 +47,11 @@ export default function TermsOfServicePage() {
             지속적으로 제공받으며 서비스를 이용할 수 있는 자를 말합니다.
           </li>
           <li>
-            <strong>&quot;이용권&quot;</strong>이란 회사가 제공하는 풀이 서비스 1회를 이용할 수 있는 권리를 말합니다.
-            이용권 1장으로 풀이 1회를 이용하며, 재물운 심층·종합사주풀이처럼 분량이 큰 심층 풀이는 1회에{' '}
-            {FEATURE_COST.samhap.display}장을 사용합니다. 이용권은 회원이 구매한 것(이하 &quot;개별 이용권&quot;),
-            멤버십 결제 주기마다 제공되는 것, 회사가 무상으로 제공하는 것으로 나뉩니다.
+            <strong>&quot;복채&quot;</strong>란 서비스 내 유료 콘텐츠 이용을 위한 가상 포인트를 말합니다.
           </li>
           <li>
-            <strong>&quot;멤버십&quot;</strong>이란 월 단위 정기 결제를 통해 등급별 이용권과 기능을 제공받는 유료 이용
-            방식을 말합니다.
+            <strong>&quot;멤버십&quot;</strong>이란 월 단위 정기 구독을 통해 추가 혜택을 제공받는 유료 이용 방식을
+            말합니다.
           </li>
         </ol>
 
@@ -100,17 +72,15 @@ export default function TermsOfServicePage() {
         <p>회사가 제공하는 서비스는 다음과 같습니다.</p>
         <ol>
           <li>
-            <strong>무료 서비스</strong>: 오늘의 운세, 신년운세, 일부 기본 사주 분석, 출석체크
+            <strong>무료 서비스</strong>: 오늘의 운세, 일부 기본 사주 분석, 출석체크 및 룰렛 이벤트
           </li>
           <li>
-            <strong>유료 서비스 (이용권 사용)</strong>: 상세 사주팔자 분석, 천인지 분석, 궁합 분석, 사업 궁합, 관상
-            분석, 손금 분석, 풍수지리 분석, 재물운 분석, 종합사주풀이, 인기테마운세, 기운 풀이, 오방기 점사(하루 무료
-            횟수를 넘긴 경우), AI 샤먼 채팅 질문 등. 서비스별로 사용하는 이용권 장 수는 해당 서비스 화면에 표시됩니다.
+            <strong>유료 서비스 (복채 차감)</strong>: 상세 사주팔자 분석, 천인지 분석, 궁합 분석, 사업 궁합, 관상 분석,
+            손금 분석, 풍수지리 분석, 재물운 분석, 2026년 운세, AI 이미지 생성
           </li>
           <li>
-            <strong>멤버십 서비스</strong>: SINGLE(개인), FAMILY(가족), BUSINESS(사업) 등급별로 결제 주기(월)마다 정해진
-            장 수의 이용권(다음 결제 주기로 이월되지 않음)과 등급별 기능. 등급별 장 수와 기능은 서비스 화면에
-            표시됩니다.
+            <strong>멤버십 서비스</strong>: SINGLE(개인), FAMILY(가족), BUSINESS(사업) 등급별 월간 복채 지급 및 추가
+            혜택
           </li>
           <li>
             <strong>AI 샤먼 채팅</strong>: AI 기반 실시간 운세 상담
@@ -140,53 +110,29 @@ export default function TermsOfServicePage() {
           <li>유료 서비스의 이용 요금, 결제 방법 및 기타 조건은 해당 서비스 화면에 표시됩니다.</li>
           <li>결제는 토스페이먼츠를 통해 신용카드, 간편결제 등의 방법으로 처리됩니다.</li>
           <li>
-            개별 이용권의 유효기간은 결제일로부터 {PASS_VALID_DAYS}일이며, 유효기간이 지난 이용권으로는 서비스를 이용할
-            수 없습니다. 회사가 무상으로 제공하는 이용권의 유효기간은 제공할 때 안내합니다.
+            복채는 서비스 내에서만 사용 가능하며, 현금으로 환급되지 않습니다. 다만, 관련 법령에 따른 환불 사유가 있는
+            경우는 예외로 합니다.
           </li>
-          <li>
-            이용권은 회사가 제공하는 서비스에만 사용할 수 있으며, 회원 간에 양도하거나 재판매할 수 없습니다. 이용권은
-            현금으로 인출하거나 교환할 수 없으며, 결제한 이용권의 환불은 제7조에 따릅니다.
-          </li>
-          <li>
-            멤버십 구독은 월 단위 자동 결제되며, 해지 시 현재 결제 주기의 만료일까지 서비스를 이용할 수 있습니다. 다만,
-            제7조 제3항에 따라 즉시 해지하고 환불받는 경우에는 해지한 때에 이용이 끝납니다.
-          </li>
-          <li>
-            멤버십으로 제공되는 이용권은 해당 결제 주기 안에서만 사용할 수 있으며, 사용하지 않은 분은 다음 결제 주기로
-            이월되지 않습니다.
-          </li>
-          <li>
-            회사는 유료 멤버십을 처음 결제하는 회원에게 첫 결제 주기의 요금을 할인할 수 있습니다(계정당 1회). 이 경우
-            할인된 첫 결제 금액과 다음 결제부터 자동 결제되는 정상 요금을 결제 전에 함께 표시하며, 제7조 제3항의 환불은
-            회원이 실제로 결제한 금액을 기준으로 합니다.
-          </li>
+          <li>멤버십 구독은 월 단위 자동 결제되며, 해지 시 현재 결제 주기의 만료일까지 서비스를 이용할 수 있습니다.</li>
         </ol>
 
         <h2>제7조 (청약철회 및 환불)</h2>
         <ol>
           <li>
-            회원은 유료 서비스를 구매한 날로부터 {WITHDRAWAL_PERIOD_DAYS}일 이내에 청약을 철회할 수 있습니다. 다만,
-            다음의 경우에는 청약철회가 제한됩니다.
+            회원은 유료 서비스를 구매한 날로부터 7일 이내에 청약을 철회할 수 있습니다. 다만, 다음의 경우에는 청약철회가
+            제한됩니다.
             <ul>
-              <li>이미 이용권을 사용하여 풀이 서비스를 이용한 경우 (사용한 이용권에 한합니다)</li>
+              <li>이미 복채를 사용하여 분석 서비스를 이용한 경우</li>
               <li>디지털 콘텐츠의 제공이 개시된 경우 (「전자상거래 등에서의 소비자보호에 관한 법률」 제17조 제2항)</li>
             </ul>
           </li>
           <li>
-            구매한 이용권 중 사용하지 않은 이용권은 결제일로부터 {WITHDRAWAL_PERIOD_DAYS}일 이내에는 전액,{' '}
-            {WITHDRAWAL_PERIOD_DAYS}일이 지난 뒤에는 미사용 이용권 해당 금액의 {LATE_REFUND_PERCENT}%를
-            환불합니다(수수료 {LATE_FEE_PERCENT}%). 미사용 이용권 해당 금액은 결제 금액을 구매한 장 수로 나눈 금액에
-            사용하지 않은 장 수를 곱하여 산정합니다.
+            미사용 복채에 대해서는 결제일로부터 7일 이내 전액 환불이 가능하며, 7일 경과 후에는 미사용 복채 금액의 90%를
+            환불합니다(수수료 10%).
           </li>
+          <li>멤버십 환불은 이용 일수에 따라 일할 계산하여 잔여 금액을 환불합니다.</li>
           <li>
-            회원이 멤버십을 즉시 해지하고 환불을 요청하는 경우, 해당 결제 주기의 결제 금액에서 이용 비율만큼을 공제한
-            금액을 환불합니다. 이용 비율은 해당 결제 주기의 경과 기간 비율과 그 주기에 제공된 이용권의 사용 비율 중 큰
-            쪽으로 하며, 두 비율을 더하지 않습니다.
-          </li>
-          <li>회사가 무상으로 제공한 이용권은 환불 대상이 아닙니다.</li>
-          <li>
-            환불은 원래 결제 수단으로 처리합니다. 회사는 환불 요청을 받은 날부터 3영업일 이내에 환불(결제 취소)을
-            처리하며, 카드사 등 결제 수단에 따라 실제 반영까지 걸리는 기간은 이와 별도입니다.
+            환불은 원래 결제 수단으로 처리되며, 처리 기간은 결제 수단에 따라 최대 영업일 기준 7일이 소요될 수 있습니다.
           </li>
         </ol>
 
@@ -251,14 +197,10 @@ export default function TermsOfServicePage() {
         <h2>제12조 (계약 해지 및 회원 탈퇴)</h2>
         <ol>
           <li>
-            회원은 언제든지 서비스 내 &quot;마이페이지&quot;를 통해 탈퇴를 요청할 수 있으며, 회사는 지체 없이 회원
-            탈퇴를 처리합니다.
+            회원은 언제든지 서비스 내 &quot;마이페이지&quot;를 통해 탈퇴를 요청할 수 있으며, 회사는 즉시 회원 탈퇴를
+            처리합니다.
           </li>
-          <li>
-            탈퇴 시 회사가 무상으로 제공한 이용권은 소멸합니다. 구매한 이용권 중 사용하지 않은 이용권과 이용 중인
-            멤버십은 제7조에 따라 환불한 뒤 탈퇴를 처리합니다. 탈퇴 후 동일한 계정으로 재가입하더라도 소멸한 이용권은
-            복구되지 않습니다.
-          </li>
+          <li>탈퇴 시 미사용 복채는 소멸되며, 탈퇴 후 동일한 계정으로 재가입하더라도 복구되지 않습니다.</li>
           <li>
             회사는 회원이 제10조의 의무를 위반한 경우 사전 통지 후 이용계약을 해지하거나 서비스 이용을 제한할 수
             있습니다.
@@ -295,22 +237,7 @@ export default function TermsOfServicePage() {
         </ol>
 
         <h2>부칙</h2>
-        <ol>
-          <li>
-            이 약관은 {EFFECTIVE_DATE}부터 시행합니다. 회사는 {NOTICE_DATE}부터 이 약관을 종전 약관과 함께 공지합니다.
-          </li>
-          <li>
-            이 약관 시행 전에 종전 약관 제2조 제3호에 따라 회원이 보유하던 이용 단위의 미사용분(무상으로 받은 분을
-            포함합니다)은 이용권으로 전환하여 전액 보전합니다. 전환은 종전 사주 풀이 1회에 해당하던 양마다 이용권
-            1장으로 하고, 1장에 못 미치는 나머지는 1장으로 올려 계산합니다. 이렇게 전환된 이용권에는 유효기간을 두지
-            않으며, 종전에 유상으로 구매한 분의 환불은 종전과 같이 제7조에 따릅니다.
-          </li>
-          <li>
-            공지일부터 시행일 전날까지는 종전 약관을 적용합니다. 다만, 이 기간에 이용권 또는 멤버십을 새로 구매하는
-            회원에게는 구매할 때 표시하고 동의받은 조건(이 약관 제6조 및 제7조)을 적용하며, 제2항의 전환은 회원에게
-            불리하지 않으므로 공지일부터 적용합니다.
-          </li>
-        </ol>
+        <p>이 약관은 2026년 3월 3일부터 시행합니다.</p>
 
         <hr />
         <p className="text-sm text-muted-foreground">

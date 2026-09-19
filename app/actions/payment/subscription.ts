@@ -4,6 +4,9 @@ import { tossBillingSecretKey } from '@/lib/config/toss-keys'
 import { createClient } from '@/lib/supabase/server'
 import { createServerClient } from '@supabase/ssr'
 import { grantMembershipDeity } from '@/lib/services/membership-deity'
+import { requestTossCancel } from '@/lib/domain/payment/toss-cancel'
+import { firstMonthPrice } from '@/lib/domain/payment/membership-intro'
+import { SUPPORT_ASK } from '@/lib/domain/support/contact'
 import { logger } from '@/lib/utils/logger'
 import { rateLimit } from '@/lib/utils/rate-limit'
 
@@ -198,6 +201,60 @@ export async function getSubscriptionStatus(): Promise<{
     logger.error('[Subscription] getSubscriptionStatus exception:', e)
     return { isSubscribed: false, subscription: null, plan: null }
   }
+}
+
+// ============================================
+// 첫 구독 첫 달 할인 — 계정당 생애 1회
+// ============================================
+
+/**
+ * 유료 멤버십을 결제한 적이 있는가. 조회에 실패하면 null — 할인 여부를 추측하지 않는다.
+ * 환불된 결제도 «결제한 적 있음»이다(status 는 SUCCESS 로 남는다) — 가입·즉시 해지를 되풀이해 할인을 또 받지 못한다.
+ * 활성화 실패로 자동 환불된 결제(CANCELLED)는 세지 않는다 — 그 회원은 멤버십을 받은 적이 없다.
+ */
+async function hasPaidMembershipBefore(userId: string): Promise<boolean | null> {
+  const adminDb = createAdminClient()
+  if (!adminDb) return null
+  const { data, error } = await adminDb
+    .from('subscription_payments')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('status', 'SUCCESS')
+    .limit(1)
+  if (error) {
+    logger.error(new Error('[Subscription] 첫 결제 할인 자격 확인 실패'), { userId, message: error.message })
+    return null
+  }
+  return (data ?? []).length > 0
+}
+
+/** 멤버십 카드가 할인 문구를 보여 줄지 — 로그인 사용자 본인 것만. 확인하지 못하면 약속하지 않는다(false). */
+export async function getFirstMonthEligibility(): Promise<boolean> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return false
+  return (await hasPaidMembershipBefore(user.id)) === false
+}
+
+/** 결제 전 화면이 보여 줄 첫 결제 금액. 로그인 사용자 본인 것만 — 인자로 사용자를 받지 않는다. */
+export async function getFirstMonthOffer(
+  planId: string
+): Promise<{ eligible: boolean; firstPrice: number; regularPrice: number } | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const plan = await getMembershipPlan(planId)
+  if (!plan) return null
+
+  const paidBefore = await hasPaidMembershipBefore(user.id)
+  // 자격을 확인하지 못했으면 할인을 약속하지 않는다 — 화면이 정가를 보여 주고, 결제 단계가 다시 판정한다.
+  const eligible = paidBefore === false
+  return { eligible, firstPrice: eligible ? firstMonthPrice(plan.price) : plan.price, regularPrice: plan.price }
 }
 
 // ============================================
@@ -445,6 +502,15 @@ export async function executeFirstPayment(customerKey: string): Promise<{
     return { success: false, error: '이미 활성화된 구독이 있습니다.' }
   }
 
+  // 첫 결제 금액은 서버가 정한다 — 화면이 보낸 금액을 받지 않는다. 자격을 확인하지 못하면 청구하지 않는다
+  // (정가로 청구하면 화면이 보여 준 금액과 다르고, 할인가로 청구하면 자격 없는 사람에게 깎아 준다).
+  const paidBefore = await hasPaidMembershipBefore(user.id)
+  if (paidBefore === null) {
+    return { success: false, error: '결제 조건을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.' }
+  }
+  const firstMonthDiscounted = !paidBefore
+  const chargeAmount = firstMonthDiscounted ? firstMonthPrice(plan.price) : plan.price
+
   // Toss API: 빌링 결제
   const response = await fetch(`https://api.tosspayments.com/v1/billing/${subscription.billing_key}`, {
     method: 'POST',
@@ -454,9 +520,9 @@ export async function executeFirstPayment(customerKey: string): Promise<{
     },
     body: JSON.stringify({
       customerKey: subscription.customer_key,
-      amount: plan.price,
+      amount: chargeAmount,
       orderId,
-      orderName: `${plan.name} 구독`,
+      orderName: firstMonthDiscounted ? `${plan.name} 구독 (첫 달 할인)` : `${plan.name} 구독`,
     }),
   })
 
@@ -481,7 +547,7 @@ export async function executeFirstPayment(customerKey: string): Promise<{
       subscription_id: subscription.id,
       user_id: user.id,
       order_id: orderId,
-      amount: plan.price,
+      amount: chargeAmount,
       status: 'FAILED',
       failure_code: result.code,
       failure_reason: result.message,
@@ -506,7 +572,7 @@ export async function executeFirstPayment(customerKey: string): Promise<{
     user_id: user.id,
     payment_key: result.paymentKey,
     order_id: orderId,
-    amount: plan.price,
+    amount: chargeAmount,
     status: 'SUCCESS',
     billing_period_start: now.toISOString(),
     billing_period_end: periodEnd.toISOString(),
@@ -516,7 +582,7 @@ export async function executeFirstPayment(customerKey: string): Promise<{
   }
 
   // 2. 구독 활성화
-  const { data: updatedSub } = await adminDb
+  const { data: updatedSub, error: activateError } = await adminDb
     .from('subscriptions')
     .update({
       status: 'ACTIVE',
@@ -528,6 +594,36 @@ export async function executeFirstPayment(customerKey: string): Promise<{
     .eq('id', subscription.id)
     .select()
     .single()
+
+  if (activateError || !updatedSub) {
+    // 돈은 나갔는데 멤버십이 열리지 않았다(예: 유료 구독이 이미 있어 DB 유니크 인덱스에 걸림). 성공으로 답하면
+    // 회원은 결제만 하고 아무것도 받지 못한다 — 방금 결제를 되돌리고, 못 되돌리면 사람에게 올린다.
+    const refund = await requestTossCancel({
+      secretKey,
+      paymentKey: String(result.paymentKey),
+      cancelReason: '멤버십 활성화 실패 — 자동 환불',
+      idempotencyKey: `HHD-SUBACT-${subscription.id}-${orderId}`.slice(0, 300),
+    })
+    if (refund.ok) {
+      await adminDb
+        .from('subscription_payments')
+        .update({ status: 'CANCELLED', cancelled_amount: chargeAmount, cancelled_at: new Date().toISOString() })
+        .eq('order_id', orderId)
+    }
+    logger.error(new Error('[Subscription] 첫 결제 뒤 구독 활성화 실패'), {
+      userId: user.id,
+      subscriptionId: subscription.id,
+      orderId,
+      message: activateError?.message,
+      refunded: refund.ok,
+    })
+    return {
+      success: false,
+      error: refund.ok
+        ? '멤버십을 시작하지 못해 결제를 취소했습니다. 잠시 후 다시 시도해주세요.'
+        : `결제는 되었으나 멤버십을 시작하지 못했습니다. ${SUPPORT_ASK}`,
+    }
+  }
 
   // 멤버십은 아무것도 지급하지 않는다 — 이번 달 이용권은 사용량 표(subscription_usage)가 구독 기간으로 센다.
   // (재화를 지급하는 구독은 토스 빌링 심사에서 «충전»으로 거절된다.)

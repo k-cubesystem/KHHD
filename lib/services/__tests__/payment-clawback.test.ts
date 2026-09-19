@@ -56,6 +56,8 @@ const PAYMENT: PaymentRow = {
 type RpcResult = { data: unknown; error: { message: string } | null }
 
 interface CancelRequestRow {
+  /** 접수 때 확정한 환불 금액 — 웹훅은 이 값이 취소 거래 금액과 같을 때만 접수 의도를 쓴다 */
+  refund_amount: number
   verdict: string
   accepted_loss: boolean
   granted_credits: number
@@ -75,9 +77,11 @@ function adminStub(options: {
   const eq = jest.fn()
   const from = jest.fn((table: string) => {
     const builder: Record<string, unknown> = {}
+    const filters: Record<string, unknown> = {}
     for (const method of ['select', 'in', 'order', 'limit']) builder[method] = () => builder
     builder.eq = (...args: unknown[]) => {
       eq(...args)
+      filters[String(args[0])] = args[1]
       return builder
     }
     builder.update = (patch: unknown) => {
@@ -88,7 +92,14 @@ function adminStub(options: {
       Promise.resolve(
         table === 'payments'
           ? { data: options.payment === undefined ? PAYMENT : options.payment, error: options.lookupError ?? null }
-          : { data: options.cancelRequest ?? null, error: null }
+          : {
+              // 접수 기록 조회는 환불 금액으로 거른다 — 대역도 그 조건을 지킨다.
+              data:
+                options.cancelRequest && filters.refund_amount === options.cancelRequest.refund_amount
+                  ? options.cancelRequest
+                  : null,
+              error: null,
+            }
       )
     builder.then = (resolve: (value: { data: null; error: null }) => unknown) =>
       Promise.resolve({ data: null, error: null }).then(resolve)
@@ -217,6 +228,7 @@ describe('revokePaymentPasses — 셀프 취소의 회수량은 접수 때 확�
     const admin = adminStub({
       rpc: rpcOk(10),
       cancelRequest: {
+        refund_amount: 35_820,
         verdict: 'FULL_REFUNDABLE',
         accepted_loss: false,
         granted_credits: 10,
@@ -238,6 +250,7 @@ describe('revokePaymentPasses — 셀프 취소의 회수량은 접수 때 확�
     const admin = adminStub({
       rpc: rpcOk(9),
       cancelRequest: {
+        refund_amount: 32_238,
         verdict: 'PARTIALLY_SPENT',
         accepted_loss: false,
         granted_credits: 10,
@@ -258,6 +271,34 @@ describe('revokePaymentPasses — 셀프 취소의 회수량은 접수 때 확�
     expect(admin.rpc).toHaveBeenCalledWith(
       'ent_revoke_for_payment',
       expect.objectContaining({ p_target_revoked: 9, p_fully_cancelled: false })
+    )
+  })
+
+  it('🔴 접수 기록이 있어도 금액이 다른 취소 거래에는 쓰지 않는다 — 굳은 접수가 상담원의 소액 환불을 전량 회수로 바꾸면 안 된다', async () => {
+    const admin = adminStub({
+      rpc: rpcOk(1),
+      cancelRequest: {
+        refund_amount: 39_800,
+        verdict: 'FULL_REFUNDABLE',
+        accepted_loss: false,
+        granted_credits: 10,
+        ledger_remaining: 10,
+        recoverable_credits: 10,
+      },
+    })
+    mockCreateAdminClient.mockReturnValue(admin.client)
+
+    await revokePaymentPasses({
+      orderId: 'PASS_order-1',
+      tossStatus: 'PARTIAL_CANCELED',
+      totalAmount: 39_800,
+      balanceAmount: 35_820,
+      cancels: [{ cancelAmount: 3_980, cancelStatus: 'DONE', transactionKey: 'tk-agent' }],
+    })
+
+    expect(admin.rpc).toHaveBeenCalledWith(
+      'ent_revoke_for_payment',
+      expect.objectContaining({ p_target_revoked: 1, p_fully_cancelled: false })
     )
   })
 

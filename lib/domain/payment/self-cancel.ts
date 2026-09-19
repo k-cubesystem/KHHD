@@ -395,7 +395,9 @@ export function computeMembershipRefund(input: MembershipRefundInput): Membershi
   // 🔴 반올림. 내림을 쓰면 부동소수 오차(9900 × (1−0.8) = 1979.99…)가 그대로 1원 손해로 굳는다.
   //    1원 단위 이득은 사용자에게 준다 — 수수료 계산과 같은 방향.
   const refundable = Math.round(price * (1 - usageRatio))
-  const refundAmount = Math.max(0, Math.min(refundable, price - alreadyRefunded))
+  // 🔴 이미 환불한 금액은 «차감»한다. 상한으로만 쓰면(min(환불액, 결제액 − 기환불)) 환불 뒤 구독 갱신이 실패해
+  //    다시 해지를 누른 사람이 남은 결제액까지 받아 이용분 공제 없이 100% 를 돌려받는다.
+  const refundAmount = Math.max(0, Math.min(refundable - alreadyRefunded, price - alreadyRefunded))
 
   return {
     totalDays,
@@ -453,6 +455,8 @@ export interface ChargeCancelSubmission {
   acceptLoss?: boolean
   /** (b) 갈래의 기본 경로 — 쓰지 않은 장만 환불받는다(쓴 장은 그대로 쓴 것으로 남는다) */
   unusedOnly?: boolean
+  /** 화면이 보여 준 환불 예정 금액 — 서버가 다시 계산한 값과 다르면 접수하지 않는다 */
+  expectedRefundAmount?: number
 }
 
 export interface MembershipCancelSubmission {
@@ -473,6 +477,8 @@ export interface CancelActionResult {
   revokedPasses?: number
   /** true 면 「그래도 취소 요청」 2차 확인이 필요하다 */
   requiresLossAcknowledgement?: boolean
+  /** true 면 화면이 들고 있는 판정이 낡았다 — 새로 읽어 다시 보여줘야 한다 */
+  stateChanged?: boolean
   /** true 면 손실 처리 상한에 걸려 막혔다 — error 에 안내 문구가 들어 있다 */
   lossCapBlocked?: boolean
 }

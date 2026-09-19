@@ -1,7 +1,12 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { getMembershipPlans, getSubscriptionStatus, type MembershipPlan } from '@/app/actions/payment/subscription'
+import {
+  getFirstMonthEligibility,
+  getMembershipPlans,
+  getSubscriptionStatus,
+  type MembershipPlan,
+} from '@/app/actions/payment/subscription'
 import { getActivePlans } from '@/app/actions/payment/products'
 import { getMyPassSummary } from '@/app/actions/payment/passes'
 import { getShopData } from '@/app/actions/shrine/inventory'
@@ -122,7 +127,11 @@ function PassTab({ packs }: { packs: PricePlan[] }) {
 }
 
 async function MembershipTab({ plans }: { plans: MembershipPlan[] }) {
-  const [sub, t] = await Promise.all([getSubscriptionStatus(), getTranslations('store')])
+  const [sub, t, firstMonthEligible] = await Promise.all([
+    getSubscriptionStatus(),
+    getTranslations('store'),
+    getFirstMonthEligibility(),
+  ])
   const sorted = [...plans].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
 
   if (sub.isSubscribed && sub.subscription) {
@@ -147,12 +156,13 @@ async function MembershipTab({ plans }: { plans: MembershipPlan[] }) {
           plans={sorted}
           isGuest={false}
           payingPlanId={sub.subscription.billing_key ? sub.subscription.plan_id : null}
+          firstMonthEligible={firstMonthEligible}
         />
       </div>
     )
   }
 
-  return <MembershipTabs plans={sorted} isGuest={false} />
+  return <MembershipTabs plans={sorted} isGuest={false} firstMonthEligible={firstMonthEligible} />
 }
 
 async function ThemeTab() {

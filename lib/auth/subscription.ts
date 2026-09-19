@@ -62,7 +62,10 @@ interface SubscriptionRow {
  * 기간은 가입한 «그 시각»에 끝나는데 갱신 결제는 그 뒤 크론이 돌아야 일어난다. 그 사이에 멤버십이 끊긴 것으로 보면
  * 돈을 내고 있는 회원이 매달 같은 시각에 게이트와 월 몫을 잃는다. 갱신이 예정돼 있고 아직 실패한 적 없는 구독만
  * 유예한다 — 결제가 한 번이라도 실패하면(retry_count > 0) 바로 끊긴다.
- * 🔴 크론 주기(vercel.json `/api/cron/billing`)보다 길어야 한다. 너무 길면 결제가 안 될 카드로 다음 달 몫을 쓴다.
+ * 🔴 크론 주기(vercel.json `/api/cron/billing`)보다 길어야 한다.
+ * 🔴 유예는 «옛 기간을 잠깐 늘리는 것»이다. 새 주기를 미리 열지 않는다 — 열면 결제도 하기 전에 새 달 몫이 통째로 열려,
+ *    그 몫을 다 쓰고 해지하면(해지하면 크론이 청구하지 않는다) 한 달치가 무료가 된다. 새 달 몫은 갱신 결제가 성공해
+ *    크론이 current_period_start 를 옮긴 뒤에만 열린다.
  */
 export const RENEWAL_GRACE_MS = 30 * 60_000
 
@@ -129,13 +132,14 @@ async function resolveActiveSubscription(
   if (periodEnd && periodEndMs !== null && periodEndMs < nowMs) {
     const graceEndMs = periodEndMs + RENEWAL_GRACE_MS
     if (!renews || (row.retry_count ?? 0) > 0 || nowMs >= graceEndMs) return null
-    // 유예 중 — 크론이 곧 쓸 새 주기(옛 기간 끝에서 시작)를 미리 연다. 월 몫 창의 앵커가 갱신 뒤와 같아진다.
+    // 유예 중 — 옛 기간의 끝만 잠깐 늘린다. 월 몫 창은 꼬리 병합(membershipWindow) 덕에 옛 창이 그대로 이어져
+    // 남아 있던 몫만 쓸 수 있다.
     return {
       isMaster: false,
       planId: row.plan_id ?? null,
       status: 'ACTIVE',
       currentPeriodEnd: new Date(graceEndMs).toISOString(),
-      currentPeriodStart: periodEnd,
+      currentPeriodStart: row.current_period_start ?? row.start_date ?? null,
       renews,
     }
   }

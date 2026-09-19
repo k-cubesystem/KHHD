@@ -33,8 +33,15 @@ export type SettlePassPurchaseResult =
       reason: 'NO_PAYMENT' | 'NOT_A_PASS_ORDER' | 'AMOUNT_MISMATCH' | 'NOT_SETTLEABLE' | 'GRANT_FAILED' | 'ERROR'
     }
 
-/** 확정할 수 있는 상태 — 취소(refunded)·실패(failed)·수동 발급 대기(grant_failed)는 되살리지 않는다. */
-const SETTLEABLE_STATUSES: ReadonlySet<string> = new Set(['pending', 'completed'])
+/**
+ * 확정할 수 있는 상태. 취소(refunded)만 되살리지 않는다.
+ *
+ * 🔴 failed·grant_failed 도 확정한다. 이 함수의 호출자는 둘 다 «토스가 승인 완료(DONE)를 확인해 준 뒤»에만 들어온다.
+ *    성공 화면이 두 번 열리면 뒤쪽 승인 호출이 토스에 거절당해 행을 failed 로 닫는데, 그 순간 앞쪽 호출은
+ *    승인을 받는 중이다 — failed 를 확정에서 빼면 돈은 나가고 이용권은 없는 결제가 되고, 웹훅도 같은 함수라 복구되지 않는다.
+ *    발급은 멱등 키가 한 번으로 묶으므로 grant_failed 를 다시 시도해도 두 번 발급되지 않는다.
+ */
+const SETTLEABLE_STATUSES: ReadonlySet<string> = new Set(['pending', 'completed', 'failed', 'grant_failed'])
 
 export async function settlePassPurchase(params: {
   orderId: string
@@ -68,12 +75,12 @@ export async function settlePassPurchase(params: {
     return { ok: false, reason: 'AMOUNT_MISMATCH' }
   }
 
-  if (payment.status === 'pending') {
+  if (payment.status !== 'completed') {
     const { error: completeError } = await admin
       .from('payments')
       .update({ status: 'completed' })
       .eq('id', payment.id)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'failed', 'grant_failed'])
     if (completeError) {
       logger.error(new Error('[PassPurchase] 결제 확정 기록 실패 — 수동 확인 필요'), {
         orderId,
@@ -108,6 +115,24 @@ export async function settlePassPurchase(params: {
   })
 
   if (!grant.granted && grant.reason !== 'ALREADY_GRANTED') {
+    // 승인 액션과 웹훅이 동시에 들어오면 한쪽의 일시 오류가 다른 쪽의 성공을 덮을 수 있다 —
+    // 발급 행이 이미 있으면 발급된 결제다. grant_failed 로 굳히면 셀프 취소도 막힌다.
+    const { data: issued } = await admin
+      .from('entitlement_grants')
+      .select('id')
+      .eq('payment_id', payment.id)
+      .limit(1)
+      .maybeSingle()
+    if (issued) {
+      return {
+        ok: true,
+        paymentId: payment.id,
+        userId: payment.user_id,
+        passes: payment.credits_purchased,
+        validDays,
+      }
+    }
+
     await admin.from('payments').update({ status: 'grant_failed' }).eq('id', payment.id)
     logger.error(new Error('[PassPurchase] 결제 승인 뒤 이용권 발급 실패 — 수동 발급 필요'), {
       userId: payment.user_id,

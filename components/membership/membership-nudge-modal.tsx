@@ -244,9 +244,9 @@ export function MembershipNudgeModal({
           </div>
 
           {/* 🔴 여기 있던 «지금 업그레이드하면 N% 할인 혜택» 배지를 걷어냈다(2026-08-12).
-              결제 경로(createBillingAuthUrl → 토스 빌링)는 언제나 plan.price 를 그대로 청구한다 —
               업그레이드 할인은 코드 어디에도 없어 «없는 가격»을 광고하고 있었다.
-              프로모션을 실제로 만들면 그때 «가격 출처»와 함께 되살릴 것. */}
+              실제로 있는 할인은 «첫 구독 첫 달»뿐이다(lib/domain/payment/membership-intro.ts, 자격은 서버 판정) —
+              이 모달은 자격을 모르므로 정가만 보여 주고, 할인은 결제 확인 화면이 자격과 함께 보여 준다. */}
         </div>
 
         {/* Tier comparison */}

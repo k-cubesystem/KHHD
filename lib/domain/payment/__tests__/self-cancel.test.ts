@@ -324,10 +324,16 @@ describe('computeMembershipRefund — 잔여기간 일할 환불', () => {
     expect(plan.refundAmount).toBe(0)
   })
 
-  it('이미 환불된 금액을 넘겨 환불하지 않는다', () => {
-    const plan = computeMembershipRefund(membershipInput({ alreadyRefunded: 9_000 }))
+  it('🔴 이미 환불한 금액은 차감한다 — 환불 뒤 다시 해지를 눌러도 이용분 공제 없이 나머지를 받지 못한다', () => {
+    // 30일 중 1일 이용 → 환불 대상 9,570원. 이미 그만큼(또는 그 이상) 나갔으면 더 줄 것이 없다.
+    // 예전 산식 min(환불 대상, 결제액 − 기환불)은 여기서 330원을 또 내줘 누적 9,900원(100%)이 됐다.
+    expect(computeMembershipRefund(membershipInput({ alreadyRefunded: 9_570 })).refundAmount).toBe(0)
+    expect(computeMembershipRefund(membershipInput({ alreadyRefunded: 9_900 })).refundAmount).toBe(0)
+  })
 
-    expect(plan.refundAmount).toBe(900)
+  it('일부만 환불된 상태면 환불 대상에서 그만큼만 뺀다', () => {
+    expect(computeMembershipRefund(membershipInput({ alreadyRefunded: 2_000 })).refundAmount).toBe(7_570)
+    expect(computeMembershipRefund(membershipInput({ alreadyRefunded: 9_000 })).refundAmount).toBe(570)
   })
 
   it('위약금을 붙이지 않는다 — 잔여 대금 전부가 환불 대상', () => {

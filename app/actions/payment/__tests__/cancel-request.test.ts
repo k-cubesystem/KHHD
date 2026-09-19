@@ -158,8 +158,12 @@ function chargeAdmin(
     lossHistory?: unknown[]
     /** open_charge_cancel_request 응답 대역 */
     rpc?: QueryResult
+    /** 환불은 나갔는데 회수가 끝나지 않은 앞선 취소(REVOKE_PENDING) 행 */
+    unsettled?: unknown
   } = {}
 ) {
+  // 손실이 나는 취소만 상한 사용량을 읽는다 — 그 조회가 있을 때만 대기열에 자리를 둔다.
+  const lossQuery = options.lossHistory ? [{ data: options.lossHistory, error: null }] : []
   return makeAdmin(
     {
       payments: [{ data: options.payment === undefined ? PAYMENT : options.payment, error: null }],
@@ -169,8 +173,9 @@ function chargeAdmin(
           : { data: [grantRow(options.unused ?? 10)], error: null },
       ],
       payment_cancel_requests: [
-        // 1) 상한 사용량 조회(손실 취소일 때만) 2) 이후 결과 갱신(update)
-        { data: options.lossHistory ?? [], error: null },
+        // 1) 회수 미완인 앞선 취소 확인 2) 상한 사용량 조회(손실 취소일 때만) 3) 이후 결과 갱신(update)
+        { data: options.unsettled ?? null, error: null },
+        ...lossQuery,
         { data: null, error: null },
       ],
     },
@@ -398,6 +403,49 @@ describe('submitChargeCancel — 회수 경로', () => {
     const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE' })
 
     expect(result.success).toBe(false)
+    expect(admin.rpc).not.toHaveBeenCalled()
+    expect(mockTossCancel).not.toHaveBeenCalled()
+  })
+
+  it('🔴 앞선 취소의 환불은 나갔는데 회수가 끝나지 않은 결제는 다시 접수하지 않는다 — 같은 장으로 환불이 두 번 나간다', async () => {
+    const admin = chargeAdmin({ unsettled: { id: 'req-old' } })
+    mockCreateAdmin.mockReturnValue(admin.client)
+
+    const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE' })
+
+    expect(result.success).toBe(false)
+    expect(admin.rpc).not.toHaveBeenCalled()
+    expect(mockTossCancel).not.toHaveBeenCalled()
+  })
+
+  it('🔴 토스 취소 결과를 모르면(응답 유실) 접수를 실패로 닫지 않는다 — 닫으면 이용권이 풀리고 재시도가 이중 환불이 된다', async () => {
+    mockTossCancel.mockResolvedValue({
+      ok: false,
+      code: 'NETWORK_ERROR',
+      message: '취소 처리 결과를 확인하고 있습니다.',
+      retryable: true,
+      httpStatus: 0,
+      outcomeUnknown: true,
+    })
+    const admin = chargeAdmin()
+    mockCreateAdmin.mockReturnValue(admin.client)
+
+    const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE' })
+
+    expect(result.success).toBe(false)
+    expect(mockRevoke).not.toHaveBeenCalled()
+    const updates = admin.calls.filter((call) => call.table === 'payment_cancel_requests' && call.method === 'update')
+    expect(updates.map((call) => (call.args[0] as { status?: string }).status)).not.toContain('FAILED')
+    expect(updates[0]?.args[0]).toMatchObject({ toss_error_code: 'NETWORK_ERROR' })
+  })
+
+  it('화면이 보여 준 환불 금액과 서버가 다시 계산한 금액이 다르면 접수하지 않고 화면을 새로 읽게 한다', async () => {
+    const admin = chargeAdmin()
+    mockCreateAdmin.mockReturnValue(admin.client)
+
+    const result = await submitChargeCancel({ paymentId: 'pay-1', reasonCode: 'MISTAKE', expectedRefundAmount: 1 })
+
+    expect(result).toMatchObject({ success: false, stateChanged: true })
     expect(admin.rpc).not.toHaveBeenCalled()
     expect(mockTossCancel).not.toHaveBeenCalled()
   })

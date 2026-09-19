@@ -117,19 +117,20 @@ describe('갱신 유예 — 기간 끝과 갱신 크론 사이의 틈', () => {
     await expect(hasActiveMembership('user-1')).resolves.toBe(true)
   })
 
-  it('유예 중에는 크론이 곧 쓸 새 주기를 미리 연다 — 월 몫 창의 앵커가 갱신 뒤와 같아야 같은 사용량 행에 쌓인다', async () => {
+  it('🔴 유예는 옛 기간을 늘릴 뿐 새 주기를 미리 열지 않는다 — 결제 전에 새 달 몫이 열리면 다 쓰고 해지하는 공짜 한 달이 된다', async () => {
     const ended = justEnded()
+    const started = new Date(Date.now() - 30 * DAY).toISOString()
     supabaseStub({
       status: 'ACTIVE',
       current_period_end: ended,
-      current_period_start: new Date(Date.now() - 30 * DAY).toISOString(),
+      current_period_start: started,
       next_billing_date: ended,
       retry_count: 0,
     })
 
     const membership = await getActiveMembership('user-1')
 
-    expect(membership?.currentPeriodStart).toBe(ended)
+    expect(membership?.currentPeriodStart).toBe(started)
     expect(membership?.currentPeriodEnd).toBe(new Date(new Date(ended).getTime() + RENEWAL_GRACE_MS).toISOString())
     expect(membership?.renews).toBe(true)
   })

@@ -40,7 +40,21 @@ export interface TossCancelRequest {
 
 export type TossCancelOutcome =
   | { ok: true; payment: TossCanceledPayment }
-  | { ok: false; code: string; message: string; retryable: boolean; httpStatus: number }
+  | {
+      ok: false
+      code: string
+      message: string
+      retryable: boolean
+      httpStatus: number
+      /**
+       * true = 환불이 나갔는지 알 수 없다(응답을 잃었거나 해석하지 못했다).
+       * 🔴 이때 접수를 «실패»로 닫으면 안 된다 — 닫으면 이용권이 풀리고 재시도가 열려, 실제로는 나간 환불 위에
+       *    한 번 더 환불이 나갈 수 있다. 접수를 열어 둔 채(이용권 동결) 웹훅이 결과를 맞추게 한다.
+       */
+      outcomeUnknown?: boolean
+    }
+
+const OUTCOME_UNKNOWN_MESSAGE = '취소 처리 결과를 확인하고 있습니다. 잠시 후 결제 내역을 다시 확인해주세요.'
 
 /** 멱등키 최대 길이(토스 규격). 초과 시 400 INVALID_IDEMPOTENCY_KEY. */
 export const TOSS_IDEMPOTENCY_KEY_MAX_LENGTH = 300
@@ -140,15 +154,27 @@ export async function requestTossCancel(input: TossCancelRequest): Promise<TossC
     body.cancelAmount = Math.max(0, Math.trunc(input.cancelAmount))
   }
 
-  const response = await fetch(`${TOSS_API_BASE}/${encodeURIComponent(input.paymentKey)}/cancel`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${input.secretKey}:`).toString('base64')}`,
-      'Content-Type': 'application/json',
-      'Idempotency-Key': input.idempotencyKey,
-    },
-    body: JSON.stringify(body),
-  })
+  let response: Response
+  try {
+    response = await fetch(`${TOSS_API_BASE}/${encodeURIComponent(input.paymentKey)}/cancel`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${input.secretKey}:`).toString('base64')}`,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': input.idempotencyKey,
+      },
+      body: JSON.stringify(body),
+    })
+  } catch {
+    return {
+      ok: false,
+      code: 'NETWORK_ERROR',
+      message: OUTCOME_UNKNOWN_MESSAGE,
+      retryable: true,
+      httpStatus: 0,
+      outcomeUnknown: true,
+    }
+  }
 
   const payload: unknown = await response.json().catch(() => null)
 
@@ -162,9 +188,10 @@ export async function requestTossCancel(input: TossCancelRequest): Promise<TossC
     return {
       ok: false,
       code: 'INVALID_RESPONSE',
-      message: `결제 취소 응답을 해석하지 못했습니다. ${SUPPORT_ASK}`,
+      message: OUTCOME_UNKNOWN_MESSAGE,
       retryable: false,
       httpStatus: response.status,
+      outcomeUnknown: true,
     }
   }
 
