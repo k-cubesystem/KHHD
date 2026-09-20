@@ -1,17 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchReplies, fetchInsights, loadThreadsToken, refreshLongLivedToken } from '@/lib/services/threads/client'
-import {
-  classifyReply,
-  needsAiClassification,
-  JEV_REPLY_MIN_CONFIDENCE,
-  REPLY_CLASSES,
-  REPLY_CLASS_CRITERIA,
-  REPLY_CLASS_INSTRUCTIONS,
-  type ReplyClass,
-} from '@/lib/domain/threads/classify'
-import { generateAIContent } from '@/lib/services/ai-client'
-import { askJev, confidentChoice } from '@/lib/services/jev-client'
+import { classifyReply, needsAiClassification, type ReplyClass } from '@/lib/domain/threads/classify'
+import { createReplyAiClassifier } from '@/lib/services/threads/ai-classify'
 import { logger } from '@/lib/utils/logger'
 import { getSiteUrl } from '@/lib/utils/site-url'
 
@@ -75,6 +66,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  const ai = createReplyAiClassifier(AI_CLASSIFY_PER_RUN)
+
   // 1) 대상 글
   const since = new Date(Date.now() - LOOKBACK_DAYS * 86400_000).toISOString()
   const { data: posts } = await admin
@@ -121,12 +114,12 @@ export async function GET(req: NextRequest) {
 
       // 2) AI 2차
       let finalClass: ReplyClass = cls.classification
-      if (needsAiClassification(cls) && summary.aiClassified < AI_CLASSIFY_PER_RUN) {
-        const ai = await aiClassify(r.text ?? '')
-        if (ai) {
-          finalClass = ai
+      if (needsAiClassification(cls)) {
+        const aiClass = await ai.classify(r.text)
+        if (aiClass) {
+          finalClass = aiClass
           summary.aiClassified++
-          await admin.from('threads_replies').update({ classification: ai, classified_by: 'ai' }).eq('id', ins.id)
+          await admin.from('threads_replies').update({ classification: aiClass, classified_by: 'ai' }).eq('id', ins.id)
         }
       }
 
@@ -157,40 +150,6 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: summary.errors.length === 0, ...summary })
-}
-
-/** Jev 가 확신하면 그 답을 쓰고, 키가 없거나 실패했거나 확신이 낮으면 null — 아래 Gemini 분류로 넘어간다. */
-async function jevClassify(text: string): Promise<ReplyClass | null> {
-  const answers = await askJev({
-    state: text.slice(0, 500),
-    questions: { intent: { type: 'choice', instructions: REPLY_CLASS_INSTRUCTIONS, criteria: REPLY_CLASS_CRITERIA } },
-    actionType: 'threads_classify_jev',
-  })
-  return confidentChoice(answers?.intent, REPLY_CLASSES, JEV_REPLY_MIN_CONFIDENCE)
-}
-
-async function aiClassify(text: string): Promise<ReplyClass | null> {
-  const viaJev = await jevClassify(text)
-  if (viaJev) return viaJev
-  try {
-    const res = await generateAIContent({
-      featureKey: 'threads-classify',
-      systemPrompt:
-        '스레드 댓글을 다음 중 하나로 분류합니다: apply(이벤트 신청·참여 의사), question(질문), chat(감상·인사·잡담), spam(광고·도배·욕설), other. JSON {"c":"..."} 만 답하세요.',
-      userPrompt: text.slice(0, 500),
-      maxTokens: 20,
-      temperature: 0,
-      jsonMode: true,
-      actionType: 'threads_classify',
-    })
-    const parsed = JSON.parse(res.text) as { c?: unknown }
-    const c = parsed.c
-    if (c === 'apply' || c === 'question' || c === 'chat' || c === 'spam' || c === 'other') return c
-    return null
-  } catch (e) {
-    logger.warn('[threads-sync] AI 분류 실패', e instanceof Error ? e.message : String(e))
-    return null
-  }
 }
 
 /**
