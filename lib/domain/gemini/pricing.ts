@@ -63,6 +63,13 @@ export const DEFAULT_IMAGE_PRICE_USD = 0.067
 /** 폴백 텍스트 단가(등록 안 된 텍스트 모델) — 주력 3.5-flash 와 동일(과소계상보다 과대계상이 안전) */
 const FALLBACK_TEXT_PRICING = { input: 1.5, output: 9.0 }
 
+/** «Gemini 호출 한도» 화면의 모델 선택지. 단가표에는 Claude·Jev 도 있어 그대로 쓰면 Gemini 가 아닌 모델이 섞인다. */
+export function geminiTextModels(): string[] {
+  return Object.keys(MODEL_PRICING)
+    .filter((model) => model.startsWith('gemini-'))
+    .sort()
+}
+
 export function isImageModel(model: string): boolean {
   return model in IMAGE_MODEL_PRICE_USD || model.includes('image')
 }

@@ -33,11 +33,11 @@ import {
   type GeminiCostVsPrice,
 } from '@/app/actions/admin/gemini-usage'
 import { USAGE_RANGES, USAGE_RANGE_LABEL, type UsageRange } from '@/lib/domain/gemini/usage-range'
-import { MODEL_PRICING } from '@/lib/domain/gemini/pricing'
+import { geminiTextModels } from '@/lib/domain/gemini/pricing'
 import { GEMINI_FLASH } from '@/lib/config/ai-models'
 
 /** 단가를 아는 모델만 고를 수 있다 — 모르는 모델을 고르면 원가가 폴백값으로 어긋난다. */
-const MODEL_OPTIONS = Object.keys(MODEL_PRICING).sort()
+const MODEL_OPTIONS = geminiTextModels()
 
 // ─────────────────────────────────────────
 // 비용 포맷 유틸

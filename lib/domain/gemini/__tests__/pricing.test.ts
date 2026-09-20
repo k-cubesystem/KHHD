@@ -1,4 +1,10 @@
-import { estimateCostUsd, isImageModel, IMAGE_MODEL_PRICE_USD, MODEL_PRICING } from '@/lib/domain/gemini/pricing'
+import {
+  estimateCostUsd,
+  geminiTextModels,
+  isImageModel,
+  IMAGE_MODEL_PRICE_USD,
+  MODEL_PRICING,
+} from '@/lib/domain/gemini/pricing'
 import { MODEL_FLASH, MODEL_PRO } from '@/lib/config/ai-models'
 
 describe('Gemini 비용 추정', () => {
@@ -48,5 +54,16 @@ describe('Gemini 비용 추정', () => {
       expect(MODEL_FLASH).toBe('gemini-3.8-flash')
       expect(MODEL_PRICING['gemini-3.8-flash']).toEqual({ input: 1.5, output: 7.5 })
     })
+  })
+})
+
+describe('geminiTextModels — 호출 한도 화면의 모델 선택지', () => {
+  it('지금 쓰는 Gemini 모델은 고를 수 있다', () => {
+    expect(geminiTextModels()).toContain(MODEL_FLASH)
+  })
+
+  it('🔴 단가표에 함께 있는 Jev·Claude 는 섞이지 않는다 — Gemini 토큰 버킷에 남의 모델 이름이 적힌다', () => {
+    expect(MODEL_PRICING['jev-latest']).toEqual({ input: 0.042, output: 0 })
+    expect(geminiTextModels().filter((model) => !model.startsWith('gemini-'))).toEqual([])
   })
 })
