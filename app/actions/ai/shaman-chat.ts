@@ -12,6 +12,8 @@ import { recallMemories, recallMemoryList, extractAndSaveMemories } from '@/lib/
 import { buildGreeting, type Greeting } from '@/lib/domain/chat/greeting'
 import { maybeSummarizeSession } from '@/lib/ai/summarizer'
 import { guardAiInput } from '@/lib/ai/input-guard'
+import { CHAT_SAFETY_INSTRUCTION, CRISIS_REPLY, detectCrisisInTurn, withConcernFooter } from '@/lib/domain/chat/crisis'
+import { recordChatSafetyEvent } from '@/lib/services/chat-safety'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/utils/logger'
 import { getSceneData } from '@/app/actions/shrine/scene'
@@ -225,6 +227,11 @@ export interface ShamanChatResponse {
   bondLevelName?: string
   /** 차감 반영 후 서버 기준 잔여 — 클라 낙관 감소치를 이 값으로 덮어써 desync 를 없앤다(P0-F5). */
   remaining?: { onboarding: number; memberWeekly: number; ad: number; purchased: number; total: number }
+  /**
+   * 위기 신호 등급(lib/domain/chat/crisis.ts). crisis = 풀이 대신 고정 안내가 나갔고 **질문권을 쓰지 않았다** —
+   * 화면은 남은 질문 수를 깎지 않는다. concern = 답 끝에 상담 안내 한 줄이 붙었다.
+   */
+  safety?: 'crisis' | 'concern'
 }
 
 /**
@@ -493,6 +500,14 @@ export async function sendShamanChatMessage(
     const rl = await rateLimit(`ai-shaman:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 20 })
     if (!rl.success) return { success: false, error: '요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.' }
 
+    // 위기 신호(안전) — 🔴 질문권을 확인·차감하기 «전»에 본다. crisis 면 풀이도 차감도 없다.
+    //    lib/services/shaman-chat-pipeline.ts prepareShamanChat 의 같은 자리와 함께 고칠 것.
+    const safety = detectCrisisInTurn(safeMessage, conversationHistory)
+    recordChatSafetyEvent(safety, 'action')
+    if (safety.level === 'crisis') {
+      return { success: true, response: CRISIS_REPLY, suggestedQuestions: [], emotion: 'neutral', safety: 'crisis' }
+    }
+
     const adminClient = createAdminClient()
     const today = chatUsageDateKey()
 
@@ -671,6 +686,9 @@ export async function sendShamanChatMessage(
       deityCode = shrineCtx.deityCode
     }
 
+    // 4.6 안전 지침 — 맨 뒤에 얹어야 앞선 지시(신물 권유 등)를 이긴다.
+    if (safety.level === 'concern') systemInstruction += `\n\n${CHAT_SAFETY_INSTRUCTION}`
+
     // 5. systemInstruction을 모델에 주입하고 대화 히스토리 복원
     const model = getGeminiModel(systemInstruction)
     // 슬라이딩 윈도우 + 🔴 **첫 항목은 user 여야 한다**.
@@ -715,6 +733,7 @@ export async function sendShamanChatMessage(
       responseText.replace(/\[\[[^\]]*\]\]/g, '').trim() ||
       rawText.replace(/\[\[[^\]]*\]\]/g, '').trim() ||
       '신탁이 흐릿하게 전해졌습니다. 조금 다르게 다시 여쭤봐 주시겠어요?'
+    if (safety.level === 'concern') responseText = withConcernFooter(responseText)
 
     // 신당 3.0: 좌정 主神과의 대화면 인연(緣) 적립 — 응답 후 백그라운드(freeze 방지)
     // 인연(緣) 적립 — 레벨업 여부를 응답에 실어야 하므로 동기 수행(원자 RPC ~수십ms, 응답 대비 미미)
@@ -769,6 +788,7 @@ export async function sendShamanChatMessage(
       emotion: emotion ?? undefined,
       bondLeveledUp: bondLeveledUp || undefined,
       bondLevelName,
+      safety: safety.level === 'concern' ? 'concern' : undefined,
     }
   } catch (e: unknown) {
     // Error 를 첫 인자로 — logger 가 Sentry captureException 으로 잇는다(스택 보존).

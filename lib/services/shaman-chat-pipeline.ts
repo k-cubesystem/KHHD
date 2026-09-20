@@ -24,6 +24,8 @@ import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { toGeminiHistory } from '@/lib/domain/chat/history'
 import { recallMemories } from '@/lib/ai/memory'
 import { guardAiInput } from '@/lib/ai/input-guard'
+import { CHAT_SAFETY_INSTRUCTION, detectCrisisInTurn, withConcernFooter } from '@/lib/domain/chat/crisis'
+import { recordChatSafetyEvent } from '@/lib/services/chat-safety'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/utils/logger'
 import { getSceneData } from '@/app/actions/shrine/scene'
@@ -133,9 +135,15 @@ export interface PreparedChat {
   refundDate: string
   /** 추천 질문 생성용 — 어떤 분석 기록을 갖고 있는지 */
   records: { saju: boolean; face: boolean; hand: boolean }
+  /** 위기 신호 등급 — concern 이면 모델에 안전 지침을 얹고 답 끝에 상담 안내 한 줄을 붙인다. */
+  safety: 'none' | 'concern'
 }
 
-export type PrepareResult = { ok: true; prepared: PreparedChat } | { ok: false; error: string; noCredits?: boolean }
+export type PrepareResult =
+  | { ok: true; prepared: PreparedChat }
+  | { ok: false; error: string; noCredits?: boolean }
+  /** 위기 신호(crisis) — 질문권 차감도 모델 호출도 없이 고정 안내(CRISIS_REPLY)로 답한다. */
+  | { ok: false; crisis: true }
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>
 
@@ -411,6 +419,12 @@ export async function prepareShamanChat(
   const rl = await rateLimit(`ai-shaman:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 20 })
   if (!rl.success) return { ok: false, error: '요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.' }
 
+  // 위기 신호(안전) — 🔴 질문권을 확인·차감하기 «전»에 본다. crisis 면 풀이도 차감도 없다.
+  //    액션(sendShamanChatMessage)의 같은 자리와 함께 고칠 것.
+  const safety = detectCrisisInTurn(safeMessage, conversationHistory)
+  recordChatSafetyEvent(safety, 'stream')
+  if (safety.level === 'crisis') return { ok: false, crisis: true }
+
   const adminClient = createAdminClient()
   const today = chatUsageDateKey()
 
@@ -581,6 +595,9 @@ export async function prepareShamanChat(
     deityCode = shrineCtx.deityCode
   }
 
+  // 4.6 안전 지침 — 맨 뒤에 얹어야 앞선 지시(신물 권유 등)를 이긴다.
+  if (safety.level === 'concern') systemInstruction += `\n\n${CHAT_SAFETY_INSTRUCTION}`
+
   // 5. 히스토리 — 🔴 첫 항목은 user 여야 한다. 선문안(assistant)이 먼저 오면 SDK 가 호출 전에 거절해
   //    속풀이가 통째로 죽는다(2026-08-16). 규칙은 lib/domain/chat/history.ts 가 단독으로 든다.
   const geminiHistory = toGeminiHistory(conversationHistory, CHAT_HISTORY_WINDOW, (text) => guardAiInput(text).text)
@@ -599,6 +616,7 @@ export async function prepareShamanChat(
       consumedFrom,
       refundDate: today,
       records: { saju: !!sajuRecord, face: !!faceRecord, hand: !!handRecord },
+      safety: safety.level === 'concern' ? 'concern' : 'none',
     },
   }
 }
@@ -639,7 +657,9 @@ export interface FinalizeResult {
  * 감정/인연/잔여는 같은 계산을 거쳐야 두 경로의 결과가 어긋나지 않는다.
  */
 export async function finalizeShamanChat(prepared: PreparedChat, rawText: string): Promise<FinalizeResult> {
-  const { text: responseText, emotion } = stripEmotionTag(rawText, prepared.deityCode)
+  const { text: answerText, emotion } = stripEmotionTag(rawText, prepared.deityCode)
+  // 스트리밍 경로는 같은 한 줄을 본문 뒤 토큰으로 이미 흘렸다 — 저장·복원용 정본에도 똑같이 붙인다.
+  const responseText = prepared.safety === 'concern' ? withConcernFooter(answerText) : answerText
 
   // 인연(緣) 적립 — 레벨업 여부를 응답에 실어야 하므로 동기 수행(원자 RPC ~수십ms)
   let bondLeveledUp = false

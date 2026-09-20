@@ -13,6 +13,7 @@ import { logger } from '@/lib/utils/logger'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
 import { thoughtTokensOf } from '@/lib/domain/gemini/usage'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
+import { CONCERN_FOOTER, CRISIS_REPLY } from '@/lib/domain/chat/crisis'
 import {
   prepareShamanChat,
   finalizeShamanChat,
@@ -39,6 +40,31 @@ function sse(event: string, data: unknown): Uint8Array {
   return new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
 }
 
+const SSE_HEADERS = {
+  'Content-Type': 'text/event-stream; charset=utf-8',
+  'Cache-Control': 'no-cache, no-transform',
+  Connection: 'keep-alive',
+  // 프록시 버퍼링이 켜져 있으면 스트리밍이 무의미해진다(끝에 한 번에 도착).
+  'X-Accel-Buffering': 'no',
+}
+
+/**
+ * 위기 신호(crisis) — 모델을 부르지 않고 고정 안내를 같은 SSE 규약(meta → token → done)으로 흘린다.
+ * safety:'crisis' 를 본 클라이언트는 질문 횟수를 깎지 않는다(서버도 차감하지 않았다).
+ * 표정은 neutral 로 되돌린다 — 직전 답의 웃는 얼굴이 안내문 옆에 남으면 안 된다.
+ */
+function crisisResponse(): Response {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(sse('meta', { emotion: 'neutral', deityCode: null }))
+      controller.enqueue(sse('token', { t: CRISIS_REPLY }))
+      controller.enqueue(sse('done', { full: CRISIS_REPLY, suggestedQuestions: [], safety: 'crisis' }))
+      controller.close()
+    },
+  })
+  return new Response(stream, { headers: SSE_HEADERS })
+}
+
 export async function POST(req: NextRequest) {
   let body: StreamBody
   try {
@@ -55,6 +81,7 @@ export async function POST(req: NextRequest) {
   // 인증·레이트리밋·잔량·차감·컨텍스트 — 액션과 동일 경로.
   const prep = await prepareShamanChat(message, history, familyMemberId)
   if (!prep.ok) {
+    if ('crisis' in prep) return crisisResponse()
     // 잔량 부족·로그인 필요 등은 스트림을 열지 않고 그대로 알린다(클라가 폴백하지 않도록 4xx).
     const status = prep.noCredits ? 402 : 400
     return Response.json({ error: prep.error, noCredits: prep.noCredits ?? false }, { status })
@@ -116,6 +143,13 @@ export async function POST(req: NextRequest) {
           delivered += text.length
         }
 
+        // concern — 답 끝에 상담 안내 한 줄. 정본(done.full)에는 finalizeShamanChat 이 같은 줄을 붙인다.
+        if (prepared.safety === 'concern') {
+          const footer = `\n\n${CONCERN_FOOTER}`
+          controller.enqueue(sse('token', { t: footer }))
+          delivered += footer.length
+        }
+
         const usage = (await result.response).usageMetadata
         void logUsage({
           userId: prepared.userId,
@@ -140,6 +174,7 @@ export async function POST(req: NextRequest) {
             emotion: done.emotion ?? undefined,
             bondLeveledUp: done.bondLeveledUp || undefined,
             bondLevelName: done.bondLevelName,
+            safety: prepared.safety === 'concern' ? 'concern' : undefined,
           })
         )
       } catch (e) {
@@ -166,13 +201,5 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream; charset=utf-8',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-      // 프록시 버퍼링이 켜져 있으면 스트리밍이 무의미해진다(끝에 한 번에 도착).
-      'X-Accel-Buffering': 'no',
-    },
-  })
+  return new Response(stream, { headers: SSE_HEADERS })
 }

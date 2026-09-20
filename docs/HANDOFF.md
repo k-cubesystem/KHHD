@@ -8,7 +8,53 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-25(56차) · 라이브 브랜치 `claude/determined-yonath`(`2048c36c` push 완료 · 라이브는 아직 `hhd-rco5dfdi5`) · **55차 = 마이그레이션 적용·push 끝, 배포 명령만 대표 손에 남았다**
+마지막 갱신: 2026-09-25(57차) · 라이브 브랜치 `claude/determined-yonath`(57차 push 완료 · 라이브는 아직 `hhd-rco5dfdi5`) · **55·57차 = push 끝, 배포 명령만 대표 손** — 배포하는 워크트리를 원격 tip 으로 올린 뒤 55차 「진행 상태」의 명령을 실행하면 둘이 함께 나간다(56차는 DB 만이라 배포 불필요)
+
+**(57차 · 2026-09-25) 속풀이 «위기 신호 감지 → 상담 안내» 최소 안전장치 — ✅ push 완료(`claude/determined-yonath` fast-forward) · 🟡 다음 배포에 포함(라이브는 아직 `hhd-rco5dfdi5`):**
+
+대표 지시(09-25) «멈춘 작업 전부 마무리». 09-20 에 만들어 보고 대기 중이던 브랜치 `feature/chat-crisis-guard`(`c8449a6b`, base `85924c89`)를
+55차 위로 리베이스해 올렸다. 대표 결정: 지시에 없던 추가 2건(concern 시 안전 지침 · 직전 8턴 crisis 승계)은 **유지** · 안전 지침 상시 삽입은
+**보류**(concern 일 때만) · 질문권 0 회원 입력창 잠김은 범위 밖(아래 후속). 워크트리 `.claude/worktrees/chat-crisis-guard`.
+
+속풀이에 «죽고 싶다»고 써도 운세 풀이가 그대로 나갔다(입력 가드는 프롬프트 인젝션 표시뿐, 상담 안내 문구는 저장소 전체에 0건).
+
+- 정본 `lib/domain/chat/crisis.ts` — 순수 함수 `detectCrisis(text)` → `none | concern | crisis` + 고정 라벨 `reason`. 판정표
+  `lib/domain/chat/__tests__/crisis.test.ts` 가 규칙의 계약이다(규칙을 고치면 표에 사례를 먼저 더한다).
+  - **crisis**: 질문권을 쓰지 않고 모델도 부르지 않는다. 풀이 대신 고정 안내(`CRISIS_REPLY` — 자살예방상담전화 109 ·
+    정신건강 위기상담전화 1577-0199 · 청소년상담 1388). 화면도 남은 질문 수를 깎지 않는다(`safety: 'crisis'`).
+  - **concern**: 평소처럼 차감·응답하되 시스템 지시문 «맨 뒤»에 안전 지침(`CHAT_SAFETY_INSTRUCTION` — 숙명론·유료 권유·효과 약속 금지)을
+    얹고, 답 끝에 안내 한 줄(`CONCERN_FOOTER`)을 붙인다. 직전 대화(8턴)에 crisis 가 있었으면 평범한 다음 질문도 concern 이다.
+- 결선은 **두 곳 모두**(의도된 중복 — 파이프라인 파일 머리말): `lib/services/shaman-chat-pipeline.ts prepareShamanChat`(SSE) ·
+  `app/actions/ai/shaman-chat.ts sendShamanChatMessage`(폴백). 자리는 인증·레이트리밋 «뒤», 질문권 확인·차감 «앞». 한쪽만 고치면
+  `app/actions/__tests__/shaman-chat-crisis.test.ts` 가 잡는다. SSE 는 고정 안내도 같은 규약(meta → token → done)으로 흘린다 —
+  4xx 로 끊으면 클라이언트가 메시지를 되돌려 안내문이 화면에 남지 않는다.
+- 🔴 **번호는 2026-09-20 공식 출처로 확인했다**(129.go.kr/109 · mohw.go.kr 정신건강정책 · mogef.go.kr 청소년상담1388). 고치면
+  `CRISIS_HOTLINES_VERIFIED_ON` 도 함께(테스트가 묶어 둔다). 1388 은 휴대전화에서 지역번호를 붙여야 걸려 **바로 걸기 링크를 달지 않았다**.
+  문구에는 확인된 사실(24시간)만 — 무료·비밀보장·나아진다 같은 말은 넣지 않았다(의료 효과 표현 금지 · 회귀 테스트).
+- 🔴 **건수 기록은 `lib/services/chat-safety.ts` 로만**: 등급·규칙 라벨·경로 셋. `logger.warn` 을 쓰면 안 된다 — Sentry 는 요청 스코프의
+  정보(요청 본문 = 회원이 쓴 글)를 이벤트에 붙여 보낸다. 스코프 이벤트 프로세서로 request·user·breadcrumbs 를 떼어 낸다(회귀 테스트).
+  전역 설정은 별도 브랜치 `fix/sentry-request-body` 가 고치는 중 — 이 헬퍼의 떼어 내기는 이중 방어로 그대로 둔다.
+  GA4 이벤트는 일부러 달지 않았다(«누가 위기 신호를 보였다»가 분석 도구에 회원 단위로 남는다).
+- 🔴 **빈칸을 지우는 정규화의 함정**: 「혼자 살고 싶어요」→자살 · 「투자해도 될까요」→자해 · 「사유서를 썼어요」→유서. 핵심 낱말은
+  낱말 경계를 지킨 원문에서 실제로 쓰였을 때만 센다(`REAL_WORD`). 속풀이 단골 주제(「남편이랑 살기 싫어요」· 꿈 해몽)도 표로 막았다.
+- 리베이스(85924c89 → 56차 `9bfbdbd1`): 코드 4파일은 자동 병합(55차 `thoughtTokensOf` 가 같은 함수 안에 들어왔지만 겹치지 않음), 충돌은
+  HANDOFF·MEMORY 만. 게이트(리베이스 뒤, 워크트리 자체 node_modules 로): `tsc --noEmit` ✅ 0 · `eslint --max-warnings=0` ✅ 0/0 ·
+  `jest` 247스위트 5,651건(+1 skipped) ✅ · `next build` ✅(122 페이지).
+  ⚠️ 두 함정: ①워크트리 폴더가 세션 사이에 지워져 다시 만든 뒤 **node_modules 없이** 돌린 첫 게이트는 상위 main 체크아웃의
+  **낡은 node_modules 를 집어 «통과»했다** — tsc 가 `msedge-tts`·`web-push` 를 못 찾아 드러났다(eslint 는 그대로 0/0 을 냈다).
+  새 워크트리는 `ls node_modules` 를 먼저 볼 것. ②tsc·eslint·jest 를 동시에 돌리면 `theme-stage.test.ts` 가 시간 초과로 1건
+  죽는다(단독·재실행 모두 통과 — 부하 플레이크).
+  **미검증**: 실제 모델이 안전 지침을 받았을 때의 답 품질 · 말풍선의 바로 걸기 링크 실기기 동작(워크트리에 환경 파일이 없어 화면을 띄우지
+  않았다) — 배포 뒤 검수 항목.
+- 🔴 **배포할 때**: `vercel deploy` 는 작업 트리를 올리므로 **배포하는 워크트리가 이 push 이후의 tip 이어야 57차가 함께 나간다.**
+  55차 워크트리에서 내리려면 먼저 `git -C D:/anti/haehwadang/.claude/worktrees/lucid-panini-b9c171 pull --ff-only origin claude/determined-yonath`.
+  배포 뒤 확인: ① 속풀이에 «죽고 싶어요» → 고정 안내가 말풍선으로 오고 남은 질문 수가 그대로 ② «사는 게 의미가 없어요» → 답 끝에 안내 한 줄
+  ③ Sentry 에 `chat_safety.level` 태그 이벤트가 오고 그 이벤트에 request 본문이 **없다**.
+- 후속(대표 결정 필요): ① 질문권이 0인 회원은 입력창이 잠겨 이 안내에 닿지 못한다 — 위기 문장만은 질문권 없이도 보내게 할지.
+  ② 안전 지침 상시 삽입(규칙이 놓친 표현을 모델이 2차로 받게) — 모든 대화의 프롬프트가 바뀌므로 실모델 시험 뒤.
+- 2차(검토만 · 미구현): 규칙이 애매하게 본 글만 결정형 모델(`lib/services/jev-client.ts` 의 `askJev` noul)로 보강하는 안. 회원이 쓴 글이
+  국외 서버로 나가므로 **개인정보처리방침의 처리위탁·국외이전 고지 개정 + 대표 승인이 선행**이다. 하게 되면 «끌어올리기만»(내리지 않는다) ·
+  사용량 로그에 회원 식별자를 남기지 않을 것.
 
 **(56차 · 2026-09-25) Gemini 사용량 RPC 5종에 관리자 확인 — ✅ 라이브 DB 적용·검증 완료(코드 변경 없음 · 배포 불필요):**
 

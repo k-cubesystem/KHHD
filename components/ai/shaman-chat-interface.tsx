@@ -41,6 +41,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { GAChat } from '@/lib/analytics/chat-ga'
 import { canStream, streamShamanChat, type StreamDonePayload } from '@/lib/domain/chat/stream-client'
+import { splitHotlineLinks } from '@/lib/domain/chat/crisis'
 import { AdIncenseSheet } from '@/components/ai/chat/ad-incense-sheet'
 import { getAdRewardAvailability } from '@/app/actions/ads/coupang'
 import type { AdRewardAvailability } from '@/lib/domain/ads/rewarded'
@@ -163,7 +164,20 @@ const Bubble = memo(function Bubble({
               </p>
             ) : (
               <p key={i} className="whitespace-pre-wrap break-words my-1 first:mt-0 last:mb-0">
-                {part.text}
+                {/* 상담 안내의 번호는 눌러서 바로 걸 수 있어야 한다 — 공식 이름 뒤의 번호만 링크가 된다. */}
+                {splitHotlineLinks(part.text).map((seg, j) =>
+                  seg.tel ? (
+                    <a
+                      key={j}
+                      href={`tel:${seg.tel}`}
+                      className="font-semibold text-gold-300 underline underline-offset-2"
+                    >
+                      {seg.text}
+                    </a>
+                  ) : (
+                    seg.text
+                  )
+                )}
               </p>
             )
           )}
@@ -818,6 +832,9 @@ export function ShamanChatInterface({
         if (result.deityCode) setDeityCode(result.deityCode)
         if (result.emotion) setDeityEmotion(result.emotion)
 
+        // 위기 안내(crisis)는 풀이가 아니다 — 서버가 질문권을 쓰지 않았으니 화면도 깎지 않는다.
+        const uncharged = result.safety === 'crisis'
+
         // 인연(緣) 레벨업 — 아바타 발광 + 골드 토스트 + 바라 효과음(F-4)
         if (result.bondLeveledUp) {
           setBondFx(true)
@@ -849,7 +866,7 @@ export function ShamanChatInterface({
 
         // 잔여 동기화(P0-F5) — 서버가 차감 반영 잔여를 주면 그 값으로 덮어쓴다(낙관 desync 제거).
         setQuestionStatus((prev) => {
-          if (!prev) return prev
+          if (!prev || uncharged) return prev
           if (result.remaining) {
             return {
               ...prev,
@@ -963,6 +980,7 @@ export function ShamanChatInterface({
             emotion: result.emotion,
             bondLeveledUp: result.bondLeveledUp,
             bondLevelName: result.bondLevelName,
+            safety: result.safety,
           }
         } else {
           applyFailure(result.error || '전송 실패', result.noCredits === true)

@@ -49,6 +49,8 @@ export interface StreamDonePayload {
   emotion?: string
   bondLeveledUp?: boolean
   bondLevelName?: string
+  /** 위기 신호 등급 — crisis 면 서버가 질문권을 쓰지 않았다(화면도 깎지 않는다). concern 은 안내 한 줄이 붙은 답. */
+  safety?: 'crisis' | 'concern'
 }
 
 export interface StreamHandlers {
