@@ -9,6 +9,8 @@ const envSchema = z.object({
   // AI Services
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1, 'Google Generative AI API Key가 필요합니다').optional(),
   OPENAI_API_KEY: z.string().min(1, 'OpenAI API Key가 필요합니다').optional(),
+  // Jev(TypeSafe AI) — 없으면 lib/services/jev-client 가 조용히 건너뛰고 기존 경로가 돈다.
+  TYPESAFE_API_KEY: z.string().min(1).optional(),
 
   // Payments — 상점(MID)이 둘이라 키도 두 쌍이다. 실제 읽는 곳은 lib/config/toss-keys.ts,
   // 클라이언트는 lib/services/tosspayments.ts.

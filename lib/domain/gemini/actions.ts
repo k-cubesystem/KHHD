@@ -39,6 +39,9 @@ export const AI_ACTION_LABELS: Record<string, string> = {
   ritual_month_line: '초하루 문안',
   circle_narrative: '기운 처방전·그룹 AI 풀이',
   together_narrative: '함께 보는 기운 AI 분석',
+  // ── Threads 댓글 2차 분류 (Jev 먼저 → 확신이 낮으면 Gemini) ──
+  threads_classify: '스레드 댓글 분류',
+  threads_classify_jev: '스레드 댓글 분류 (Jev)',
   // ── 기타 ──
   unknown: '기타',
 }
@@ -73,6 +76,9 @@ export const EMITTED_ACTION_TYPES = [
   'ritual_month_line',
   'circle_narrative',
   'together_narrative',
+  // threads-sync 크론
+  'threads_classify',
+  'threads_classify_jev',
 ] as const
 
 export type EmittedActionType = (typeof EMITTED_ACTION_TYPES)[number]
@@ -148,6 +154,8 @@ export const ACTION_TO_COST_KEY: Record<string, FeatureCostKey | null> = {
   summarizer: null,
   memory: null,
   reading_insights: null,
+  threads_classify: null,
+  threads_classify_jev: null,
 }
 
 /**

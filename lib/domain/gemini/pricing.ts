@@ -35,6 +35,9 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
   // 🔴 정정(2026-08-14): 구값 1.25/5.0 은 1.5 Pro 값이었다 — 실제는 2/12(200K 초과 시 4/18).
   'gemini-3.1-pro-preview': { input: 2.0, output: 12.0 },
   'gemini-2.5-flash-preview': { input: 0.3, output: 2.5 },
+  // Jev(TypeSafe AI) 결정형 모델 — 입력 $0.042/1M · 출력 무료.
+  // 출처: https://typesafe.ai/blog/introducing-system-one-models-and-jev (확인일 2026-09-20)
+  'jev-latest': { input: 0.042, output: 0 },
   // Claude models
   'claude-opus-4-6': { input: 15.0, output: 75.0 },
   'claude-sonnet-4-6': { input: 3.0, output: 15.0 },

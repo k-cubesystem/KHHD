@@ -98,6 +98,25 @@ export function classifyReply(text: string | null | undefined): ClassifyResult {
   return { classification: 'other', confidence: 0.3, reason: 'no-rule' }
 }
 
+export const REPLY_CLASSES: readonly ReplyClass[] = ['apply', 'question', 'chat', 'spam', 'other']
+
+/** AI 2차 분류에 주는 선택지 풀이 — 선택지 이름이 곧 threads_replies.classification 값이다. */
+export const REPLY_CLASS_INSTRUCTIONS = '사주·운세 서비스 계정의 스레드 글에 달린 댓글이다. 댓글의 의도를 하나 고른다.'
+export const REPLY_CLASS_CRITERIA: Record<ReplyClass, string> = {
+  apply:
+    '이벤트·무료 풀이에 신청하거나 참여하겠다는 뜻. «저요», «저도 봐주세요», «신청합니다», 생년월일을 적어 풀이를 청하는 댓글.',
+  question: '사주·운세·서비스 이용에 관해 묻는 댓글. 풀이를 청하는 것이 아니라 정보를 묻는다.',
+  chat: '감상·인사·응원·공감·잡담. 답을 바라지 않는다.',
+  spam: '광고·외부 링크·연락처 유도·도배·욕설·비방.',
+  other: '위 넷 어디에도 들지 않거나 뜻을 알 수 없는 댓글.',
+}
+
+/**
+ * Jev 의 확신이 이 값에 못 미치면 Gemini 2차로 넘긴다.
+ * 🔴 한국어 보정이 검증된 값이 아니다 — jev-eval.live.test.ts 가 이 기준에서의 정확도·적용률을 잰다. 그 결과로 고칠 것.
+ */
+export const JEV_REPLY_MIN_CONFIDENCE = 0.75
+
 /** AI 2차 분류가 필요한가 — 규칙이 확신 못 한 것만. */
 export function needsAiClassification(r: ClassifyResult): boolean {
   return r.classification === 'other' || r.confidence < 0.6

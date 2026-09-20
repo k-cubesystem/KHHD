@@ -8,7 +8,22 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-19(45차) · 라이브 브랜치 `claude/determined-yonath`(`1f5a925e` · 배포 `hhd-evlhweacl`)
+마지막 갱신: 2026-09-20(46차 · 미배포) · 라이브 브랜치 `claude/determined-yonath`(`1f5a925e` · 배포 `hhd-evlhweacl`)
+
+**(46차 · 2026-09-20) Jev(TypeSafe AI) 결정형 모델 도입 — 🟡 브랜치 `feature/jev-decision-model`, 미배포:**
+
+Jev 는 글을 쓰지 않고 미리 선언한 질문에 `choice` / `score` / `noul`(예·아니오 확률)만 답하는 모델이다(70~500ms · 입력 $0.042/1M · 출력 무료).
+풀이 생성은 그대로 Gemini 가 하고, 답의 범위가 닫힌 판정 단계에만 덧붙인다.
+
+- `lib/services/jev-client.ts` — `askJev()` 는 어떤 실패든(키 없음·2.5초 초과·HTTP 오류·모양 불일치) **null** 을 돌려준다. 부르는 쪽은 null 이면 기존 경로로.
+  `confidentChoice()` = 확신이 기준에 못 미치면 null. 사용량은 `gemini_api_logs` 에 model=`jev-latest` 로 남는다(단가 `pricing.ts`).
+- 1차 적용 = Threads 댓글 2차 분류(`app/api/cron/threads-sync/route.ts`): Jev 먼저 → 확신 < 0.75(`JEV_REPLY_MIN_CONFIDENCE`)면 기존 Gemini 분류.
+- 🔴 **`TYPESAFE_API_KEY` 가 없으면 아무 일도 하지 않는다.** 키는 얼리 액세스(console.typesafe.ai) — 대표 액션.
+- 🔴 **한국어 정확도는 검증되지 않았다**(공식 문서에 언급 없음). 키를 받으면 먼저
+  `JEV_EVAL=1 TYPESAFE_API_KEY=… npx jest lib/domain/threads/__tests__/jev-eval.live.test.ts` — 기준 이상 답의 정확도 90% 미만이면 쓰지 않는다.
+- 🔴 API 질문 필드는 `criteria` 다. 블로그 예시의 `options`·`min`·`max` 는 공식 문서(docs.typesafe.ai/api.md)와 다르다.
+- 🔴 쓰지 말 곳: 테마운세 판정 엔진(`lib/domain/theme-fortune/resolvers`) — «같은 사주 = 같은 답»이 정본. 산수·날짜 비교도 Jev 의 공식 약점.
+- 🔴 `state` 는 TypeSafe(미국) 서버로 나간다. 회원이 쓴 글·이름·생년월일을 보내는 용도로 넓히려면 개인정보처리방침의 처리위탁·국외이전 고지를 먼저 고친다.
 
 **(45차 · 2026-09-18~19) 복채 → 이용권 전면 전환 — ✅ 프로덕션 라이브(`1f5a925e` · 배포 `hhd-evlhweacl` · 직전 정상 배포 `hhd-o2c5coipw`):**
 

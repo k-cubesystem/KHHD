@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchReplies, fetchInsights, loadThreadsToken, refreshLongLivedToken } from '@/lib/services/threads/client'
-import { classifyReply, needsAiClassification, type ReplyClass } from '@/lib/domain/threads/classify'
+import {
+  classifyReply,
+  needsAiClassification,
+  JEV_REPLY_MIN_CONFIDENCE,
+  REPLY_CLASSES,
+  REPLY_CLASS_CRITERIA,
+  REPLY_CLASS_INSTRUCTIONS,
+  type ReplyClass,
+} from '@/lib/domain/threads/classify'
 import { generateAIContent } from '@/lib/services/ai-client'
+import { askJev, confidentChoice } from '@/lib/services/jev-client'
 import { logger } from '@/lib/utils/logger'
 import { getSiteUrl } from '@/lib/utils/site-url'
 
@@ -150,7 +159,19 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ok: summary.errors.length === 0, ...summary })
 }
 
+/** Jev 가 확신하면 그 답을 쓰고, 키가 없거나 실패했거나 확신이 낮으면 null — 아래 Gemini 분류로 넘어간다. */
+async function jevClassify(text: string): Promise<ReplyClass | null> {
+  const answers = await askJev({
+    state: text.slice(0, 500),
+    questions: { intent: { type: 'choice', instructions: REPLY_CLASS_INSTRUCTIONS, criteria: REPLY_CLASS_CRITERIA } },
+    actionType: 'threads_classify_jev',
+  })
+  return confidentChoice(answers?.intent, REPLY_CLASSES, JEV_REPLY_MIN_CONFIDENCE)
+}
+
 async function aiClassify(text: string): Promise<ReplyClass | null> {
+  const viaJev = await jevClassify(text)
+  if (viaJev) return viaJev
   try {
     const res = await generateAIContent({
       featureKey: 'threads-classify',
