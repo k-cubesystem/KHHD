@@ -105,7 +105,7 @@ export async function askJev<K extends string>(options: JevAskOptions<K>): Promi
       redirect: 'error',
     })
     if (!res.ok) {
-      void res.body?.cancel()
+      void res.body?.cancel().catch(() => undefined)
       log(res.status === 429 || res.status === 529 ? 'rate_limited' : 'error', null, null, String(res.status))
       logger.warn('[Jev] 호출 실패 — 기존 경로로 진행', { status: res.status, actionType: options.actionType })
       return null
