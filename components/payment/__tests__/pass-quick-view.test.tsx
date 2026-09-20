@@ -134,6 +134,54 @@ describe('상단 바 「내 이용권」 팝업', () => {
     expect(mockOverview).toHaveBeenCalledTimes(2)
   })
 
+  it('🔴 다시 읽기에 실패하면 옛 값을 최신인 것처럼 두지 않는다 — 새로 읽지 못했다고 밝힌다', async () => {
+    mockOverview.mockResolvedValueOnce(overview({ passes: HELD, firstMonthEligible: true }))
+    mockOverview.mockRejectedValueOnce(new Error('network'))
+    render(<PassQuickView />)
+
+    open()
+    expect(await screen.findByText('이용권 3장')).not.toBeNull()
+    expect(screen.queryByText(/새로 읽지 못했습니다/)).toBeNull()
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByText('이용권 3장')).toBeNull())
+
+    open()
+    expect(await screen.findByText(/새로 읽지 못했습니다/)).not.toBeNull()
+    expect(screen.getByText('이용권 3장')).not.toBeNull()
+  })
+
+  it('🔴 실패한 뒤 다시 열면 실패 문구가 아니라 읽는 중을 보인다', async () => {
+    mockOverview.mockRejectedValueOnce(new Error('boom'))
+    render(<PassQuickView />)
+    open()
+    expect(await screen.findByText(/이용권을 불러오지 못했습니다/)).not.toBeNull()
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+
+    mockOverview.mockReturnValueOnce(new Promise(() => {}))
+    open()
+    expect(await screen.findByText('불러오는 중')).not.toBeNull()
+    expect(screen.queryByText(/이용권을 불러오지 못했습니다/)).toBeNull()
+  })
+
+  it('🔴 늦게 온 옛 응답이 새 응답을 덮지 않는다', async () => {
+    let resolveFirst: (value: PassOverview) => void = () => {}
+    mockOverview.mockReturnValueOnce(new Promise<PassOverview>((resolve) => (resolveFirst = resolve)))
+    mockOverview.mockResolvedValueOnce(
+      overview({ passes: { ...HELD, holdings: [{ ...HELD.holdings[0]!, remaining: 2 }] } })
+    )
+    render(<PassQuickView />)
+
+    open()
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+    open()
+    expect(await screen.findByText('이용권 2장')).not.toBeNull()
+
+    resolveFirst(overview({ passes: HELD }))
+    await waitFor(() => expect(mockOverview).toHaveBeenCalledTimes(2))
+    expect(screen.queryByText('이용권 3장')).toBeNull()
+    expect(screen.getByText('이용권 2장')).not.toBeNull()
+  })
+
   it('비로그인이면 로그인 안내, 조회 실패면 실패 안내', async () => {
     mockOverview.mockResolvedValueOnce(null)
     const { unmount } = render(<PassQuickView />)

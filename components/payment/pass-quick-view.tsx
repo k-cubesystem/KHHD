@@ -16,30 +16,35 @@ import { logger } from '@/lib/utils/logger'
  * 이용권 구매와 멤버십으로 가는 문을 둔다(CEO 2026-09-20).
  *
  * 🔴 주머니(멤버십 이번 달 몫 · 보유 이용권)를 한 숫자로 합치지 않는다 — 문구는 pass.ts 의 것을 그대로 쓴다.
- * 🔴 열 때마다 다시 읽는다. 풀이를 보고 나면 장 수가 바뀌므로, 명식 팝업처럼 한 번 읽고 굳히면 틀린 수를 보인다.
+ * 🔴 열 때마다 다시 읽는다. 풀이를 보고 나면 장 수가 바뀌므로, 한 번 읽고 굳히면 틀린 수를 보인다.
  *    앞서 읽은 값이 있으면 그것을 보인 채로 조용히 갈아 끼운다(열 때마다 빈 화면이 깜빡이지 않게).
+ *    다시 읽기에 실패하면 옛 값을 지우지 않되 «새로 읽지 못했다»고 밝힌다 — 옛 수를 최신인 것처럼 두지 않는다.
  */
 export function PassQuickView() {
   const [open, setOpen] = useState(false)
   const [overview, setOverview] = useState<PassOverview | null>(null)
-  const [status, setStatus] = useState<'idle' | 'ready' | 'failed'>('idle')
-  const latestRequest = useRef(0)
+  const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading')
+  // sent = 마지막으로 보낸 요청, applied = 화면에 반영한 요청. 늦게 온 옛 응답이 새 응답을 덮지 않게 한다.
+  const requests = useRef({ sent: 0, applied: 0 })
 
   const openPopup = () => {
     setOpen(true)
     trackEvent({ action: 'pass_popup_open', category: 'conversion' })
+    // 앞서 실패·비로그인으로 끝났어도 다시 열면 다시 읽는 중이다.
+    if (!overview) setStatus('loading')
 
-    const request = ++latestRequest.current
+    const request = (requests.current.sent += 1)
     getMyPassOverview()
       .then((next) => {
-        if (latestRequest.current !== request) return
+        if (request < requests.current.applied) return
+        requests.current.applied = request
         setOverview(next)
         setStatus('ready')
       })
       .catch((e: unknown) => {
-        if (latestRequest.current !== request) return
         logger.error('[pass-quick-view] 이용권 요약 조회 실패:', e)
-        setStatus('failed')
+        // 더 새 요청이 나가 있으면 그쪽 결과에 맡긴다.
+        if (request === requests.current.sent) setStatus('failed')
       })
   }
 
@@ -69,8 +74,18 @@ export function PassQuickView() {
 
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-6">
             {overview ? (
-              <PassQuickViewBody overview={overview} onNavigate={close} />
-            ) : status === 'idle' ? (
+              <>
+                {status === 'failed' ? (
+                  <p
+                    role="status"
+                    className="mb-3 rounded-lg border border-seal/40 px-3 py-2 text-[12px] text-ink-light/80"
+                  >
+                    방금 새로 읽지 못했습니다. 아래는 앞서 읽은 값입니다.
+                  </p>
+                ) : null}
+                <PassQuickViewBody overview={overview} onNavigate={close} />
+              </>
+            ) : status === 'loading' ? (
               <p className="flex items-center justify-center gap-2 py-8 text-[12px] text-ink-light/60">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 불러오는 중
