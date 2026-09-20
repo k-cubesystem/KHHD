@@ -1,5 +1,5 @@
 /**
- * Jev(TypeSafe AI) 클라이언트 — 글을 쓰지 않고 «미리 정해 둔 답» 가운데 하나를 확률과 함께 돌려주는 결정형 모델.
+ * Jev(jev-ai.pro) 클라이언트 — 글을 쓰지 않고 «미리 정해 둔 답» 가운데 하나를 확률과 함께 돌려주는 결정형 모델.
  *
  * 쓰는 자리: 분류·라우팅·점수·예/아니오 판정처럼 답의 범위가 닫혀 있는 단계. 풀이 생성은 Gemini 가 한다.
  * 쓰지 않는 자리: 산수·날짜 계산·여러 단계 추론(공식 문서가 밝힌 약점), 그리고 «같은 사주 = 같은 답»이어야 하는
@@ -13,13 +13,15 @@
  *    스스로 적은 생년월일·@핸들이 들어 있을 수 있다. 프로덕션에 키를 넣기 전에 수령자 고지 여부를 정할 것.
  * 🔴 state 안의 지시문에 흔들릴 수 있다(공식 문서 «Adversarial Content») — 결과로 되돌릴 수 없는 일을 하지 말 것.
  *
- * API: https://docs.typesafe.ai/api.md (확인일 2026-09-20)
+ * API: `POST https://jev-ai.pro/api/v1/systemone` · Bearer 키 · 2026-09-21 실호출로 확인(200, 계약 일치).
+ * 🔴 공식 문서(docs.typesafe.ai)에 적힌 호스트는 `api.typesafe.ai` 인데 우리 키는 그쪽에서 401 이다 — 호스트를 문서에서
+ *    베끼지 말고 발급처에 실제로 한 번 불러 보고 박을 것. 요청·응답 모양은 두 문서가 같다.
  */
 import type { EmittedActionType } from '@/lib/domain/gemini/actions'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
 import { logger } from '@/lib/utils/logger'
 
-const JEV_ENDPOINT = 'https://api.typesafe.ai/v1/systemone'
+const JEV_ENDPOINT = 'https://jev-ai.pro/api/v1/systemone'
 const JEV_MODEL = 'jev-latest'
 const JEV_TIMEOUT_MS = 2500
 /** 관계없는 내용이 길수록 정확도가 떨어진다(공식 문서 «Context Overload») — 비용 상한도 겸한다. */
@@ -44,7 +46,7 @@ export interface JevAskOptions<K extends string> {
 }
 
 export function isJevEnabled(): boolean {
-  return !!process.env.TYPESAFE_API_KEY
+  return !!process.env.JEV_AI_API_KEY
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -75,7 +77,7 @@ function parseAnswer(question: JevQuestion, raw: unknown): JevAnswer | null {
 }
 
 export async function askJev<K extends string>(options: JevAskOptions<K>): Promise<Record<K, JevAnswer> | null> {
-  const apiKey = process.env.TYPESAFE_API_KEY
+  const apiKey = process.env.JEV_AI_API_KEY
   if (!apiKey) return null
 
   const startedAt = Date.now()

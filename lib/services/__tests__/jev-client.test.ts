@@ -26,16 +26,16 @@ const okBody = (answer: unknown) => ({
 describe('askJev', () => {
   const realFetch = global.fetch
   beforeEach(() => {
-    process.env.TYPESAFE_API_KEY = 'test-key'
+    process.env.JEV_AI_API_KEY = 'test-key'
     jest.mocked(logUsage).mockClear()
   })
   afterEach(() => {
-    delete process.env.TYPESAFE_API_KEY
+    delete process.env.JEV_AI_API_KEY
     global.fetch = realFetch
   })
 
   it('키가 없으면 부르지 않고 null — 기존 경로가 그대로 돈다', async () => {
-    delete process.env.TYPESAFE_API_KEY
+    delete process.env.JEV_AI_API_KEY
     const fetchMock = respondWith(200, okBody({}))
     expect(isJevEnabled()).toBe(false)
     expect(
@@ -59,7 +59,8 @@ describe('askJev', () => {
       confidence: 0.88,
     })
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe('https://api.typesafe.ai/v1/systemone')
+    // 🔴 실제 발급처. 공식 문서의 api.typesafe.ai 로 되돌리면 우리 키는 401 이다(2026-09-21 실측).
+    expect(url).toBe('https://jev-ai.pro/api/v1/systemone')
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer test-key')
     // 본문에 댓글 원문이 실린다 — 리다이렉트를 따라가 다른 출처로 다시 보내지 않는다
     expect(init.redirect).toBe('error')

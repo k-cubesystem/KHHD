@@ -2,7 +2,7 @@
 /**
  * Jev 한국어 정확도 실측 — 실제 API 를 부른다. 평소 테스트에서는 돌지 않는다.
  *
- *   JEV_EVAL=1 TYPESAFE_API_KEY=... npx jest lib/domain/threads/__tests__/jev-eval.live.test.ts
+ *   JEV_EVAL=1 JEV_AI_API_KEY=... npx jest lib/domain/threads/__tests__/jev-eval.live.test.ts
  *
  * 공식 문서에 한국어 성능이 적혀 있지 않다. 규칙 분류가 놓치는 애매한 댓글로 재서, JEV_REPLY_MIN_CONFIDENCE 기준에서
  * 정확도 90% 이상이어야 통과다. 못 미치면 기준을 올리거나 Threads 에서 Jev 를 뺀다(키를 지우면 기존 경로만 돈다).
@@ -57,7 +57,7 @@ describe('Jev 실측 표본', () => {
   })
 })
 
-const run = process.env.JEV_EVAL === '1' && !!process.env.TYPESAFE_API_KEY ? describe : describe.skip
+const run = process.env.JEV_EVAL === '1' && !!process.env.JEV_AI_API_KEY ? describe : describe.skip
 
 run('Jev 한국어 댓글 분류 실측', () => {
   it(`확신 ${JEV_REPLY_MIN_CONFIDENCE} 이상인 답의 정확도가 90% 이상`, async () => {
