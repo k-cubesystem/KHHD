@@ -8,9 +8,9 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-20(47차 · 미배포) · 라이브 브랜치 `claude/determined-yonath`(`1f5a925e` · 배포 `hhd-evlhweacl`)
+마지막 갱신: 2026-09-20(47차) · 라이브 브랜치 `claude/determined-yonath`(`ec0a241c` · 배포 `hhd-bcvyddxzo` · 직전 정상 `hhd-evlhweacl`)
 
-**(47차 · 2026-09-20) 상단 바 「내 이용권」 아이콘·팝업 — 🟡 브랜치 `feature/header-pass-chip`, 미배포:**
+**(47차 · 2026-09-20) 상단 바 「내 이용권」 아이콘·팝업 — ✅ 프로덕션 라이브(`ec0a241c` · 배포 `hhd-bcvyddxzo` · 직전 정상 `hhd-evlhweacl`):**
 
 CEO 지시 «로고 쪽 명식 아이콘 옆에 이용권 모양, 누르면 현재 수량·멤버십 등급, 추가 구매·등급 유도 버튼».
 
@@ -39,9 +39,14 @@ CEO 지시 «로고 쪽 명식 아이콘 옆에 이용권 모양, 누르면 현�
   - 갱신 결제 재시도 중(ACTIVE·기간 종료)인 회원은 팝업에 «무료 회원 / 멤버십 시작하기»가 뜨고 결제 단계에서 막힌다 — 상점에도 원래 있던 막다른 길.
   - `shortDate`(`pass.ts`)가 로컬 시간대를 써서 00~09시(KST) 결제분은 팝업(브라우저)과 «결제 · 구독 관리»(서버 UTC)의 날짜가 하루 어긋난다.
   - Jev 와 Gemini 의 판정이 둘 다 `classified_by='ai'` 라 DB 에서 갈라 볼 수 없다(CHECK 제약) — 호출 수는 `gemini_api_logs` 의 action_type 으로 본다.
-- 게이트 tsc 0 · eslint 0 · jest(최종 수치는 아래 배포 기록). 🔴 실기기·로그인 상태의 실제 팝업은 배포 뒤 `e2e/prod/header-pass.spec.ts` 로 본다.
+- 게이트 tsc 0 · eslint 0 · jest 238 스위트 5,377건(실측 테스트 1건 skip) · next build ✓ · 새 클래스가 빌드 CSS 에 산출됐는지 grep 확인.
+- 배포 순서(실제로 한 것): fetch → 원격 tip(`85924c89`)이 HEAD 의 조상인지 확인 → fast-forward push 성공 확인 → 워크트리에서 `vercel deploy --prod --yes`.
+- 배포 후 스모크: 공개·보호 경로 15곳 정상(`/ilgan` 은 `/saju3` 로 308 — 종전과 같다) · og:image 는 정본 도메인 ·
+  **실계정 프로덕션 e2e 통과**(`E2E_PROD_SMOKE=1 E2E_BASE_URL=https://k-haehwadang.com npx playwright test e2e/prod/header-pass.spec.ts --project=chromium --workers=1 --no-deps`)
+  — 360px 에서 상호 온전·아이콘 넷, 팝업이 서버 값으로 채워짐, 다시 열림, 명식 팝업 정상, 페이지 오류 0. 촬영본 `D:/anti/hhd-shots-46/prod/`.
+- 되돌리기: `vercel alias set hhd-evlhweacl-cubesystems-projects.vercel.app k-haehwadang.com` (DB 변경 없음 — 코드만 되돌리면 된다).
 
-**(46차 · 2026-09-20) Jev(TypeSafe AI) 결정형 모델 도입 — 🟡 브랜치 `feature/jev-decision-model`, 미배포:**
+**(46차 · 2026-09-20) Jev(TypeSafe AI) 결정형 모델 도입 — ✅ 47차와 함께 라이브(`hhd-bcvyddxzo`) · 🔴 키가 없어 아직 아무 일도 하지 않는다:**
 
 Jev 는 글을 쓰지 않고 미리 선언한 질문에 `choice` / `score` / `noul`(예·아니오 확률)만 답하는 모델이다(70~500ms · 입력 $0.042/1M · 출력 무료).
 풀이 생성은 그대로 Gemini 가 하고, 답의 범위가 닫힌 판정 단계에만 덧붙인다.
