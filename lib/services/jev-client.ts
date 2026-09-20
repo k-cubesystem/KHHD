@@ -9,16 +9,18 @@
  * 기존 경로로 떨어져야 한다 — Jev 는 덧붙이는 단계지 의존하는 단계가 아니다.
  *
  * 🔴 state 는 TypeSafe(미국) 서버로 나간다. 회원이 쓴 글·이름·생년월일을 넣으려면 개인정보처리방침의
- *    처리위탁·국외이전 고지를 먼저 고쳐야 한다. 지금 쓰는 곳(Threads 공개 댓글)은 회원 정보가 아니다.
+ *    처리위탁·국외이전 고지를 먼저 고쳐야 한다. 지금 쓰는 곳은 Threads 공개 댓글뿐이다 — 다만 공개 댓글에도 작성자가
+ *    스스로 적은 생년월일·@핸들이 들어 있을 수 있다. 프로덕션에 키를 넣기 전에 수령자 고지 여부를 정할 것.
  * 🔴 state 안의 지시문에 흔들릴 수 있다(공식 문서 «Adversarial Content») — 결과로 되돌릴 수 없는 일을 하지 말 것.
  *
  * API: https://docs.typesafe.ai/api.md (확인일 2026-09-20)
  */
+import type { EmittedActionType } from '@/lib/domain/gemini/actions'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
 import { logger } from '@/lib/utils/logger'
 
 const JEV_ENDPOINT = 'https://api.typesafe.ai/v1/systemone'
-export const JEV_MODEL = 'jev-latest'
+const JEV_MODEL = 'jev-latest'
 const JEV_TIMEOUT_MS = 2500
 /** 관계없는 내용이 길수록 정확도가 떨어진다(공식 문서 «Context Overload») — 비용 상한도 겸한다. */
 const JEV_MAX_STATE_CHARS = 4000
@@ -36,8 +38,8 @@ export type JevAnswer =
 export interface JevAskOptions<K extends string> {
   state: string
   questions: Record<K, JevQuestion>
-  /** 사용량 로그의 action_type — lib/domain/gemini/actions 에 등록된 값 */
-  actionType: string
+  /** 사용량 로그의 action_type — 등록하지 않은 값은 컴파일에서 막힌다(원가 화면의 라벨이 빠지지 않게). */
+  actionType: EmittedActionType
   userId?: string | null
 }
 
@@ -62,7 +64,9 @@ function parseAnswer(question: JevQuestion, raw: unknown): JevAnswer | null {
   if (question.type === 'score') {
     return typeof raw.score === 'number' ? { type: 'score', score: raw.score, confidence: raw.confidence } : null
   }
-  if (typeof raw.choice !== 'string' || !(raw.choice in question.criteria) || !isRecord(raw.probabilities)) return null
+  // `in` 은 프로토타입 키(constructor·toString)도 통과시킨다 — 선언한 선택지만 받는다.
+  if (typeof raw.choice !== 'string' || !Object.hasOwn(question.criteria, raw.choice) || !isRecord(raw.probabilities))
+    return null
   const probabilities: Record<string, number> = {}
   for (const [option, p] of Object.entries(raw.probabilities)) {
     if (typeof p === 'number') probabilities[option] = p
@@ -85,7 +89,7 @@ export async function askJev<K extends string>(options: JevAskOptions<K>): Promi
       latencyMs: Date.now() - startedAt,
       status,
       errorCode: errorCode ?? null,
-    }).catch(() => {})
+    })
 
   try {
     const res = await fetch(JEV_ENDPOINT, {
@@ -97,8 +101,11 @@ export async function askJev<K extends string>(options: JevAskOptions<K>): Promi
         questions: options.questions,
       }),
       signal: AbortSignal.timeout(JEV_TIMEOUT_MS),
+      // 본문에 댓글 원문이 실린다 — 다른 출처로 다시 보내지 않는다.
+      redirect: 'error',
     })
     if (!res.ok) {
+      void res.body?.cancel()
       log(res.status === 429 || res.status === 529 ? 'rate_limited' : 'error', null, null, String(res.status))
       logger.warn('[Jev] 호출 실패 — 기존 경로로 진행', { status: res.status, actionType: options.actionType })
       return null

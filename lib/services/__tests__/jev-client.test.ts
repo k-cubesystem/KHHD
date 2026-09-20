@@ -61,6 +61,8 @@ describe('askJev', () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('https://api.typesafe.ai/v1/systemone')
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer test-key')
+    // 본문에 댓글 원문이 실린다 — 리다이렉트를 따라가 다른 출처로 다시 보내지 않는다
+    expect(init.redirect).toBe('error')
     expect(JSON.parse(String(init.body))).toEqual({ model: 'jev-latest', state: '저요', questions: { intent: INTENT } })
     expect(logUsage).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -81,6 +83,11 @@ describe('askJev', () => {
 
   it.each([
     ['선택지에 없는 답', { type: 'choice', choice: 'refund', probabilities: {}, confidence: 0.9 }],
+    [
+      '🔴 프로토타입 키(constructor) — `in` 검사는 통과시키던 값',
+      { type: 'choice', choice: 'constructor', probabilities: {}, confidence: 0.9 },
+    ],
+    ['🔴 프로토타입 키(toString)', { type: 'choice', choice: 'toString', probabilities: {}, confidence: 0.9 }],
     ['질문과 다른 타입', { type: 'noul', noul: 0.9 }],
     ['범위를 벗어난 확신', { type: 'choice', choice: 'apply', probabilities: {}, confidence: 1.4 }],
     ['답이 빠짐', undefined],
