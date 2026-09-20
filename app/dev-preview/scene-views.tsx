@@ -19,6 +19,10 @@ import { buildJourney, type JourneyStage } from '@/lib/domain/analysis/journey'
 import type { JourneyStatusData } from '@/app/actions/analysis/reading-insights'
 import type { WallpaperStatus } from '@/app/actions/analysis/wallpaper'
 import type { PreviewSceneId } from '@/lib/domain/dev-preview/scenes'
+import { Bell, Home } from 'lucide-react'
+import { IconGunghap, IconPass } from '@/components/icons/traditional-icons'
+import { PassQuickViewBody } from '@/components/payment/pass-quick-view'
+import type { PassOverview } from '@/app/actions/payment/passes'
 
 // ── 복주머니 목 ───────────────────────────────────────────────────────────────
 
@@ -73,6 +77,76 @@ const WALLPAPER_BASE: WallpaperStatus = {
   premiumUrls: {},
 }
 
+// ── 내 이용권 팝업 목 ─────────────────────────────────────────────────────────
+
+/** getMyPassOverview() 가 주는 모양 그대로. 날짜는 구매 +90일 · 구독 시작일 앵커 한 달. */
+const PASS_FREE: PassOverview = {
+  passes: {
+    unlimited: false,
+    membership: null,
+    holdings: [
+      { id: 'p1', source: 'onboarding', remaining: 1, expiresAt: '2026-12-01T00:00:00.000Z' },
+      { id: 'p2', source: 'purchase', remaining: 4, expiresAt: '2026-12-18T00:00:00.000Z' },
+    ],
+  },
+  tier: null,
+  planName: '무료 회원',
+  isSubscribed: false,
+  firstMonthEligible: true,
+}
+
+const PASS_MEMBER: PassOverview = {
+  passes: {
+    unlimited: false,
+    membership: { quota: 5, used: 3, remaining: 2, resetsAt: '2026-10-19T00:00:00.000Z', renews: true },
+    holdings: [{ id: 'p3', source: 'purchase', remaining: 1, expiresAt: '2026-11-30T00:00:00.000Z' }],
+  },
+  tier: 'SINGLE',
+  planName: '싱글 멤버십',
+  isSubscribed: true,
+  firstMonthEligible: false,
+}
+
+const PASS_EMPTY: PassOverview = {
+  passes: { unlimited: false, membership: null, holdings: [] },
+  tier: null,
+  planName: '무료 회원',
+  isSubscribed: false,
+  firstMonthEligible: false,
+}
+
+/**
+ * 상단 바의 오른쪽 아이콘 줄(태극 · 표 · 종 · 홈)과 팝업 본문을 한 장에 세운다.
+ * 실제 바(MobileHeader)는 세우지 않는다 — 종이 뜨자마자 서버 액션을 부른다(미리보기에는 로그인·DB 가 없다).
+ */
+function PassPopupScene({ overview }: { overview: PassOverview }) {
+  const slot = 'flex h-11 w-11 items-center justify-center text-ink-light/70'
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex h-14 items-center justify-end border-b border-primary/10 bg-background/80 px-4">
+        <span className={slot}>
+          <IconGunghap className="h-5 w-5" />
+        </span>
+        <span className={`${slot} text-primary`}>
+          <IconPass className="h-5 w-5" />
+        </span>
+        <span className={slot}>
+          <Bell className="h-5 w-5" />
+        </span>
+        <span className={slot}>
+          <Home className="h-5 w-5" />
+        </span>
+      </div>
+      <div className="mx-4 rounded-lg border border-gold-500/25 bg-surface px-6 pb-6 pt-6">
+        <p className="flex items-center gap-1.5 pb-3 font-serif text-lg font-semibold text-gold-500">
+          <IconPass className="h-4 w-4 shrink-0" />내 이용권
+        </p>
+        <PassQuickViewBody overview={overview} onNavigate={() => {}} />
+      </div>
+    </div>
+  )
+}
+
 // ── 표 ────────────────────────────────────────────────────────────────────────
 
 const PREVIEW_SCENE_VIEWS: Record<PreviewSceneId, () => React.ReactNode> = {
@@ -107,6 +181,10 @@ const PREVIEW_SCENE_VIEWS: Record<PreviewSceneId, () => React.ReactNode> = {
   'samhap-intro': () => <SamhapIntroCard />,
   // 목 URL — 실제 링크는 system_settings 가 준다(여기서는 조회하지 않는다).
   'coupang-banner': () => <CoupangBannerView url="https://link.coupang.com/a/EXAMPLE" />,
+
+  'pass-popup-free': () => <PassPopupScene overview={PASS_FREE} />,
+  'pass-popup-member': () => <PassPopupScene overview={PASS_MEMBER} />,
+  'pass-popup-empty': () => <PassPopupScene overview={PASS_EMPTY} />,
 }
 
 /**

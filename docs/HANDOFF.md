@@ -8,8 +8,25 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-20(46차 · 미배포) · 라이브 브랜치 `claude/determined-yonath`(`1f5a925e` · 배포 `hhd-evlhweacl`)
+마지막 갱신: 2026-09-20(47차 · 미배포) · 라이브 브랜치 `claude/determined-yonath`(`1f5a925e` · 배포 `hhd-evlhweacl`)
 
+**(47차 · 2026-09-20) 상단 바 「내 이용권」 아이콘·팝업 — 🟡 브랜치 `feature/header-pass-chip`, 미배포:**
+
+CEO 지시 «로고 쪽 명식 아이콘 옆에 이용권 모양, 누르면 현재 수량·멤버십 등급, 추가 구매·등급 유도 버튼».
+
+- 상단 바 순서 = 태극(내 명식) · **표(내 이용권)** · 종 · 홈. 아이콘은 `IconPass`(`components/icons/traditional-icons.tsx`).
+- 팝업 `components/payment/pass-quick-view.tsx` — 등급 · 이용권(주머니별 한 줄, `passSummaryLines` 그대로) · 「이용권 구매하기」 · 멤버십 권유 · 환불 정책 링크.
+  🔴 **열 때마다 다시 읽는다**(`getMyPassOverview`, `app/actions/payment/passes.ts`) — 풀이를 보고 오면 장 수가 바뀐다. 누르기 전에는 아무것도 읽지 않는다.
+  🔴 주머니(이번 달 몫 · 보유 이용권)를 한 숫자로 합치지 않는다. 아이콘에 숫자 배지도 달지 않았다(전 화면 상시 조회가 된다).
+- 멤버십 권유 판정 `lib/domain/payment/membership-upsell.ts`: 비회원 = 「멤버십 시작하기」(첫 달 할인 대상일 때만 자격 문구) ·
+  싱글 → 「패밀리 등급 살펴보기」 · 패밀리 → 「비즈니스 등급 살펴보기」 · 비즈니스·관리자 = 없음.
+  🔴 회원에게 «올리기·업그레이드»라고 쓰지 않는다 — **정기결제 중에는 등급을 바로 바꿀 수 없다**(서버가 새 구독 결제를 막고
+  멤버십 탭이 «해지 후 변경»을 안내). 실제 등급 변경 흐름은 없다 — 만들려면 빌링·환불 산식까지 가는 별도 과제.
+- 등급 표시명은 `planDisplayName()`(`membership-tiers.ts`)으로 모았다 — 명식 팝업과 이용권 팝업이 같은 말을 쓴다.
+- 계측: `pass_popup_open` · `pass_popup_cta`(label `buy_pass` / `membership_start|FAMILY|BUSINESS`), category `conversion`.
+- 미리보기 장면 3개(`pass-popup-free|member|empty`, 그룹 «상단 바»). 🔴 워크트리에 `.env.local` 이 없으면 미들웨어가 죽어 촬영이 안 된다 —
+  장면은 DB 가 필요 없으니 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 에 자리표시 값을 **프로세스 환경으로** 넘기면 찍힌다.
+- 게이트 tsc 0 · eslint 0 · jest 234 스위트 5,326건. 🔴 실기기·로그인 상태의 실제 팝업은 확인하지 못했다(촬영은 목 데이터).
 **(46차 · 2026-09-20) Jev(TypeSafe AI) 결정형 모델 도입 — 🟡 브랜치 `feature/jev-decision-model`, 미배포:**
 
 Jev 는 글을 쓰지 않고 미리 선언한 질문에 `choice` / `score` / `noul`(예·아니오 확률)만 답하는 모델이다(70~500ms · 입력 $0.042/1M · 출력 무료).

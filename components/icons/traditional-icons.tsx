@@ -342,6 +342,25 @@ const IconBokjumeoni = memo(function IconBokjumeoni({ className, size = 24, ...r
   )
 })
 
+/** 이용권 — 양옆이 파인 표 한 장. 절취선 오른쪽이 떼어 내는 쪽, 왼쪽 마름모는 전통 능화(菱花) 무늬. */
+const IconPass = memo(function IconPass({ className, size = 24, ...rest }: SvgIconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className}
+      {...defaultProps}
+      {...rest}
+    >
+      <path d="M5 5.5 H19 a2 2 0 0 1 2 2 V10 a2 2 0 0 0 0 4 V16.5 a2 2 0 0 1 -2 2 H5 a2 2 0 0 1 -2 -2 V14 a2 2 0 0 0 0 -4 V7.5 a2 2 0 0 1 2 -2 Z" />
+      <path d="M15.5 7.9 v1.3 M15.5 11.35 v1.3 M15.5 14.8 v1.3" />
+      <path d="M9.2 9.6 L11.6 12 L9.2 14.4 L6.8 12 Z" strokeWidth="1.2" />
+    </svg>
+  )
+})
+
 IconSaju.displayName = 'IconSaju'
 IconGunghap.displayName = 'IconGunghap'
 IconGwansang.displayName = 'IconGwansang'
@@ -355,6 +374,7 @@ IconUnse.displayName = 'IconUnse'
 IconInyon.displayName = 'IconInyon'
 IconBokjigi.displayName = 'IconBokjigi'
 IconBokjumeoni.displayName = 'IconBokjumeoni'
+IconPass.displayName = 'IconPass'
 
 export {
   IconBokjumeoni,
@@ -370,4 +390,5 @@ export {
   IconUnse,
   IconInyon,
   IconBokjigi,
+  IconPass,
 }

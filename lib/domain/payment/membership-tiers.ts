@@ -30,6 +30,15 @@ export function isMembershipTier(value: unknown): value is MembershipTier {
   return value === 'SINGLE' || value === 'FAMILY' || value === 'BUSINESS'
 }
 
+/** 등급 표시명 — 상단 바 팝업들이 같은 말을 쓴다. 숫자·주기는 적지 않는다(표시광고법 규율, CLAUDE.md). */
+export function planDisplayName(limits: { is_subscribed?: boolean | null; tier?: string | null } | null): string {
+  if (!limits?.is_subscribed) return '무료 회원'
+  if (isMembershipTier(limits.tier)) return `${TIER_LABEL[limits.tier]} 멤버십`
+  if (limits.tier === 'MASTER') return '관리자'
+  if (limits.tier === 'TESTER') return '테스터'
+  return '멤버십 회원'
+}
+
 function rankOf(tier: string | null | undefined): number {
   if (!tier) return 0
   return (TIER_RANK as Record<string, number>)[tier] ?? 0

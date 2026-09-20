@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { GuideBell } from '@/components/guide/GuideBell'
 import { ManseQuickView } from '@/components/destiny/manse-quick-view'
+import { PassQuickView } from '@/components/payment/pass-quick-view'
 
 /** 상호·로고를 누르면 가는 곳. 홈 버튼도 같은 자리다. */
 const APP_HOME_PATH = '/protected/analysis'
@@ -15,7 +16,7 @@ const BAR =
 
 /**
  * 고정 상단 바 — **모든 화면이 같은 머리글을 쓴다**(CEO 2026-08-24 "상단헤더를 전부 이렇게").
- * 아이콘 + 「청담해화당」(홈 링크) · 가이드 종 · 홈.
+ * 아이콘 + 「청담해화당」(홈 링크) · 태극(내 명식) · 표(내 이용권) · 가이드 종 · 홈.
  *
  * 인사 한 줄(「늦은 밤에 오셨네요」)은 CEO 지시로 뺐다(2026-08-24) — `hubGreeting()` 자체는
  * 도메인에 그대로 있으니 되살릴 땐 여기서 다시 부르면 된다.
@@ -49,6 +50,9 @@ export function MobileHeader() {
           {/* 태극 — 내 명식 바로보기(사람 선택·사주팔자·오행·이용권·등급·신위). 종 왼쪽에 둔다:
               «내 것»이 먼저, 알림이 그다음, 홈이 마지막. */}
           <ManseQuickView />
+
+          {/* 표 — 내 이용권(수량·등급·구매·멤버십). 이것도 «내 것»이라 태극 바로 옆이다(CEO 2026-09-20). */}
+          <PassQuickView />
 
           <GuideBell />
 

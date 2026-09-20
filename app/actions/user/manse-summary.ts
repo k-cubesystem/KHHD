@@ -6,7 +6,7 @@ import { getUserTierLimits } from '@/app/actions/payment/membership'
 import { getPassSummary } from '@/lib/services/entitlement'
 import { loadWornMainDeity } from '@/lib/services/shrine-wear'
 import type { PassSummary } from '@/lib/domain/entitlement/pass'
-import { TIER_LABEL, isMembershipTier } from '@/lib/domain/payment/membership-tiers'
+import { planDisplayName } from '@/lib/domain/payment/membership-tiers'
 import { logger } from '@/lib/utils/logger'
 
 /**
@@ -51,18 +51,9 @@ export async function getManseSummary(): Promise<ManseSummary | null> {
   return {
     targets,
     passes,
-    planName: planNameOf(tierLimits),
+    planName: planDisplayName(tierLimits),
     isSubscribed: Boolean(tierLimits?.is_subscribed),
     deityName: deity?.name ?? null,
     deityPortraitUrl: deity?.portraitUrl ?? null,
   }
-}
-
-/** 등급 표시명 — 화면에 숫자·주기를 쓰지 않는다(표시광고법 규율, CLAUDE.md). 등급 이름은 membership-tiers 가 정본. */
-function planNameOf(limits: Awaited<ReturnType<typeof getUserTierLimits>>): string {
-  if (!limits?.is_subscribed) return '무료 회원'
-  if (isMembershipTier(limits.tier)) return `${TIER_LABEL[limits.tier]} 멤버십`
-  if (limits.tier === 'MASTER') return '관리자'
-  if (limits.tier === 'TESTER') return '테스터'
-  return '멤버십 회원'
 }

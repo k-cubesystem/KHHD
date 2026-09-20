@@ -25,6 +25,11 @@ jest.mock('@/components/destiny/manse-quick-view', () => ({
   ManseQuickView: () => <button aria-label="내 명식 바로보기" />,
 }))
 
+// 표(내 이용권)도 같다 — 팝업은 pass-quick-view.test 가 진다.
+jest.mock('@/components/payment/pass-quick-view', () => ({
+  PassQuickView: () => <button aria-label="내 이용권 보기" />,
+}))
+
 const setPath = (path: string) => (usePathname as jest.Mock).mockReturnValue(path)
 
 /** 허브(앱 홈) · 허브 하위 · 완전히 다른 계열 — 어디서든 같은 바여야 한다. */
@@ -42,6 +47,7 @@ describe('상단 바 — 전 화면 동일', () => {
     expect(within(header).getByText('청담해화당')).not.toBeNull()
     expect(header.querySelector('img')?.getAttribute('src')).toBe('/logo-new.png')
     expect(within(header).getByLabelText('내 명식 바로보기')).not.toBeNull()
+    expect(within(header).getByLabelText('내 이용권 보기')).not.toBeNull()
     expect(within(header).getByLabelText('해화지기의 안내 펼치기')).not.toBeNull()
     expect(within(header).getByLabelText('홈')).not.toBeNull()
   })

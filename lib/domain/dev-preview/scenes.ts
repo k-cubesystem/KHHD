@@ -13,7 +13,7 @@
  */
 
 /** 화면 묶음 — 목록 페이지의 소제목이자 촬영 순서. */
-export type PreviewSceneGroup = '허브' | '복주머니' | '복 배경화면' | '종합사주풀이'
+export type PreviewSceneGroup = '허브' | '복주머니' | '복 배경화면' | '종합사주풀이' | '상단 바'
 
 export interface PreviewScene {
   /** URL·PNG 파일명이 되는 식별자. 소문자·숫자·하이픈만(아래 패턴). */
@@ -109,6 +109,24 @@ export const PREVIEW_SCENES = [
     label: '허브 — 쿠팡 제휴 배너',
     group: '허브',
     note: '배경화면 카드 아래 비던 자리. 대가성 고지가 배너에 딸려 있어야 한다',
+  },
+  {
+    id: 'pass-popup-free',
+    label: '내 이용권 팝업 — 비회원·이용권 보유',
+    group: '상단 바',
+    note: '상단 바의 표 아이콘 + 보유 장 수·유효기간 + 이용권 구매·멤버십 시작(첫 달 할인 자격 문구)',
+  },
+  {
+    id: 'pass-popup-member',
+    label: '내 이용권 팝업 — 싱글 회원',
+    group: '상단 바',
+    note: '이번 달 몫과 보유 이용권이 따로 적힌다(합친 숫자 없음) · 패밀리 등급 살펴보기 · 결제 · 구독 관리',
+  },
+  {
+    id: 'pass-popup-empty',
+    label: '내 이용권 팝업 — 이용권 0장',
+    group: '상단 바',
+    note: '없다고 말하고 구매 문을 연다. 할인 대상이 아니면 할인을 약속하지 않는다',
   },
 ] as const satisfies readonly PreviewScene[]
 
