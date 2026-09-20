@@ -86,7 +86,8 @@ const PASS_FREE: PassOverview = {
     membership: null,
     holdings: [
       { id: 'p1', source: 'onboarding', remaining: 1, expiresAt: '2026-12-01T00:00:00.000Z' },
-      { id: 'p2', source: 'purchase', remaining: 4, expiresAt: '2026-12-18T00:00:00.000Z' },
+      // 쓰는 순서는 만료 가까운 순(ent_consume) — 가입 선물이 남아 있다면 5장 팩은 아직 손대지 않은 상태다.
+      { id: 'p2', source: 'purchase', remaining: 5, expiresAt: '2026-12-18T00:00:00.000Z' },
     ],
   },
   tier: null,
@@ -120,20 +121,20 @@ const PASS_EMPTY: PassOverview = {
  * 실제 바(MobileHeader)는 세우지 않는다 — 종이 뜨자마자 서버 액션을 부른다(미리보기에는 로그인·DB 가 없다).
  */
 function PassPopupScene({ overview }: { overview: PassOverview }) {
-  const slot = 'flex h-11 w-11 items-center justify-center text-ink-light/70'
+  const slot = 'flex h-11 w-11 items-center justify-center'
   return (
     <div className="flex flex-col gap-4">
       <div className="flex h-14 items-center justify-end border-b border-primary/10 bg-background/80 px-4">
-        <span className={slot}>
+        <span className={`${slot} text-ink-light/70`}>
           <IconGunghap className="h-5 w-5" />
         </span>
         <span className={`${slot} text-primary`}>
           <IconPass className="h-5 w-5" />
         </span>
-        <span className={slot}>
+        <span className={`${slot} text-ink-light/70`}>
           <Bell className="h-5 w-5" />
         </span>
-        <span className={slot}>
+        <span className={`${slot} text-ink-light/70`}>
           <Home className="h-5 w-5" />
         </span>
       </div>

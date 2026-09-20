@@ -63,6 +63,8 @@ describe('askJev', () => {
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer test-key')
     // 본문에 댓글 원문이 실린다 — 리다이렉트를 따라가 다른 출처로 다시 보내지 않는다
     expect(init.redirect).toBe('error')
+    // 🔴 크론 60초 예산을 지키는 유일한 장치 — 신호를 빼도 다른 테스트는 전부 통과한다
+    expect(init.signal).toBeInstanceOf(AbortSignal)
     expect(JSON.parse(String(init.body))).toEqual({ model: 'jev-latest', state: '저요', questions: { intent: INTENT } })
     expect(logUsage).toHaveBeenCalledWith(
       expect.objectContaining({

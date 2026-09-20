@@ -26,7 +26,21 @@ CEO 지시 «로고 쪽 명식 아이콘 옆에 이용권 모양, 누르면 현�
 - 계측: `pass_popup_open` · `pass_popup_cta`(label `buy_pass` / `membership_start|FAMILY|BUSINESS`), category `conversion`.
 - 미리보기 장면 3개(`pass-popup-free|member|empty`, 그룹 «상단 바»). 🔴 워크트리에 `.env.local` 이 없으면 미들웨어가 죽어 촬영이 안 된다 —
   장면은 DB 가 필요 없으니 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 에 자리표시 값을 **프로세스 환경으로** 넘기면 찍힌다.
-- 게이트 tsc 0 · eslint 0 · jest 234 스위트 5,326건. 🔴 실기기·로그인 상태의 실제 팝업은 확인하지 못했다(촬영은 목 데이터).
+- 🔴 46차(Jev)와 한 줄로 합쳐 검수했다(`feature/header-pass-chip` = 85924c89 → Jev → 이용권 팝업 → /pipeline 수정분). **47차를 배포하면 Jev 코드도
+  함께 나간다** — 키가 없으면 무동작.
+- /pipeline(2026-09-20) 리뷰 4기 — critical·high 0건. 고친 것: 크론 AI 예산(상한을 시도로 · Jev 실패 시 그 실행에서 끊음 · 빈 댓글 제외) ·
+  Jev 선택지 검증(`Object.hasOwn`)·`redirect: 'error'` · 어드민 모델 선택지 · 팝업 재조회 실패 고지·요청 순서 · 누를 자리 44px·관리자 계정의
+  구독 링크·비로그인 로그인 길·할인 문구에 정가 자동결제 고지(`firstMonthTeaserLine`) · 340px 아래 홈 접기 · 명식 팝업도 열 때마다 읽기.
+- **알고 남긴 것**(고치려면 범위가 커진다):
+  - 서버 액션은 앞선 액션 뒤에 줄을 선다 — 풀이(수십 초)를 기다리는 중에 표를 처음 누르면 그동안 «불러오는 중»이다. 명식 팝업·종도 같은 구조.
+    읽기를 GET 라우트 + fetch(시간 제한)로 옮기는 것이 처방.
+  - `readTierLimits`(`app/actions/payment/membership.ts`)가 `membership_plans` 를 세션 클라이언트로 읽는다 — RLS 가 판매 중 행만 보여 주므로
+    판매를 내린 플랜의 구독자는 «무료 회원»으로 보인다(`lib/auth/subscription.ts` 가 경고한 함정). 09-20 실측 해당 0명.
+  - 갱신 결제 재시도 중(ACTIVE·기간 종료)인 회원은 팝업에 «무료 회원 / 멤버십 시작하기»가 뜨고 결제 단계에서 막힌다 — 상점에도 원래 있던 막다른 길.
+  - `shortDate`(`pass.ts`)가 로컬 시간대를 써서 00~09시(KST) 결제분은 팝업(브라우저)과 «결제 · 구독 관리»(서버 UTC)의 날짜가 하루 어긋난다.
+  - Jev 와 Gemini 의 판정이 둘 다 `classified_by='ai'` 라 DB 에서 갈라 볼 수 없다(CHECK 제약) — 호출 수는 `gemini_api_logs` 의 action_type 으로 본다.
+- 게이트 tsc 0 · eslint 0 · jest(최종 수치는 아래 배포 기록). 🔴 실기기·로그인 상태의 실제 팝업은 배포 뒤 `e2e/prod/header-pass.spec.ts` 로 본다.
+
 **(46차 · 2026-09-20) Jev(TypeSafe AI) 결정형 모델 도입 — 🟡 브랜치 `feature/jev-decision-model`, 미배포:**
 
 Jev 는 글을 쓰지 않고 미리 선언한 질문에 `choice` / `score` / `noul`(예·아니오 확률)만 답하는 모델이다(70~500ms · 입력 $0.042/1M · 출력 무료).

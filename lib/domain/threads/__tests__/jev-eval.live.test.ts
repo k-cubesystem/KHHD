@@ -11,6 +11,8 @@ import {
   JEV_REPLY_MIN_CONFIDENCE,
   REPLY_CLASS_CRITERIA,
   REPLY_CLASS_INSTRUCTIONS,
+  classifyReply,
+  needsAiClassification,
   type ReplyClass,
 } from '@/lib/domain/threads/classify'
 import { askJev } from '@/lib/services/jev-client'
@@ -19,7 +21,7 @@ jest.mock('@/lib/services/gemini-rate-limiter', () => ({ logUsage: jest.fn().moc
 
 const SAMPLES: ReadonlyArray<readonly [string, ReplyClass]> = [
   ['93년 4월 12일 오전 8시생 여자입니다', 'apply'],
-  ['저도 올해 이직운이 어떤지 알고 싶네요 88년생이에요', 'apply'],
+  ['올해 이직운이 어떤지 알고 싶네요 88년생이에요', 'apply'],
   ['혹시 남자친구랑 같이 봐주실 수 있나요 둘 다 적을게요', 'apply'],
   ['손 들어봅니다 🙋‍♀️', 'apply'],
   ['이번 주 라운드 아직 자리 남았으면 저 넣어주세요', 'apply'],
@@ -46,6 +48,14 @@ const SAMPLES: ReadonlyArray<readonly [string, ReplyClass]> = [
   ['@minji_0412', 'other'],
   ['3번', 'other'],
 ]
+
+// 이 검사는 늘 돈다(API 를 부르지 않는다). 규칙이 이미 확신하는 댓글은 프로덕션에서 Jev 까지 오지 않는다 —
+// 그런 표본이 섞이면 실측 정확도가 실제 모집단의 것이 아니게 된다.
+describe('Jev 실측 표본', () => {
+  it('전부 «규칙이 못 정해 AI 2차로 넘어가는» 댓글이다', () => {
+    expect(SAMPLES.filter(([text]) => !needsAiClassification(classifyReply(text))).map(([text]) => text)).toEqual([])
+  })
+})
 
 const run = process.env.JEV_EVAL === '1' && !!process.env.TYPESAFE_API_KEY ? describe : describe.skip
 
@@ -84,7 +94,10 @@ run('Jev 한국어 댓글 분류 실측', () => {
     process.stdout.write(`\n${report.join('\n')}\n`)
 
     expect(rows.filter((r) => r.got === 'FAILED')).toEqual([])
-    expect(acted.length).toBeGreaterThan(0)
+    // 한두 건만 확신해도 정확도는 100% 가 된다 — 절반은 스스로 정해야 Gemini 호출을 줄인다는 도입 이유가 선다.
+    expect(acted.length / rows.length).toBeGreaterThanOrEqual(0.5)
     expect(correct(acted) / acted.length).toBeGreaterThanOrEqual(0.9)
+    // 실제로 일을 일으키는 분류는 apply 뿐이다(안내 답글 초안이 큐에 들어간다) — 확신한 apply 는 틀리면 안 된다.
+    expect(acted.filter((r) => r.got === 'apply' && r.expected !== 'apply').map((r) => r.text)).toEqual([])
   }, 120_000)
 })
