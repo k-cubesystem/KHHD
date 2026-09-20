@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ChevronRight, Crown, Loader2, Sparkles, Ticket } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { TargetSelect, toTargetOption } from '@/components/destiny/target-select'
 import { IconGunghap } from '@/components/icons/traditional-icons'
 import { getManseSummary, type ManseSummary } from '@/app/actions/user/manse-summary'
@@ -39,13 +39,11 @@ export function ManseQuickView() {
   const [loaded, setLoaded] = useState(false)
   const [targetId, setTargetId] = useState<string | null>(null)
 
-  // 팝업을 처음 열 때만 불러온다 — 상단 바는 전 화면에 있으므로 상시 조회하면 낭비다.
-  // 🔴 effect 안에서 동기 setState 를 하지 않는다(연쇄 렌더). «불렀는가»는 ref 로 잠그고,
-  //    상태는 응답이 온 뒤에만 바꾼다.
-  const requested = useRef(false)
-  useEffect(() => {
-    if (!open || requested.current) return
-    requested.current = true
+  // 누를 때마다 다시 읽는다 — 상단 바는 전 화면에 있으므로 «상시» 조회는 하지 않되, 한 번 읽고 굳히지도 않는다.
+  // 🔴 이용권·등급은 풀이를 보거나 결제하고 오면 바뀐다. 굳혀 두면 바로 옆 「내 이용권」 팝업과 다른 수를 보인다.
+  //    앞서 읽은 값은 보인 채로 갈아 끼운다. 고른 사람(targetId)은 그대로 둔다.
+  const openPopup = () => {
+    setOpen(true)
     getManseSummary()
       .then((s) => {
         setSummary(s)
@@ -53,7 +51,7 @@ export function ManseQuickView() {
       })
       .catch((e) => logger.error('[manse-quick-view] 요약 조회 실패:', e))
       .finally(() => setLoaded(true))
-  }, [open])
+  }
 
   const target = summary?.targets.find((t) => t.id === targetId) ?? null
 
@@ -76,7 +74,7 @@ export function ManseQuickView() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={openPopup}
         aria-label="내 명식 바로보기"
         className="flex h-11 w-11 items-center justify-center text-ink-light/70 transition-colors hover:text-primary"
       >
@@ -91,6 +89,9 @@ export function ManseQuickView() {
             <DialogTitle className="flex items-center gap-1.5 font-serif text-gold-500">
               <IconGunghap className="h-4 w-4 shrink-0" />내 명식 바로보기
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              고른 사람의 사주팔자와 오행, 내 이용권·등급·신위를 간략히 봅니다.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-6">
