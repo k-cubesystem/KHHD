@@ -91,11 +91,23 @@ export function PassQuickView() {
                 불러오는 중
               </p>
             ) : (
-              <p className="py-8 text-center text-[12px] text-ink-light/60">
-                {status === 'failed'
-                  ? '이용권을 불러오지 못했습니다. 잠시 후 다시 열어 주세요.'
-                  : '로그인이 필요합니다.'}
-              </p>
+              <div className="flex flex-col items-center gap-1 py-8 text-center text-[12px] text-ink-light/60">
+                {status === 'failed' ? (
+                  <p>이용권을 불러오지 못했습니다. 잠시 후 다시 열어 주세요.</p>
+                ) : (
+                  <>
+                    <p>로그인이 필요합니다.</p>
+                    {/* 상단 바는 공개 화면(/webtoon)에도 있다 — 비로그인 방문자에게 갈 곳을 준다. */}
+                    <Link
+                      href="/auth/login"
+                      onClick={close}
+                      className="flex min-h-11 items-center px-2 font-serif font-bold text-gold-500 underline-offset-2 hover:underline"
+                    >
+                      로그인하러 가기
+                    </Link>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </DialogContent>
@@ -122,11 +134,12 @@ export function PassQuickViewBody({ overview, onNavigate }: { overview: PassOver
           <span className="text-[11px] font-light text-ink-light/60">등급</span>
           <span className="truncate font-serif text-[13px] font-bold text-gold-500">{overview.planName}</span>
         </span>
-        {overview.isSubscribed ? (
+        {/* 관리자·검수 계정은 구독이 없어도 등급 상수가 is_subscribed=true 다 — 관리할 구독이 없으니 링크를 두지 않는다. */}
+        {overview.isSubscribed && !overview.passes.unlimited ? (
           <Link
             href="/protected/membership/manage"
             onClick={onNavigate}
-            className="flex shrink-0 items-center text-[11px] text-ink-light/60 transition-colors hover:text-gold-500"
+            className="-my-2.5 flex min-h-11 shrink-0 items-center px-1 text-[11px] text-ink-light/60 transition-colors hover:text-gold-500"
           >
             결제 · 구독 관리
             <ChevronRight className="h-3 w-3" />
@@ -140,8 +153,13 @@ export function PassQuickViewBody({ overview, onNavigate }: { overview: PassOver
         </p>
         {lines.length > 0 ? (
           <ul className="mt-2 flex flex-col gap-1">
-            {lines.map((line) => (
-              <li key={line} className="text-[12px] font-light text-ink-light/80" style={{ wordBreak: 'keep-all' }}>
+            {/* 같은 날 같은 팩을 두 번 사면 같은 문장이 둘 나온다 — 문장만으로는 key 가 겹친다. */}
+            {lines.map((line, index) => (
+              <li
+                key={`${index}:${line}`}
+                className="text-[12px] font-light text-ink-light/80"
+                style={{ wordBreak: 'keep-all' }}
+              >
                 {line}
               </li>
             ))}
@@ -170,7 +188,11 @@ export function PassQuickViewBody({ overview, onNavigate }: { overview: PassOver
           <Link
             href={upsell.href}
             onClick={() => {
-              trackEvent({ action: 'pass_popup_cta', category: 'conversion', label: `membership_${upsell.target}` })
+              trackEvent({
+                action: 'pass_popup_cta',
+                category: 'conversion',
+                label: `membership_${upsell.target.toLowerCase()}`,
+              })
               onNavigate()
             }}
             className="flex w-full items-center justify-center gap-1.5 rounded-[3px] border border-gold-500/50 bg-gold-500/15 py-3 font-serif text-[13px] font-bold text-gold-200 shadow-dojang transition-colors hover:bg-gold-500/25"
@@ -190,7 +212,7 @@ export function PassQuickViewBody({ overview, onNavigate }: { overview: PassOver
       <Link
         href="/pass-policy"
         onClick={onNavigate}
-        className="self-center text-[11px] text-ink-light/55 underline-offset-2 transition-colors hover:text-gold-500 hover:underline"
+        className="-my-2 flex min-h-11 items-center self-center px-2 text-[11px] text-ink-light/55 underline-offset-2 transition-colors hover:text-gold-500 hover:underline"
       >
         이용권 안내 · 환불 정책
       </Link>

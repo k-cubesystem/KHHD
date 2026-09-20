@@ -33,6 +33,14 @@ export function firstMonthOfferLine(regularPrice: number): string {
   return `첫 달 ${won(firstMonthPrice(regularPrice))} · 다음 결제부터 ${won(regularPrice)}`
 }
 
+/**
+ * 결제 화면 «밖»에서 할인을 알릴 때(상단 바 이용권 팝업) — 가격을 적지 않는 자리라, 다음 결제부터 정가로 자동 결제된다는
+ * 사실을 덧붙인다. 팝업은 전 화면에 상주해 심사 캡처에도 잡힌다. 문장은 여기서만 만든다(화면에서 조립하지 않는다).
+ */
+export function firstMonthTeaserLine(): string {
+  return `${firstMonthEligibilityLine()} 다음 결제부터는 정가로 자동 결제됩니다.`
+}
+
 /** 자격 안내 — 누가 받는지 숨기지 않는다. */
 export function firstMonthEligibilityLine(): string {
   return `멤버십을 처음 결제하시는 분께 첫 달 요금을 ${firstMonthDiscountPercent()}% 할인해 드립니다(계정당 1회).`

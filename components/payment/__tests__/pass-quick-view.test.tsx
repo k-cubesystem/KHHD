@@ -58,7 +58,7 @@ describe('상단 바 「내 이용권」 팝업', () => {
     expect(screen.getByText('멤버십 시작하기').closest('a')?.getAttribute('href')).toBe(
       '/protected/store?tab=membership'
     )
-    expect(screen.getByText(/첫 달 요금을 50% 할인/)).not.toBeNull()
+    expect(screen.getByText(/첫 달 요금을 50% 할인.*다음 결제부터는 정가로 자동 결제됩니다/)).not.toBeNull()
     expect(screen.queryByText('결제 · 구독 관리')).toBeNull()
   })
 
@@ -114,6 +114,8 @@ describe('상단 바 「내 이용권」 팝업', () => {
 
     expect(await screen.findByText('이용권 관리자')).not.toBeNull()
     expect(screen.queryByText('이용권 구매하기')).toBeNull()
+    // 등급 상수가 is_subscribed=true 라도 관리할 구독이 없다
+    expect(screen.queryByText('결제 · 구독 관리')).toBeNull()
     expect(screen.queryByText(/등급 살펴보기|멤버십 시작하기/)).toBeNull()
   })
 
@@ -187,6 +189,7 @@ describe('상단 바 「내 이용권」 팝업', () => {
     const { unmount } = render(<PassQuickView />)
     open()
     expect(await screen.findByText('로그인이 필요합니다.')).not.toBeNull()
+    expect(screen.getByText('로그인하러 가기').closest('a')?.getAttribute('href')).toBe('/auth/login')
     unmount()
 
     mockOverview.mockRejectedValueOnce(new Error('boom'))
@@ -195,28 +198,88 @@ describe('상단 바 「내 이용권」 팝업', () => {
     expect(await screen.findByText(/이용권을 불러오지 못했습니다/)).not.toBeNull()
   })
 
-  it('계측 — 열기와 구매 버튼이 각각 남는다', async () => {
-    // jsdom 은 링크 이동을 구현하지 않는다 — 누름만 보고 이동은 막는다.
+  describe('계측', () => {
+    // jsdom 은 링크 이동을 구현하지 않는다 — 누름만 보고 이동은 막는다. 단언이 실패해도 리스너가 새지 않게 afterEach 로 뗀다.
     const stopNavigation = (e: Event) => e.preventDefault()
-    document.addEventListener('click', stopNavigation)
-    mockOverview.mockResolvedValue(overview({ passes: HELD }))
-    render(<PassQuickView />)
-    open()
-    expect(trackEvent).toHaveBeenCalledWith({ action: 'pass_popup_open', category: 'conversion' })
+    beforeEach(() => document.addEventListener('click', stopNavigation))
+    afterEach(() => document.removeEventListener('click', stopNavigation))
 
-    fireEvent.click(await screen.findByText('이용권 구매하기'))
-    expect(trackEvent).toHaveBeenCalledWith({ action: 'pass_popup_cta', category: 'conversion', label: 'buy_pass' })
-    document.removeEventListener('click', stopNavigation)
+    it('열기와 구매 버튼이 각각 남는다', async () => {
+      mockOverview.mockResolvedValue(overview({ passes: HELD }))
+      render(<PassQuickView />)
+      open()
+      expect(trackEvent).toHaveBeenCalledWith({ action: 'pass_popup_open', category: 'conversion' })
+
+      fireEvent.click(await screen.findByText('이용권 구매하기'))
+      expect(trackEvent).toHaveBeenCalledWith({ action: 'pass_popup_cta', category: 'conversion', label: 'buy_pass' })
+    })
+
+    it.each([
+      [overview({ passes: HELD }), '멤버십 시작하기', 'membership_start'],
+      [
+        overview({ passes: MEMBER, tier: 'SINGLE', planName: '싱글 멤버십', isSubscribed: true }),
+        '패밀리 등급 살펴보기',
+        'membership_family',
+      ],
+    ])('멤버십 버튼은 어느 권유였는지 소문자 라벨로 남긴다', async (data, button, label) => {
+      mockOverview.mockResolvedValue(data)
+      render(<PassQuickView />)
+      open()
+
+      fireEvent.click(await screen.findByText(button))
+      expect(trackEvent).toHaveBeenCalledWith({ action: 'pass_popup_cta', category: 'conversion', label })
+    })
   })
 
-  it('팝업 문구에 금지어가 없다', async () => {
+  it.each([
+    ['비회원·할인 대상', overview({ passes: HELD, firstMonthEligible: true }), '이용권 3장'],
+    ['이용권 0장', overview({}), '이용권 0장'],
+    [
+      '싱글 회원',
+      overview({ passes: MEMBER, tier: 'SINGLE', planName: '싱글 멤버십', isSubscribed: true }),
+      '이번 달 2장',
+    ],
+  ])('팝업 문구에 금지어가 없다 — %s', async (_label, data, headline) => {
+    mockOverview.mockResolvedValue(data)
+    render(<PassQuickView />)
+    open()
+    await screen.findByText(headline)
+
+    expect(findBannedPassTerms(document.body.textContent ?? '')).toEqual([])
+  })
+
+  it('🔴 같은 날 같은 팩을 두 번 사도(같은 문장 두 줄) 둘 다 그린다 — key 가 겹치면 React 가 한 줄을 버릴 수 있다', async () => {
+    const twin = { source: 'purchase' as const, remaining: 1, expiresAt: '2026-12-18T00:00:00.000Z' }
+    mockOverview.mockResolvedValue(
+      overview({
+        passes: {
+          unlimited: false,
+          membership: null,
+          holdings: [
+            { id: 'a', ...twin },
+            { id: 'b', ...twin },
+          ],
+        },
+      })
+    )
+    const errors = jest.spyOn(console, 'error').mockImplementation(() => {})
+    render(<PassQuickView />)
+    open()
+
+    expect(await screen.findAllByText(/구매한 이용권 1장/)).toHaveLength(2)
+    expect(errors.mock.calls.filter(([message]) => String(message).includes('same key'))).toEqual([])
+    errors.mockRestore()
+  })
+
+  it('작은 글자 링크도 누를 자리는 44px 이다 — 구독 관리는 해지로 가는 길이다', async () => {
     mockOverview.mockResolvedValue(
       overview({ passes: MEMBER, tier: 'SINGLE', planName: '싱글 멤버십', isSubscribed: true })
     )
     render(<PassQuickView />)
     open()
-    await screen.findByText('이번 달 2장')
 
-    expect(findBannedPassTerms(document.body.textContent ?? '')).toEqual([])
+    for (const name of ['결제 · 구독 관리', '이용권 안내 · 환불 정책']) {
+      expect((await screen.findByText(name)).closest('a')?.className).toContain('min-h-11')
+    }
   })
 })

@@ -1,5 +1,5 @@
 import { findBannedPassTerms } from '@/lib/domain/entitlement/pass'
-import { firstMonthEligibilityLine } from '@/lib/domain/payment/membership-intro'
+import { firstMonthEligibilityLine, firstMonthTeaserLine } from '@/lib/domain/payment/membership-intro'
 import { planDisplayName } from '@/lib/domain/payment/membership-tiers'
 import { MEMBERSHIP_STORE_PATH, membershipUpsell } from '@/lib/domain/payment/membership-upsell'
 
@@ -10,7 +10,7 @@ describe('membershipUpsell — 상단 바 이용권 팝업의 멤버십 권유',
     const upsell = membershipUpsell({ ...base, firstMonthEligible: true })
     expect(upsell).toEqual({
       label: '멤버십 시작하기',
-      note: firstMonthEligibilityLine(),
+      note: firstMonthTeaserLine(),
       href: MEMBERSHIP_STORE_PATH,
       target: 'start',
     })
@@ -42,12 +42,22 @@ describe('membershipUpsell — 상단 바 이용권 팝업의 멤버십 권유',
     }
   })
 
-  it.each(['BUSINESS', 'MASTER', 'MEMBER', null])('%s 회원에게는 권할 윗 등급이 없다', (tier) => {
+  it.each(['BUSINESS', null])('%s 회원에게는 권할 윗 등급이 없다', (tier) => {
     expect(membershipUpsell({ ...base, tier, isSubscribed: true })).toBeNull()
   })
 
-  it('관리자·검수 계정에는 아무것도 권하지 않는다', () => {
+  // getUserTierLimits 가 실제로 주는 조합 — 관리자 MASTER · 검수 TESTER 모두 is_subscribed=true, 이용권은 unlimited
+  it.each(['MASTER', 'TESTER'])('%s 계정(관리자·검수)에는 아무것도 권하지 않는다', (tier) => {
+    expect(membershipUpsell({ ...base, tier, isSubscribed: true, unlimited: true })).toBeNull()
+  })
+
+  it('역할 조회가 어긋나 등급은 무료인데 이용권만 unlimited 로 온 순간에도 권하지 않는다', () => {
     expect(membershipUpsell({ ...base, unlimited: true })).toBeNull()
+  })
+
+  it('할인 안내는 자격 문구(단일 출처) + 정가 자동결제 고지 — 가격 없는 자리에서 «50%»만 말하지 않는다', () => {
+    expect(firstMonthTeaserLine().startsWith(firstMonthEligibilityLine())).toBe(true)
+    expect(firstMonthTeaserLine()).toContain('다음 결제부터는 정가로 자동 결제됩니다')
   })
 
   it('권유 문구에 금지어가 없다', () => {
