@@ -81,6 +81,25 @@ describe('상단 바 — 전 화면 동일', () => {
     expect(texts).toEqual(['청담해화당'])
   })
 
+  it('🔴 340px 아래에서는 홈을 접어 상호 자리를 지킨다 — 홈은 로고와 가는 곳이 같다', () => {
+    render(<MobileHeader />)
+
+    expect(screen.getByLabelText('홈').className).toContain('max-[339px]:hidden')
+    // 접는 것은 홈 하나뿐이다 — «내 것» 둘과 종은 어느 폭에서도 남는다
+    for (const name of ['내 명식 바로보기', '내 이용권 보기', '해화지기의 안내 펼치기']) {
+      expect(screen.getByLabelText(name).className).not.toContain('hidden')
+    }
+  })
+
+  it('태극 → 표 → 종 → 홈 순서로 선다', () => {
+    const { container } = render(<MobileHeader />)
+
+    const labels = Array.from(container.querySelectorAll('header [aria-label]')).map((el) =>
+      el.getAttribute('aria-label')
+    )
+    expect(labels).toEqual(['내 명식 바로보기', '내 이용권 보기', '해화지기의 안내 펼치기', '홈'])
+  })
+
   it('바는 하나뿐이고 높이는 그대로다 (레이아웃 pt-14 가 이 높이를 전제한다)', () => {
     const { container } = render(<MobileHeader />)
 

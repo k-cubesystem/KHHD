@@ -56,9 +56,11 @@ export function MobileHeader() {
 
           <GuideBell />
 
+          {/* 아이콘이 넷이 되면서 340px 아래에서 상호가 «청담해…»로 잘린다(남는 자리 68px < 필요 81px).
+              홈은 로고·상호와 가는 곳이 같으므로 좁은 화면에서는 이것을 접는다. */}
           <Link
             href={APP_HOME_PATH}
-            className="w-11 h-11 flex items-center justify-center text-ink-light/70 hover:text-primary transition-colors"
+            className="w-11 h-11 flex items-center justify-center text-ink-light/70 hover:text-primary transition-colors max-[339px]:hidden"
             aria-label={t('nav.home')}
           >
             <Home className="w-5 h-5" />
