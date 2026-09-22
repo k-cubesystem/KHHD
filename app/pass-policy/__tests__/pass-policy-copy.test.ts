@@ -66,4 +66,9 @@ describe('/pass-policy — 금지어', () => {
   it('화면 문구에 잔액형 재화 어휘가 없다', () => {
     expect(findBannedPassTerms(PAGE_COPY)).toEqual([])
   })
+
+  // 토스가 빌링을 거절한 사유가 «충전 형태»였다 — 멤버십 이용권을 «채워진다»고 쓰면 같은 그림으로 읽힌다(2026-09-22).
+  it('멤버십 이용권을 «채운다»로 설명하지 않는다', () => {
+    expect(PAGE_COPY).not.toMatch(/채워|채움|채운다/)
+  })
 })
