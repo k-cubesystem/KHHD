@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-22(49차) · 라이브 브랜치 `claude/determined-yonath`(`b19dd38e` · 배포 `hhd-kx84x5i9b` · 직전 정상 `hhd-66z1ba1r4`)
+마지막 갱신: 2026-09-22(49차) · 라이브 브랜치 `claude/determined-yonath`(`74f94cb5` · 배포 `hhd-szu8ioer1` · 직전 정상 `hhd-kx84x5i9b`)
 
 **(49차 · 2026-09-22) 법률 문서 항 번호·글머리 복구 — ✅ 프로덕션 라이브(`b19dd38e` · 배포 `hhd-kx84x5i9b`, 23:0x KST):**
 
@@ -20,6 +20,8 @@
   플러그인을 전역으로 켜지 않았다 — prose 를 쓰는 분석 화면 3곳(`samhap-result` · `detail-analysis-accordion` · `business-compatibility-client`)
   모양까지 바뀐다. 그 3곳도 목록 번호가 없을 수 있다 — 별도 확인 거리.
 - 실측: 세 페이지 computed `list-style-type` = `legal-circled` / `disc`, 페이지 오류 0, 주요 경로 200/307/308 정상. 회귀선 `pass-surface-copy.test.ts`.
+- 이어서 `/pass-policy` 의 «(멤버십 이용권은) 주기마다 새로 채워져요» → «결제 주기마다 등급별 장 수로 새로 시작해요»(`74f94cb5` · 배포 `hhd-szu8ioer1`).
+  «채운다»는 토스가 빌링을 거절한 «충전 형태»와 같은 그림으로 읽힌다. 회귀선 `pass-policy-copy.test.ts`.
 - 🔴 토스 재심사 캡처는 `/terms` 모양이 바뀌었으므로 **16장 전부 09-23 에 같은 날 순서대로 다시 찍는다**(시각이 앞에서 뒤로만 흐르게).
 
 **(48차 · 2026-09-22) 이용약관 단일 현행본(2026-09-22 시행) — ✅ 프로덕션 라이브(`44741eb4` · 배포 `hhd-66z1ba1r4`, 21:4x KST):**
