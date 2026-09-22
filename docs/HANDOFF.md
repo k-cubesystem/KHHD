@@ -8,7 +8,19 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-22(48차) · 라이브 브랜치 `claude/determined-yonath`(`44741eb4` · 배포 `hhd-66z1ba1r4` · 직전 정상 `hhd-7ukb4ezu6`)
+마지막 갱신: 2026-09-22(49차) · 라이브 브랜치 `claude/determined-yonath`(`b19dd38e` · 배포 `hhd-kx84x5i9b` · 직전 정상 `hhd-66z1ba1r4`)
+
+**(49차 · 2026-09-22) 법률 문서 항 번호·글머리 복구 — ✅ 프로덕션 라이브(`b19dd38e` · 배포 `hhd-kx84x5i9b`, 23:0x KST):**
+
+- 증상: `/terms` · `/privacy` · `/pass-policy` 의 목록이 번호·글머리 없이 맨 줄로 나왔다. 약관 본문이 «제7조 제3항»처럼 항 번호로 서로를
+  가리키는데 화면에 번호가 없었다. 토스 재심사 캡처(제7조 ②③⑤ 인용)를 검수하다 발견.
+- 원인: 세 문서가 목록 모양을 `prose` 에 맡겼는데 **typography 플러그인이 없다**(Tailwind v3, 플러그인은 `tailwindcss-animate` 뿐) →
+  라이브 CSS 의 prose 규칙 0건. 기본 초기화의 `list-style: none` 이 남았다.
+- 수정: 세 문서 `<article>` 에 `legal-doc` + `globals.css` 에 `@counter-style legal-circled`(①~⑮, 이후 숫자) · `ul` 점 · 금색 마커.
+  플러그인을 전역으로 켜지 않았다 — prose 를 쓰는 분석 화면 3곳(`samhap-result` · `detail-analysis-accordion` · `business-compatibility-client`)
+  모양까지 바뀐다. 그 3곳도 목록 번호가 없을 수 있다 — 별도 확인 거리.
+- 실측: 세 페이지 computed `list-style-type` = `legal-circled` / `disc`, 페이지 오류 0, 주요 경로 200/307/308 정상. 회귀선 `pass-surface-copy.test.ts`.
+- 🔴 토스 재심사 캡처는 `/terms` 모양이 바뀌었으므로 **16장 전부 09-23 에 같은 날 순서대로 다시 찍는다**(시각이 앞에서 뒤로만 흐르게).
 
 **(48차 · 2026-09-22) 이용약관 단일 현행본(2026-09-22 시행) — ✅ 프로덕션 라이브(`44741eb4` · 배포 `hhd-66z1ba1r4`, 21:4x KST):**
 
