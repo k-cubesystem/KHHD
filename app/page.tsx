@@ -7,7 +7,6 @@ import { LandingAuthBar } from '@/components/landing/landing-auth-bar'
 import { MiniReadingSection } from '@/components/landing/mini-reading-section'
 import { SocialProof } from '@/components/landing/social-proof'
 import { SiteFooter } from '@/components/site-footer'
-import { TermsRevisionNotice } from '@/components/legal/terms-revision-notice'
 
 export const metadata: Metadata = {
   title: '청담해화당 - AI 사주 운세 분석',
@@ -27,9 +26,6 @@ export default async function Home() {
 
       {/* Screen 1: Hanok Night Intro (Carousel) */}
       <HeroCarousel />
-
-      {/* 약관 개정 공지 — 제3조 제3항 «서비스 초기 화면에 공지». 공지 기간이 지나면 스스로 사라진다. */}
-      <TermsRevisionNotice />
 
       {/* Screen 2: Mini Reading — 가입 전 가치 제공 */}
       <MiniReadingSection />

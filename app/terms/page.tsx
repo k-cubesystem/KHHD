@@ -3,13 +3,7 @@ import Link from 'next/link'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { PASS_VALID_DAYS } from '@/lib/domain/entitlement/pass'
 import { LATE_CANCEL_FEE_RATE, WITHDRAWAL_PERIOD_DAYS } from '@/lib/domain/payment/self-cancel'
-import {
-  PREVIOUS_TERMS_DATE,
-  TERMS_EFFECTIVE_DATE,
-  TERMS_NOTICE_DATE,
-  TERMS_REVISION_REASONS,
-  formatTermsDate,
-} from '@/lib/domain/legal/terms-revision'
+import { TERMS_EFFECTIVE_DATE, formatTermsDate } from '@/lib/domain/legal/terms-revision'
 
 export const metadata: Metadata = {
   title: '이용약관',
@@ -19,10 +13,8 @@ export const metadata: Metadata = {
 const LATE_FEE_PERCENT = Math.round(LATE_CANCEL_FEE_RATE * 100)
 const LATE_REFUND_PERCENT = 100 - LATE_FEE_PERCENT
 
-// 🔴 제3조 제3항: 개정 약관은 적용일자 7일 전부터 공지한다. 날짜·개정 사유의 정본은 lib/domain/legal/terms-revision.ts.
+// 시행일 정본은 lib/domain/legal/terms-revision.ts.
 const EFFECTIVE_DATE = formatTermsDate(TERMS_EFFECTIVE_DATE)
-const NOTICE_DATE = formatTermsDate(TERMS_NOTICE_DATE)
-const PREVIOUS_DATE = formatTermsDate(PREVIOUS_TERMS_DATE)
 
 export default function TermsOfServicePage() {
   return (
@@ -36,21 +28,7 @@ export default function TermsOfServicePage() {
         </Link>
 
         <h1>이용약관</h1>
-        <p className="text-muted-foreground">
-          시행일: {EFFECTIVE_DATE} · 공지일: {NOTICE_DATE} ·{' '}
-          <Link href={`/terms/${PREVIOUS_TERMS_DATE}`}>종전 약관({PREVIOUS_DATE} 시행) 보기</Link>
-        </p>
-
-        <h2>개정 안내</h2>
-        <p>
-          이 약관은 {NOTICE_DATE}에 공지하여 {EFFECTIVE_DATE}부터 시행합니다. 개정 사유와 주요 변경 내용은 다음과
-          같습니다.
-        </p>
-        <ul>
-          {TERMS_REVISION_REASONS.map((reason) => (
-            <li key={reason}>{reason}</li>
-          ))}
-        </ul>
+        <p className="text-muted-foreground">시행일: {EFFECTIVE_DATE}</p>
 
         <hr />
 
@@ -295,22 +273,7 @@ export default function TermsOfServicePage() {
         </ol>
 
         <h2>부칙</h2>
-        <ol>
-          <li>
-            이 약관은 {EFFECTIVE_DATE}부터 시행합니다. 회사는 {NOTICE_DATE}부터 이 약관을 종전 약관과 함께 공지합니다.
-          </li>
-          <li>
-            이 약관 시행 전에 종전 약관 제2조 제3호에 따라 회원이 보유하던 이용 단위의 미사용분(무상으로 받은 분을
-            포함합니다)은 이용권으로 전환하여 전액 보전합니다. 전환은 종전 사주 풀이 1회에 해당하던 양마다 이용권
-            1장으로 하고, 1장에 못 미치는 나머지는 1장으로 올려 계산합니다. 이렇게 전환된 이용권에는 유효기간을 두지
-            않으며, 종전에 유상으로 구매한 분의 환불은 종전과 같이 제7조에 따릅니다.
-          </li>
-          <li>
-            공지일부터 시행일 전날까지는 종전 약관을 적용합니다. 다만, 이 기간에 이용권 또는 멤버십을 새로 구매하는
-            회원에게는 구매할 때 표시하고 동의받은 조건(이 약관 제6조 및 제7조)을 적용하며, 제2항의 전환은 회원에게
-            불리하지 않으므로 공지일부터 적용합니다.
-          </li>
-        </ol>
+        <p>이 약관은 {EFFECTIVE_DATE}부터 시행합니다.</p>
 
         <hr />
         <p className="text-sm text-muted-foreground">

@@ -1,10 +1,12 @@
 /**
- * 첫 구독 첫 달 할인 · 약관 개정 공지 — 문구와 날짜의 계약.
+ * 첫 구독 첫 달 할인 · 약관 단일 현행본 — 문구와 날짜의 계약.
  *
  * 🔴 자동결제 금액이 바뀌는 상품이다. 첫 결제 금액을 말하는 자리마다 정가가 함께 있어야 한다.
  */
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
+import { renderToStaticMarkup } from 'react-dom/server'
+import TermsOfServicePage from '@/app/terms/page'
 import { findBannedPassTerms } from '@/lib/domain/entitlement/pass'
 import {
   FIRST_MONTH_DISCOUNT_RATE,
@@ -13,18 +15,10 @@ import {
   firstMonthOfferLine,
   firstMonthPrice,
 } from '../membership-intro'
-import {
-  PREVIOUS_TERMS_DATE,
-  TERMS_EFFECTIVE_DATE,
-  TERMS_NOTICE_DATE,
-  TERMS_REVISION_REASONS,
-  formatTermsDate,
-  isTermsInEffect,
-  isTermsNoticeActive,
-  termsNoticeLine,
-} from '@/lib/domain/legal/terms-revision'
+import { TERMS_EFFECTIVE_DATE, formatTermsDate } from '@/lib/domain/legal/terms-revision'
 
 const read = (rel: string) => readFileSync(join(process.cwd(), rel), 'utf8')
+const exists = (rel: string) => existsSync(join(process.cwd(), rel))
 
 describe('첫 달 할인 — 금액', () => {
   it('세 등급의 첫 결제 금액', () => {
@@ -80,43 +74,42 @@ describe('첫 달 할인 — 문구', () => {
   })
 })
 
-describe('약관 개정 공지 — 제3조 제3항(적용일자 7일 전부터 공지)', () => {
-  const day = (iso: string) => Date.parse(`${iso}T00:00:00+09:00`)
+// 2026-09-22 CEO 결정: 실사용자가 없어 개정 공지·종전 약관·경과 조항 없이 단일 현행본만 게시한다.
+// 토스 심사자가 «옛 재화가 아직 있다»로 읽을 흔적(종전 약관 링크·전환 부칙·공지 띠)이 되살아나지 않게 막는다.
+describe('약관 단일 현행본 — 개정·경과 흔적 없음', () => {
+  const TRANSITION_WORDS = ['종전', '개정 안내', '공지일', '2026-03-03', '전환', '보전', '/terms/']
+  const source = read('app/terms/page.tsx')
+  const html = renderToStaticMarkup(TermsOfServicePage())
 
-  it('🔴 시행일은 공지일로부터 7일 이상 뒤다', () => {
-    expect((day(TERMS_EFFECTIVE_DATE) - day(TERMS_NOTICE_DATE)) / 86_400_000).toBeGreaterThanOrEqual(7)
+  it('🔴 시행일은 2026년 9월 22일 하나다', () => {
+    expect(TERMS_EFFECTIVE_DATE).toBe('2026-09-22')
+    expect(formatTermsDate(TERMS_EFFECTIVE_DATE)).toBe('2026년 9월 22일')
+    expect(html).toContain('시행일: 2026년 9월 22일')
+    expect(html).toContain('<h2>부칙</h2><p>이 약관은 2026년 9월 22일부터 시행합니다.</p>')
   })
 
-  it('공지 띠는 공지일부터 시행 뒤 7일까지 뜨고, 그 뒤에는 스스로 사라진다', () => {
-    expect(isTermsNoticeActive(day(TERMS_NOTICE_DATE) - 1)).toBe(false)
-    expect(isTermsNoticeActive(day(TERMS_NOTICE_DATE))).toBe(true)
-    expect(isTermsNoticeActive(day(TERMS_EFFECTIVE_DATE) + 7 * 86_400_000)).toBe(true)
-    expect(isTermsNoticeActive(day(TERMS_EFFECTIVE_DATE) + 9 * 86_400_000)).toBe(false)
+  it('약관 원문과 화면 어디에도 종전 약관·개정 안내·경과 문구가 없다', () => {
+    for (const word of TRANSITION_WORDS) {
+      expect(source).not.toContain(word)
+      expect(html).not.toContain(word)
+    }
   })
 
-  it('시행 전에는 «개정됩니다», 시행 뒤에는 «개정 시행되었습니다»', () => {
-    expect(isTermsInEffect(day(TERMS_EFFECTIVE_DATE) - 1)).toBe(false)
-    expect(termsNoticeLine(day(TERMS_EFFECTIVE_DATE) - 1)).toContain('개정됩니다')
-    expect(termsNoticeLine(day(TERMS_EFFECTIVE_DATE))).toContain('시행되었습니다')
-    expect(formatTermsDate('2026-09-26')).toBe('2026년 9월 26일')
+  it('화면 문구에 금지어가 없다(BANNED_PASS_TERMS)', () => {
+    expect(findBannedPassTerms(source)).toEqual([])
+    expect(findBannedPassTerms(html)).toEqual([])
   })
 
-  it('현행 약관이 개정 사유·공지일·종전 약관 링크를 함께 보여 준다', () => {
-    const terms = read('app/terms/page.tsx')
-    expect(terms).toContain('TERMS_REVISION_REASONS')
-    expect(terms).toContain('NOTICE_DATE')
-    expect(terms).toContain('`/terms/${PREVIOUS_TERMS_DATE}`')
-    expect(TERMS_REVISION_REASONS.length).toBeGreaterThan(0)
-    for (const reason of TERMS_REVISION_REASONS) expect(findBannedPassTerms(reason)).toEqual([])
+  it('종전 약관 페이지와 랜딩 공지 띠가 없다', () => {
+    expect(exists('app/terms/2026-03-03')).toBe(false)
+    expect(exists('components/legal/terms-revision-notice.tsx')).toBe(false)
+    expect(read('app/page.tsx')).not.toContain('TermsRevisionNotice')
+    expect(read('app/sitemap.ts')).not.toContain('/terms/')
   })
 
-  it('종전 약관이 보존 게시돼 있고 검색에는 올리지 않는다', () => {
-    const previous = read(`app/terms/${PREVIOUS_TERMS_DATE}/page.tsx`)
-    expect(previous).toContain('이용약관 (종전)')
-    expect(previous).toContain('index: false')
-  })
-
-  it('초기 화면(랜딩)에 공지 띠가 걸려 있다', () => {
-    expect(read('app/page.tsx')).toContain('<TermsRevisionNotice />')
+  it('옛 종전 약관 주소는 현행 약관으로 영구 이동한다 — 옛 알림 링크가 404 가 되지 않게', () => {
+    expect(read('next.config.ts')).toMatch(
+      /\{\s*source:\s*'\/terms\/2026-03-03',\s*destination:\s*'\/terms',\s*permanent:\s*true\s*\}/
+    )
   })
 })

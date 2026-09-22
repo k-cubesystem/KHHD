@@ -68,6 +68,9 @@ const nextConfig: NextConfig = {
       // 「기운 한 장」 인쇄물은 2026-09-14 에 없앴다(가족·팀 그룹 모두). 옛 인쇄 링크는 같은 지도로 — ?circle= 은 그대로 따라간다.
       // 되살릴 수 있는 기능이라 영구(308)가 아닌 임시(307)로 둔다 — 브라우저가 308 을 오래 기억한다.
       { source: '/protected/family/map/print', destination: '/protected/family/map', permanent: false },
+      // 종전 약관 보존 페이지는 2026-09-22 단일 현행본 전환으로 없앴다 — 옛 알림·공지 링크는 현행 약관으로.
+      // 되살리지 않을 페이지라 영구(308). `/terms/:path*` 와일드카드는 쓰지 않는다(다음 보존본 경로와 부딪힌다).
+      { source: '/terms/2026-03-03', destination: '/terms', permanent: true },
     ]
   },
 
