@@ -1,7 +1,7 @@
 /**
  * 멤버십 게이트 판정 — 해지 예약(CANCELLED) 구독의 «남은 기간» 취급.
  *
- * 약관 제6조 4항: "해지 시 현재 결제 주기의 만료일까지 서비스를 이용할 수 있습니다."
+ * 약관 제6조 제5항: "해지 시 현재 결제 주기의 만료일까지 서비스를 이용할 수 있습니다."
  * status='ACTIVE' 만 보면 해지 버튼을 누른 순간 혜택이 끊겨 약관 위반이 된다.
  * 반대로 즉시 해지(일할 환불)는 current_period_end 를 지금으로 닫으므로 곧바로 빠져야 한다.
  */
@@ -65,7 +65,7 @@ describe('hasActiveMembership — 해지 예약 구독', () => {
     await expect(hasActiveMembership('user-1')).resolves.toBe(true)
   })
 
-  it('해지 예약(CANCELLED)이어도 남은 기간에는 혜택이 유지된다 — 약관 제6조 4항', async () => {
+  it('해지 예약(CANCELLED)이어도 남은 기간에는 혜택이 유지된다 — 약관 제6조 제5항', async () => {
     supabaseStub({ status: 'CANCELLED', current_period_end: new Date(Date.now() + 5 * DAY).toISOString() })
 
     await expect(hasActiveMembership('user-1')).resolves.toBe(true)

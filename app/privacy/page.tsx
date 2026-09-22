@@ -18,7 +18,7 @@ export default function PrivacyPolicyPage() {
         </Link>
 
         <h1>개인정보처리방침</h1>
-        <p className="text-muted-foreground">시행일: 2026년 3월 3일</p>
+        <p className="text-muted-foreground">시행일: 2026년 9월 22일</p>
 
         <p>
           큐브시스템(이하 &quot;회사&quot;)은 「개인정보 보호법」 제30조에 따라 정보주체의 개인정보를 보호하고 이와
@@ -273,7 +273,7 @@ export default function PrivacyPolicyPage() {
 
         <h2>제11조 (개인정보 처리방침 변경)</h2>
         <p>
-          이 개인정보 처리방침은 2026년 3월 3일부터 적용됩니다. 이전의 개인정보 처리방침은 이 방침으로 대체됩니다. 변경
+          이 개인정보 처리방침은 2026년 9월 22일부터 적용됩니다. 이전의 개인정보 처리방침은 이 방침으로 대체됩니다. 변경
           사항이 있을 경우 시행 7일 전부터 서비스 내 공지사항을 통하여 고지합니다.
         </p>
 

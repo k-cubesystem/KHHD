@@ -931,7 +931,7 @@ describe('submitMembershipCancel', () => {
     expect(update?.args[0]).toMatchObject({ status: 'CANCELLED', next_billing_date: null })
   })
 
-  it('기간 만료 해지는 이용 기간을 앞당기지 않는다(약관 제6조 4항)', async () => {
+  it('기간 만료 해지는 이용 기간을 앞당기지 않는다(약관 제6조 제5항)', async () => {
     const admin = membershipAdmin()
     mockCreateAdmin.mockReturnValue(admin.client)
 

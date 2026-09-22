@@ -44,7 +44,7 @@ const LOGIN_REQUIRED: LimitCheck = { allowed: false, current: 0, limit: 0, messa
  * 등급 한도(인연·기록 보관). 멤버십 판정은 lib/auth/subscription(getActiveMembership) 한 곳을 따른다.
  *
  * 🔴 status='ACTIVE' 만 보면 «기간 끝 해지»를 누른 즉시 무료 한도(보관 5개)로 떨어지고, 결제 기간이 남았는데도
- *    다음 기록 저장 때 오래된 기록이 지워진다(history.ts 자동 정리 — 약관 제6조 4항 위반).
+ *    다음 기록 저장 때 오래된 기록이 지워진다(history.ts 자동 정리 — 약관 제6조 제5항 위반).
  *    이용권 월 몫·등급 기능과 같은 판정을 써야 한도만 먼저 끊기지 않는다.
  */
 async function readTierLimits(supabase: ServerClient, userId: string): Promise<TierLimits> {

@@ -74,8 +74,8 @@ describe('첫 달 할인 — 문구', () => {
   })
 })
 
-// 2026-09-22 CEO 결정: 실사용자가 없어 개정 공지·종전 약관·경과 조항 없이 단일 현행본만 게시한다.
-// 토스 심사자가 «옛 재화가 아직 있다»로 읽을 흔적(종전 약관 링크·전환 부칙·공지 띠)이 되살아나지 않게 막는다.
+// 단일 현행본 — 개정·경과 문구(종전 약관 링크·전환 부칙·공지 띠)가 다시 들어오지 않게 한다(2026-09-22).
+// 🔴 다음 개정 때는 이 가드를 걷고 제3조 제3항 절차(적용일 7일/30일 전 공지·현행 약관 병기)를 따른다.
 describe('약관 단일 현행본 — 개정·경과 흔적 없음', () => {
   const TRANSITION_WORDS = ['종전', '개정 안내', '공지일', '2026-03-03', '전환', '보전', '/terms/']
   const source = read('app/terms/page.tsx')
@@ -108,8 +108,8 @@ describe('약관 단일 현행본 — 개정·경과 흔적 없음', () => {
   })
 
   it('옛 종전 약관 주소는 현행 약관으로 영구 이동한다 — 옛 알림 링크가 404 가 되지 않게', () => {
-    expect(read('next.config.ts')).toMatch(
-      /\{\s*source:\s*'\/terms\/2026-03-03',\s*destination:\s*'\/terms',\s*permanent:\s*true\s*\}/
-    )
+    // 주석 처리된 줄은 규칙이 아니다 — 그 줄로도 통과하면 redirect 를 꺼도 초록불이 된다.
+    const config = read('next.config.ts').replace(/^\s*\/\/.*$/gm, '')
+    expect(config).toMatch(/\{\s*source:\s*'\/terms\/2026-03-03',\s*destination:\s*'\/terms',\s*permanent:\s*true\s*\}/)
   })
 })

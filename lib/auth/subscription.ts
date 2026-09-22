@@ -104,7 +104,7 @@ async function resolveActiveSubscription(
   }
 
   // 2) 활성 구독 — 기간 미만료.
-  //    🔴 CANCELLED 도 함께 본다. 약관 제6조 4항이 "해지 시 현재 결제 주기의 만료일까지 이용할 수 있다"고
+  //    🔴 CANCELLED 도 함께 본다. 약관 제6조 제5항이 "해지 시 현재 결제 주기의 만료일까지 이용할 수 있다"고
   //    약속하는데 status='ACTIVE' 만 보면 해지 버튼을 누른 즉시 혜택이 끊겨 약관 위반이 된다.
   //    즉시 해지(일할 환불)는 current_period_end 를 지금으로 닫으므로 아래 만료 검사에서 저절로 빠진다.
   const { data } = await supabase
