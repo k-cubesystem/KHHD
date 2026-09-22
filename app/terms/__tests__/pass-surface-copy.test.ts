@@ -67,6 +67,22 @@ describe('이용약관 — 충전으로 읽히지 않기 위한 조항', () => {
   })
 })
 
+// typography 플러그인이 없어 prose 가 목록 번호를 주지 않았다 — 항 번호 없이 «제6조 제5항»을 읽을 수 없었다(2026-09-22).
+describe('법률 문서 — 항 번호와 글머리가 화면에 보인다', () => {
+  const LEGAL_PAGES = ['app/terms/page.tsx', 'app/privacy/page.tsx', 'app/pass-policy/page.tsx']
+  const CSS = read('app/globals.css')
+
+  it.each(LEGAL_PAGES)('%s 본문이 legal-doc 목록 규칙을 받는다', (rel) => {
+    expect(read(rel)).toMatch(/<article className="legal-doc /)
+  })
+
+  it('번호 목록은 ①② 원문자, 글머리 목록은 점으로 그린다', () => {
+    expect(CSS).toMatch(/@counter-style legal-circled \{[^}]*symbols: '①' '②' '③'/)
+    expect(CSS).toMatch(/\.legal-doc ol \{[^}]*list-style: legal-circled;/)
+    expect(CSS).toMatch(/\.legal-doc ul \{[^}]*list-style: disc;/)
+  })
+})
+
 describe('랜딩 신뢰 지면 — 환불 문구 단일 출처', () => {
   it('story-trust 는 정본 함수를 쓰고 비율을 직접 적지 않는다', () => {
     const source = read('components/landing/story/story-trust.tsx')

@@ -233,6 +233,35 @@
   }
 }
 
+/* 법률 문서(이용약관·개인정보처리방침·이용권 안내)의 항 번호 — 본문이 «제6조 제5항»처럼 항 번호로 서로를 가리킨다.
+   typography 플러그인이 없어 prose 가 목록 번호를 주지 않는다. 16항부터는 숫자로 이어진다. */
+@counter-style legal-circled {
+  system: fixed;
+  symbols: '①' '②' '③' '④' '⑤' '⑥' '⑦' '⑧' '⑨' '⑩' '⑪' '⑫' '⑬' '⑭' '⑮';
+  suffix: ' ';
+  fallback: decimal;
+}
+
+@layer components {
+  .legal-doc ol {
+    list-style: legal-circled;
+    padding-left: 1.75rem;
+  }
+
+  .legal-doc ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+
+  .legal-doc li {
+    margin: 0.25rem 0;
+  }
+
+  .legal-doc li::marker {
+    color: theme('colors.gold.500');
+  }
+}
+
 @layer utilities {
   /* Hide scrollbar for Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
