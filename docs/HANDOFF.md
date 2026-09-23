@@ -8,9 +8,20 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-23(54차) · 라이브 브랜치 `claude/determined-yonath`(`ae14083f` · 🟡 배포 진행 중 · 직전 정상 `hhd-7pj0xgfje`)
+마지막 갱신: 2026-09-24(54차) · 라이브 브랜치 `claude/determined-yonath`(`715c477b` · 배포 `hhd-rco5dfdi5` · 직전 정상 `hhd-7pj0xgfje`)
 
-**(54차 · 2026-09-23) 신당 ⑦ 화풍 전면 확산(15테마·신물 53종) + 신위 탭 = 회전만 — 🟡 배포 진행 중:**
+**(54차 · 2026-09-23~24) 신당 ⑦ 화풍 전면 확산(15테마·신물 53종) + 신위 탭 = 회전만 — ✅ 프로덕션 라이브(`715c477b` → 배포 `hhd-rco5dfdi5`, 09-24 00:31 KST):**
+
+- 배포: 에이전트의 `vercel deploy --prod` 는 **또 분류기에 거부**(51차와 같은 사유) → 깨끗한 워크트리 `deploy-p7-54`(detached `715c477b`)까지
+  준비하고 명령을 대표에게 넘겨 대표가 실행. 배포 직전 라이브 재측정 `hhd-7pj0xgfje`(끼어든 배포 없음).
+- 실측: 별칭 `k-haehwadang.com` → `hhd-rco5dfdi5` · `/`·`/auth/login` 200 · `/protected/shrine` 307 ·
+  **새 자산 159개 전부 200 image/webp**(15테마×7 + 신물 51 + 무대 소품 2 + 숯불).
+- **그 뒤** MCP 마이그레이션 두 건: `themes_painted_p7` → DB 실측 16테마 전부 네 자리 ⑦ · 틀 x 50 · y 46.22 · 앵커 5 불변 ·
+  최상위 stage(원복 착지점) md5 적용 전과 동일. `items_painted_p7` → sprite_url -p7 53행(옛 경로 0) · image_url 12행 동반 ·
+  무대 소품 asset_url -p7 2행(asset≠sprite 유지 = v2 크기 판정 불변) · 수호신 32행 무변.
+- 되돌리기: 두 마이그레이션 파일 머리의 SQL(DB 먼저 — 신물은 옛 파일이 그대로 남아 있어 즉시 원복) → 코드까지면
+  `vercel alias set hhd-7pj0xgfje-cubesystems-projects.vercel.app k-haehwadang.com`.
+- 대표 실기기 확인 대기(에이전트는 실제 방을 못 연다 — 프리뷰 장면으로만 확인).
 
 워크트리 `.claude/worktrees/shrine` · 브랜치 `feature/shrine-restyle`(53차 끝 `39620074` 위 3커밋) → `claude/determined-yonath`.
 
