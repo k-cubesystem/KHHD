@@ -1,9 +1,15 @@
-import { getModelConfig, type AIProvider } from '@/lib/config/ai-models'
+import { getModelConfig, GEMINI_OUTPUT_TOKENS_FLOOR, type AIProvider } from '@/lib/config/ai-models'
 import { generateWithClaude, type ImagePart } from '@/lib/services/claude-client'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { FinishReason, GoogleGenerativeAI, type UsageMetadata } from '@google/generative-ai'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
+import { logger } from '@/lib/utils/logger'
 
 const geminiApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || ''
+
+/** 생각 토큰 — SDK 0.24.1 의 `UsageMetadata` 타입에는 없지만 응답에는 온다(2026-09-23 실측). */
+function thoughtTokensOf(usage: UsageMetadata | undefined): number {
+  return (usage as (UsageMetadata & { thoughtsTokenCount?: number }) | undefined)?.thoughtsTokenCount ?? 0
+}
 
 export interface AIGenerateOptions {
   featureKey: string
@@ -54,12 +60,16 @@ export async function generateAIContent(options: AIGenerateOptions): Promise<AIG
     result = { ...claude, provider: 'claude', model }
   } else {
     // Gemini — 고도화 설정
+    // 🔴 이 한도는 «생각 토큰 + 본문»의 합이다(GEMINI_OUTPUT_TOKENS_FLOOR 주석에 실측치).
+    const maxOutputTokens = options.maxTokens || GEMINI_OUTPUT_TOKENS_FLOOR
     const genAI = new GoogleGenerativeAI(geminiApiKey)
     const genModel = genAI.getGenerativeModel({
       model,
       systemInstruction: options.systemPrompt || undefined,
       generationConfig: {
-        maxOutputTokens: options.maxTokens || 8192,
+        maxOutputTokens,
+        // 샘플링은 2026-09-23 A/B(유료 테마 풀이, 안마다 3회 실호출) 뒤 **그대로 둔다** — Gemini 3 기본값
+        // (1.0 / 0.95 / 64)과 본문 길이·JSON 성공·문장 중복이 모두 같았고 생각 토큰만 2.4배였다(920 → 2,169).
         temperature: options.temperature ?? 0.8,
         topP: 0.95,
         topK: 40,
@@ -71,6 +81,16 @@ export async function generateAIContent(options: AIGenerateOptions): Promise<AIG
     const gen = await genModel.generateContent(options.userPrompt)
     const response = gen.response
     const usage = response.usageMetadata
+    // 🔴 잘림은 오류로 오지 않는다 — «짧은 답»으로 온다. 그래서 보이게 만든다(logger.warn = Sentry 경보).
+    if (response.candidates?.[0]?.finishReason === FinishReason.MAX_TOKENS) {
+      logger.warn('[ai-client] Gemini 응답이 출력 한도에서 잘렸다 — 한도는 «생각 + 본문»의 합이다', {
+        actionType,
+        model,
+        maxOutputTokens,
+        thoughtsTokenCount: thoughtTokensOf(usage),
+        candidatesTokenCount: usage?.candidatesTokenCount ?? 0,
+      })
+    }
     result = {
       text: response.text(),
       provider: 'gemini',

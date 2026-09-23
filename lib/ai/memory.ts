@@ -8,6 +8,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { GEMINI_OUTPUT_TOKENS_FLOOR } from '@/lib/config/ai-models'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { logger } from '@/lib/utils/logger'
 
@@ -168,7 +169,9 @@ export async function extractAndSaveMemories(sessionId: string): Promise<void> {
       systemPrompt,
       userPrompt: transcript,
       jsonMode: true,
-      maxTokens: 512,
+      // 🔴 한도는 «생각 + 본문»의 합이다 — 512 에서는 생각 395 + 본문 101 로 여유가 3% 뿐이었다(2026-09-23 실측).
+      //    조금만 길어지면 JSON 이 잘려 파싱이 실패하고, 기억이 조용히 0건이 된다.
+      maxTokens: GEMINI_OUTPUT_TOKENS_FLOOR,
       temperature: 0.3,
     })
 

@@ -15,6 +15,7 @@ import {
   REPLY_CLASS_INSTRUCTIONS,
   type ReplyClass,
 } from '@/lib/domain/threads/classify'
+import { GEMINI_OUTPUT_TOKENS_FLOOR } from '@/lib/config/ai-models'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { askJev, confidentChoice, isJevEnabled } from '@/lib/services/jev-client'
 import { logger } from '@/lib/utils/logger'
@@ -59,10 +60,9 @@ export function createReplyAiClassifier(maxAttempts: number): ReplyAiClassifier 
         systemPrompt:
           '스레드 댓글을 다음 중 하나로 분류합니다: apply(이벤트 신청·참여 의사), question(질문), chat(감상·인사·잡담), spam(광고·도배·욕설), other. JSON {"c":"..."} 만 답하세요.',
         userPrompt: text,
-        // 🔴 gemini-3.8-flash 는 생각 토큰이 이 한도를 본문과 같이 쓴다(2026-09-14 실측: 한도 1,200 에서 본문 78자).
-        //    종전 값 20 은 답이 잘려 늘 null 이 될 위험이 커서 올렸다. 자동화가 꺼져 있어 이 경로는 라이브에서 돈 적이 없고,
-        //    이 값도 실측하지 못했다 — 자동화를 켜기 전에 gemini_api_logs 의 threads_classify 로 확인할 것.
-        maxTokens: 1024,
+        // 🔴 한도는 «생각 + 본문»의 합이다. 2026-09-23 실측(댓글 3종 실호출): 생각 78~203 · 본문 5토큰 · 전부 STOP —
+        //    1,024 로도 돌았지만 생각량은 댓글이 정하므로 다른 호출과 같은 안전선을 쓴다(과금은 쓴 만큼이라 비용 동일).
+        maxTokens: GEMINI_OUTPUT_TOKENS_FLOOR,
         temperature: 0,
         jsonMode: true,
         actionType: 'threads_classify',

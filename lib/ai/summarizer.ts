@@ -9,6 +9,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { GEMINI_OUTPUT_TOKENS_FLOOR } from '@/lib/config/ai-models'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { logger } from '@/lib/utils/logger'
 
@@ -60,7 +61,9 @@ export async function maybeSummarizeSession(sessionId: string, windowSize: numbe
       actionType: 'summarizer',
       systemPrompt,
       userPrompt: `${prior}[새 대화]\n${newChunk}`,
-      maxTokens: 400,
+      // 🔴 한도는 «생각 + 본문»의 합이다 — 400 이던 시절엔 생각이 386 을 먹고 요약이 **13자에서 잘린 채**
+      //    chat_sessions.summary 에 저장됐다(2026-09-23 실측, finishReason MAX_TOKENS). 길이는 프롬프트가 정한다.
+      maxTokens: GEMINI_OUTPUT_TOKENS_FLOOR,
       temperature: 0.3,
     })
 

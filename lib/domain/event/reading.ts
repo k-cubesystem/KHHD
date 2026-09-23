@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { calculateManse, type SajuPillar } from '@/lib/domain/saju/manse'
+import { GEMINI_OUTPUT_TOKENS_FLOOR } from '@/lib/config/ai-models'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { guardAiInput } from '@/lib/ai/input-guard'
 
@@ -94,7 +95,9 @@ export async function generateEventReading(input: EventReadingInput): Promise<Ev
     featureKey: 'event-reading',
     systemPrompt: SYSTEM_PROMPT,
     userPrompt,
-    maxTokens: 1200,
+    // 🔴 한도는 «생각 + 본문»의 합이다 — 1,200 에서 이미 1,028(생각 766 + 본문 262)을 썼고,
+    //    한도를 풀면 생각만 1,465 까지 갔다(2026-09-23 실측). 분량은 SYSTEM_PROMPT 의 «300~450자»가 정한다.
+    maxTokens: GEMINI_OUTPUT_TOKENS_FLOOR,
     temperature: 0.7,
     actionType: 'event_reading',
   })
