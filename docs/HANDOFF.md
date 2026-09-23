@@ -8,9 +8,9 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-23(53차) · 라이브 브랜치 `claude/determined-yonath`(`d3e7d2a5` · 배포 `hhd-4vqaa30ed` · 직전 정상 `hhd-9jzk6eo2m`)
+마지막 갱신: 2026-09-23(53차) · 라이브 브랜치 `claude/determined-yonath`(`8b0cc096` · 배포 `hhd-7pj0xgfje` · 직전 정상 `hhd-4vqaa30ed`)
 
-**(53차 · 2026-09-23) Gemini 생각 토큰이 먹던 출력 한도 — 요약·기억·이벤트 풀이 수복 + 회귀 게이트 · 🚀 지금 이 커밋을 배포한다(배포 ID 는 배포 뒤 이 줄에 덧붙인다):**
+**(53차 · 2026-09-23) Gemini 생각 토큰이 먹던 출력 한도 — 요약·기억·이벤트 풀이 수복 + 회귀 게이트 — ✅ 프로덕션 라이브(`8b0cc096` → 배포 `hhd-7pj0xgfje`, 20:53 KST · 별칭 확인 · 스모크 `/`·`/auth/login`·`/webtoon` 200 · `/protected/shrine` 307):**
 
 워크트리 `.claude/worktrees/sweet-mestorf-9540a8` · 브랜치 `fix/gemini-thinking-truncation` → `claude/determined-yonath`.
 
