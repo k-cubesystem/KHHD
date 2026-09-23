@@ -25,4 +25,9 @@ describe('AI 풀이 원문 본문 — analysis-prose 규칙은 정적 CSS 에 �
     expect(css).toMatch(/\.analysis-prose ul \{[^}]*list-style: none;/)
     expect(css).toMatch(/\.analysis-prose li::before \{[^}]*content: '·';/)
   })
+
+  it('문단은 기본 p 의 색·줄간격 대신 본문을 따르고 문단 사이만 띄운다', () => {
+    const css = read('app/globals.css')
+    expect(css).toMatch(/\.analysis-prose p \{[^}]*color: inherit;[^}]*line-height: inherit;[^}]*margin: 0 0 0\.75rem;/)
+  })
 })

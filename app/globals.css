@@ -277,6 +277,17 @@
     margin-top: 0;
   }
 
+  .analysis-prose p {
+    color: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    margin: 0 0 0.75rem;
+  }
+
+  .analysis-prose p:last-child {
+    margin-bottom: 0;
+  }
+
   .analysis-prose b {
     color: theme('colors.ink.primary / 92%');
     font-weight: 600;

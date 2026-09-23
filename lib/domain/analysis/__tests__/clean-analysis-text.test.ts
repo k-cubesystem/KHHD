@@ -44,13 +44,13 @@ describe('cleanAnalysisText — 태그 제거', () => {
 
   it('여러 태그가 섞인 줄에서 태그만 제거', () => {
     const out = cleanAnalysisText('[[EARS: 8, x]][[EYES: 6, y]]핵심 문장')
-    expect(out).toBe('핵심 문장')
+    expect(out).toBe('<p>핵심 문장</p>')
   })
 })
 
 describe('cleanAnalysisText — 마크다운 변환', () => {
   it('**굵게** → <b>', () => {
-    expect(cleanAnalysisText('이것은 **중요** 합니다')).toBe('이것은 <b>중요</b> 합니다')
+    expect(cleanAnalysisText('이것은 **중요** 합니다')).toBe('<p>이것은 <b>중요</b> 합니다</p>')
   })
 
   it('## 소제목 → <h4>', () => {
@@ -74,19 +74,29 @@ describe('cleanAnalysisText — 마크다운 변환', () => {
     expect(cleanAnalysisText('* 별표\n• 불릿')).toBe('<ul>\n<li>별표</li>\n<li>불릿</li>\n</ul>')
   })
 
-  it('연속 텍스트 줄은 <br>로 이어붙인다', () => {
-    expect(cleanAnalysisText('첫 줄\n둘째 줄')).toBe('첫 줄\n<br>둘째 줄')
+  it('연속 텍스트 줄은 한 문단 안에서 <br>로 이어붙인다', () => {
+    expect(cleanAnalysisText('첫 줄\n둘째 줄')).toBe('<p>첫 줄<br>둘째 줄</p>')
   })
 
-  it('빈 줄에서 문단이 끊긴다(불필요한 <br> 없음)', () => {
+  // 예전엔 '문단1\n문단2' 를 내보냈다 — HTML 에선 개행이 공백이라 두 문단이 한 줄로 붙어 보였다(2026-09-23).
+  it('빈 줄에서 문단이 <p> 로 끊긴다(불필요한 <br> 없음)', () => {
     const out = cleanAnalysisText('문단1\n\n문단2')
-    expect(out).toBe('문단1\n문단2')
+    expect(out).toBe('<p>문단1</p>\n<p>문단2</p>')
     expect(out).not.toContain('<br>')
+  })
+
+  it('소제목·목록과 문단이 섞여도 문단마다 닫힌다', () => {
+    const out = cleanAnalysisText('머리말\n## 소제목\n본문\n- 항목\n맺음말')
+    expect(out).toBe('<p>머리말</p>\n<h4>소제목</h4>\n<p>본문</p>\n<ul>\n<li>항목</li>\n</ul>\n<p>맺음말</p>')
   })
 
   it('리스트 뒤 텍스트가 오면 <ul>이 닫힌다', () => {
     const out = cleanAnalysisText('- 항목\n다음 문장')
-    expect(out).toBe('<ul>\n<li>항목</li>\n</ul>\n다음 문장')
+    expect(out).toBe('<ul>\n<li>항목</li>\n</ul>\n<p>다음 문장</p>')
+  })
+
+  it('CRLF 입력도 빈 줄에서 문단이 끊긴다', () => {
+    expect(cleanAnalysisText('문단1\r\n\r\n문단2')).toBe('<p>문단1</p>\n<p>문단2</p>')
   })
 })
 
@@ -95,6 +105,11 @@ describe('cleanAnalysisText — XSS 안전', () => {
     const out = cleanAnalysisText('<script>alert(1)</script>')
     expect(out).toContain('&lt;script&gt;')
     expect(out).not.toContain('<script>')
+  })
+
+  it('열린 문단에 이어 붙는 줄의 태그도 이스케이프', () => {
+    const out = cleanAnalysisText('첫 줄\n</p><script>alert(1)</script>')
+    expect(out).toBe('<p>첫 줄<br>&lt;/p&gt;&lt;script&gt;alert(1)&lt;/script&gt;</p>')
   })
 
   it('img onerror 같은 속성 주입도 이스케이프', () => {

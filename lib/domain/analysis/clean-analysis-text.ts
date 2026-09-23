@@ -6,7 +6,7 @@
  * 이 순수 함수는 태그를 제거하고 마크다운을 안전한 HTML로 변환한다.
  *
  * XSS 안전: 입력의 기존 HTML은 먼저 이스케이프하고, 그 뒤 화이트리스트 태그
- * (<h4> <b> <ul> <li> <br>)만 생성한다. 따라서 입력에 `<script>`가 있어도
+ * (<h4> <p> <b> <ul> <li> <br>)만 생성한다. 따라서 입력에 `<script>`가 있어도
  * `&lt;script&gt;`로 무력화된다.
  *
  * 순수 함수(side-effect 없음) — 단위테스트 대상.
@@ -39,7 +39,7 @@ export function stripAnalysisTags(raw: string): string {
 /**
  * AI 원문 → 안전한 HTML 문자열.
  * 1) `[[SHOPPING_LIST]]` 블록 제거 → 2) 나머지 `[[...]]` 태그 제거
- * 3) HTML 이스케이프 → 4) 경량 마크다운(소제목/굵게/리스트/줄바꿈) 변환.
+ * 3) HTML 이스케이프 → 4) 경량 마크다운(소제목/문단/굵게/리스트/줄바꿈) 변환.
  */
 export function cleanAnalysisText(raw: string): string {
   if (!raw) return ''
@@ -52,7 +52,7 @@ export function cleanAnalysisText(raw: string): string {
   const lines = stripped.split(/\r?\n/)
   const out: string[] = []
   let inList = false
-  let prevWasText = false
+  let inParagraph = false
 
   const closeList = (): void => {
     if (inList) {
@@ -61,12 +61,19 @@ export function cleanAnalysisText(raw: string): string {
     }
   }
 
+  const closeParagraph = (): void => {
+    if (inParagraph) {
+      out[out.length - 1] += '</p>'
+      inParagraph = false
+    }
+  }
+
   for (const rawLine of lines) {
     const line = rawLine.trim()
 
     if (line === '') {
       closeList()
-      prevWasText = false
+      closeParagraph()
       continue
     }
 
@@ -74,30 +81,35 @@ export function cleanAnalysisText(raw: string): string {
     const heading = line.match(/^#{1,6}\s+(.*)$/)
     if (heading?.[1]) {
       closeList()
+      closeParagraph()
       out.push(`<h4>${applyInline(escapeHtml(heading[1].trim()))}</h4>`)
-      prevWasText = false
       continue
     }
 
     // 리스트 항목: -, *, • 로 시작
     const listItem = line.match(/^[-*•]\s+(.*)$/)
     if (listItem?.[1]) {
+      closeParagraph()
       if (!inList) {
         out.push('<ul>')
         inList = true
       }
       out.push(`<li>${applyInline(escapeHtml(listItem[1].trim()))}</li>`)
-      prevWasText = false
       continue
     }
 
-    // 일반 텍스트: 연속 줄은 <br>로 이어붙임
+    // 일반 텍스트: 빈 줄까지가 한 문단, 문단 안의 연속 줄은 <br>로 이어붙임
     closeList()
     const segment = applyInline(escapeHtml(line))
-    out.push(prevWasText ? `<br>${segment}` : segment)
-    prevWasText = true
+    if (inParagraph) {
+      out[out.length - 1] += `<br>${segment}`
+    } else {
+      out.push(`<p>${segment}`)
+      inParagraph = true
+    }
   }
 
   closeList()
+  closeParagraph()
   return out.join('\n').trim()
 }
