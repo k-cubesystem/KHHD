@@ -174,19 +174,21 @@ describe('등급 — 가진 프레임만큼 돈다', () => {
 })
 
 describe('경로 규약 — deityTurnFrames', () => {
-  it('굽는 키 전부를 경로로 만든다', () => {
+  it('굽는 키 전부와 영상 등급 시트를 경로로 만든다', () => {
     expect(deityTurnFrames('seonnyeo')).toEqual({
       q45: '/shrine/deities/seonnyeo/q45.webp',
       side: '/shrine/deities/seonnyeo/side.webp',
       q135: '/shrine/deities/seonnyeo/q135.webp',
       back: '/shrine/deities/seonnyeo/back.webp',
+      spinManifest: '/shrine/deities/seonnyeo/spin.json',
+      spinSheet: '/shrine/deities/seonnyeo/spin.webp',
     })
   })
 
   it('키 목록은 도메인 단일 출처를 따른다 — 각을 늘려도 이 함수는 고칠 데가 없다', () => {
     const frames = deityTurnFrames('yongwang')
     expect(frames).not.toBeNull()
-    expect(Object.keys(frames ?? {}).sort()).toEqual([...BAKED_FRAME_KEYS].sort())
+    expect(Object.keys(frames ?? {}).sort()).toEqual([...BAKED_FRAME_KEYS, 'spinManifest', 'spinSheet'].sort())
   })
 
   it('규약 밖 코드는 null — 경로 탈출(../)·대문자·공백·빈값 차단', () => {

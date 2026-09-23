@@ -8,7 +8,26 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-23(50차) · 라이브 브랜치 `claude/determined-yonath`(`925805ed` · 배포 `hhd-aok2l57yb` · 직전 정상 `hhd-szu8ioer1`)
+마지막 갱신: 2026-09-23(51차) · 라이브 브랜치 `claude/determined-yonath`(`d6550c8a` · 배포 `hhd-9jzk6eo2m` · 직전 정상 `hhd-aok2l57yb`)
+
+**(51차 · 2026-09-23) 신위 탭 회전 → Veo 영상 기반 실제 애니메이션 — ✅ 프로덕션 라이브(`94de0270`·`4a9ec84d`·`f982d277` · 배포 `hhd-9jzk6eo2m`, 16:47 KST · 워크트리 `.claude/worktrees/shrine` · 브랜치 `feature/shrine-restyle`):**
+
+- 대표 지시 «터치하면 한 바퀴 도는 모습도 실제 애니메이션처럼» + 연출 결 «B 통통 + C 신령»(시안 비교 후 선택) · «회전만 먼저 배포».
+- 종전: 굽은 자세 넷을 45°마다 갈아 끼우고 뒤 반 바퀴는 좌우 반전(두루마리가 반대 손으로 넘어감) — 초당 6장 «그림 교체».
+- 지금: 정면 스프라이트를 첫·끝 프레임으로 묶어 Veo 3.1 로 제자리 한 바퀴를 찍고(8초, 동반물·소지품 한 덩어리) 칸 44개 시트로 굽는다.
+  탭 → 예비(반대로 비틀며 웅크림) → 포물선 도약하며 한 바퀴 → 찌그러짐 착지, 도는 동안 주변만 가라앉고 금가루가 핀다.
+  - `scripts/shrine-assets/deity-spin.mjs`(gen=Veo · sheet=굽기) → `public/shrine/deities/{code}/spin.{webp,json}` 17종 284~680KB(`94de0270`)
+  - `lib/domain/shrine/deity-spin.ts` 규격 가드·타임라인·금가루(결정적 난수) + 테스트(`4a9ec84d`)
+  - `DeityTurn.tsx` 캔버스 재생 — 등급 사다리 맨 윗단, 시트 없거나 깨지면 종전 9국면 그대로 · 시트는 한가할 때(requestIdleCallback) 디코딩까지(`f982d277`)
+- 🔴 `DeityTurn` 이 `shrine-scene.css` 를 직접 import 한다 — 방 밖에서 세우면 `.deity-turn-frame{opacity:0}` 이 없어 겹 8장이 전부 드러났다.
+- 검증: 프리뷰 장면 `shrine-deity-spin`(dev 전용) + 헤드리스 Chromium(390×844·DPR3) `page.clock` 으로 40ms씩 멈춰 찍기 — 5종 모두 캔버스 44칸 ·
+  가라앉힘 최대 0.49 · 45칸째 정지 스프라이트 복귀 · 종료 후 캔버스 정리 · 종전 CSS 회전 미적용 · 콘솔 오류 0. jest 5,431 · tsc 0 · lint 0 · build ✓.
+- 🔴 로컬에서 **실제 신당 방은 못 봤다** — 메인 `.env.local` 의 공개 Supabase 주소가 죽은 구 프로젝트이고, QA 계정(qa@)이 비회원이라 신당 관문에서 막힌다.
+  실제 방 확인은 배포 후 대표 기기에서.
+- 배포: 깨끗한 detached 워크트리(`d6550c8a`)에서 CLI 배포(자동 모드 분류기가 에이전트의 `vercel deploy --prod` 를 거부해 대표가 실행).
+  실측: 별칭 → `hhd-9jzk6eo2m` · `/`·`/auth/login`·`/terms`·`/webtoon` 200 · `/protected`·`/protected/shrine` 307 · `spin.json`·`spin.webp` 17/17 200(`image/webp`).
+- 되돌리기: `vercel alias set hhd-aok2l57yb-cubesystems-projects.vercel.app k-haehwadang.com` (DB 변경 없음 — 코드만 되돌리면 된다. 시트만 빼도 종전 회전으로 돈다).
+- 남은 것: 대표 실기기 확인(방에서 탭) · 반가 ⑦ 배경·제단(두 바닥 마스크) 적용 착수.
 
 **(50차 · 2026-09-23) prose 를 쓰던 분석 화면 3곳 확인·수복 — ✅ 프로덕션 라이브(`6501063a`·`9dbe3c79`·`925805ed` · 배포 `hhd-aok2l57yb`):**
 

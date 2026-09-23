@@ -13,7 +13,7 @@
  */
 
 /** 화면 묶음 — 목록 페이지의 소제목이자 촬영 순서. */
-export type PreviewSceneGroup = '허브' | '복주머니' | '복 배경화면' | '종합사주풀이' | '상단 바'
+export type PreviewSceneGroup = '허브' | '복주머니' | '복 배경화면' | '종합사주풀이' | '상단 바' | '신당'
 
 export interface PreviewScene {
   /** URL·PNG 파일명이 되는 식별자. 소문자·숫자·하이픈만(아래 패턴). */
@@ -127,6 +127,12 @@ export const PREVIEW_SCENES = [
     label: '내 이용권 팝업 — 이용권 0장',
     group: '상단 바',
     note: '없다고 말하고 구매 문을 연다. 할인 대상이 아니면 할인을 약속하지 않는다',
+  },
+  {
+    id: 'shrine-deity-spin',
+    label: '신당 — 신위 탭 한 바퀴(영상)',
+    group: '신당',
+    note: '신위를 누르면 예비 동작 → 도약하며 한 바퀴 → 착지. 주변이 가라앉고 금가루가 핀다. 아래 버튼으로 17 신위를 바꿔 본다',
   },
 ] as const satisfies readonly PreviewScene[]
 
