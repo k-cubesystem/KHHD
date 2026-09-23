@@ -54,39 +54,6 @@ export function DetailAnalysisAccordion({ raw, title = '상세 분석 · 전문 
           </motion.div>
         )}
       </AnimatePresence>
-
-      <style jsx>{`
-        .analysis-prose :global(h4) {
-          color: var(--gold-300, #f4e4ba);
-          font-family: var(--font-serif, serif);
-          font-weight: 700;
-          font-size: 0.9rem;
-          margin: 1rem 0 0.4rem;
-        }
-        .analysis-prose :global(h4:first-child) {
-          margin-top: 0;
-        }
-        .analysis-prose :global(b) {
-          color: rgba(232, 228, 220, 0.92);
-          font-weight: 600;
-        }
-        .analysis-prose :global(ul) {
-          margin: 0.4rem 0;
-          padding-left: 1rem;
-          list-style: none;
-        }
-        .analysis-prose :global(li) {
-          position: relative;
-          padding-left: 0.9rem;
-          margin: 0.25rem 0;
-        }
-        .analysis-prose :global(li)::before {
-          content: '·';
-          position: absolute;
-          left: 0;
-          color: rgba(201, 168, 76, 0.6);
-        }
-      `}</style>
     </Card>
   )
 }

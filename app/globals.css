@@ -262,6 +262,46 @@
   }
 }
 
+/* AI 풀이 원문(관상·손금·풍수·종합사주 «전문 보기»)의 소제목·글머리 — cleanAnalysisText 가 만드는 h4·b·ul·li.
+   styled-jsx 는 App Router 에서 정적 CSS 를 남기지 않아, 같은 클래스를 쓰는 종합사주 폴백 본문에 닿지 못했다. */
+@layer components {
+  .analysis-prose h4 {
+    color: theme('colors.gold.300');
+    font-family: theme('fontFamily.serif');
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin: 1rem 0 0.4rem;
+  }
+
+  .analysis-prose h4:first-child {
+    margin-top: 0;
+  }
+
+  .analysis-prose b {
+    color: theme('colors.ink.primary / 92%');
+    font-weight: 600;
+  }
+
+  .analysis-prose ul {
+    margin: 0.4rem 0;
+    padding-left: 1rem;
+    list-style: none;
+  }
+
+  .analysis-prose li {
+    position: relative;
+    padding-left: 0.9rem;
+    margin: 0.25rem 0;
+  }
+
+  .analysis-prose li::before {
+    content: '·';
+    position: absolute;
+    left: 0;
+    color: theme('colors.gold.500 / 60%');
+  }
+}
+
 @layer utilities {
   /* Hide scrollbar for Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
