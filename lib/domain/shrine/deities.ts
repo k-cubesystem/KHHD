@@ -195,11 +195,17 @@ export function bondProgress(points: number): BondProgress {
 /** 신위 코드 허용 문자 — 경로에 그대로 박히므로 탈출 문자·상위 이동(..)을 원천 차단한다. */
 const DEITY_CODE_RE = /^[a-z0-9][a-z0-9_-]{0,30}$/
 
-/** 굽는 프레임의 URL 묶음. 정면은 DB `sprite_url` 이 정본이라 여기 없다. */
-export type DeityTurnFrames = Readonly<Record<BakedFrameKey, string>>
+/**
+ * 굽는 프레임의 URL 묶음. 정면은 DB `sprite_url` 이 정본이라 여기 없다.
+ * `spinManifest`·`spinSheet` 는 영상 등급(deity-spin.ts)의 규격·시트 — 있으면 종전 프레임보다 앞선다.
+ */
+export interface DeityTurnFrames extends Readonly<Record<BakedFrameKey, string>> {
+  readonly spinManifest: string
+  readonly spinSheet: string
+}
 
 /**
- * 신위 턴어라운드 프레임 경로 — `/shrine/deities/{code}/{key}.webp`.
+ * 신위 턴어라운드 프레임 경로 — `/shrine/deities/{code}/{key}.webp` · `spin.json` · `spin.webp`.
  *
  * 키 목록은 deity-turn.BAKED_FRAME_KEYS 단일 출처다 — 국면을 늘려도(45° 중간각 추가) 이 함수는
  * 고칠 데가 없고, 생성 스크립트도 같은 목록을 본다.
@@ -210,7 +216,8 @@ export type DeityTurnFrames = Readonly<Record<BakedFrameKey, string>>
  */
 export function deityTurnFrames(code: string | null | undefined): DeityTurnFrames | null {
   if (typeof code !== 'string' || !DEITY_CODE_RE.test(code)) return null
-  const frames = {} as Record<BakedFrameKey, string>
-  for (const key of BAKED_FRAME_KEYS) frames[key] = `/shrine/deities/${code}/${key}.webp`
-  return frames
+  const dir = `/shrine/deities/${code}`
+  const baked = {} as Record<BakedFrameKey, string>
+  for (const key of BAKED_FRAME_KEYS) baked[key] = `${dir}/${key}.webp`
+  return { ...baked, spinManifest: `${dir}/spin.json`, spinSheet: `${dir}/spin.webp` }
 }
