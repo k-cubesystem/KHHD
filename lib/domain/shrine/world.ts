@@ -35,6 +35,8 @@ export interface WorldZone {
    * 없으면(기존 구역·항등 폴백) 지금까지처럼 늘려 그린다 = 회귀 0.
    */
   tile?: boolean
+  /** 그늘 판 바닥(StageSpec.floorShadeUrl 과 같은 뜻) — 있을 때만 키를 싣는다 */
+  floorShadeUrl?: string
 }
 
 /** 두루마리 전체. zones 는 x0 오름차순·비중첩이고 최소 1개(대청)가 보장된다. */
@@ -191,6 +193,7 @@ function parseZone(v: unknown): WorldZone | null {
     structures: assets?.structures ?? [],
     // 참(true)일 때만 키를 싣는다 — 기존 구역의 모양(키 집합)을 바꾸지 않아 소비처 회귀가 0 이다
     ...(pick(v, 'tile') === true ? { tile: true } : null),
+    ...(assets?.floorShadeUrl ? { floorShadeUrl: assets.floorShadeUrl } : null),
   }
 }
 

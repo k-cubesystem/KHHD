@@ -74,12 +74,15 @@ export function zoneWidthScale(zone: WorldZone): number {
  */
 export function zoneStage(zone: WorldZone, base: StageSpec | null): StageSpec {
   const structures = zone?.structures ?? []
+  // 그늘 판은 바닥재와 짝이다 — 구역이 제 바닥재를 들고 있으면 그늘 판도 구역 것만 쓴다(남의 바닥 그늘을 얹지 않는다)
+  const floorShadeUrl = zone?.flooringUrl ? zone.floorShadeUrl : (zone?.floorShadeUrl ?? base?.floorShadeUrl)
   return {
     wallpaperUrl: zone?.wallpaperUrl ?? base?.wallpaperUrl ?? null,
     flooringUrl: zone?.flooringUrl ?? base?.flooringUrl ?? null,
     structures: structures.length > 0 ? structures : (base?.structures ?? []),
     // 광원은 방 전체가 같은 빛을 받아야 하므로 구역이 아니라 테마 단위로 남긴다(§3-C4 조명 오버레이)
     light: base?.light ?? null,
+    ...(floorShadeUrl ? { floorShadeUrl } : null),
   }
 }
 

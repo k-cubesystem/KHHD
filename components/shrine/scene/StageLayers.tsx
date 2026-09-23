@@ -22,12 +22,13 @@
  */
 
 import type { CSSProperties, SyntheticEvent } from 'react'
-import type { StageSpec } from '@/lib/domain/shrine/stage'
+import type { StageSpec, StageStructure } from '@/lib/domain/shrine/stage'
 import {
   GRAND_ALTAR_BOX_H,
   GRAND_ALTAR_CODE_PREFIX,
   STAGE_BANDS,
   STAGE_FLOOR_LINE_Y,
+  floorShadeMask,
   hasGrandAltar,
 } from '@/lib/domain/shrine/theme-stage'
 
@@ -201,6 +202,53 @@ function Flooring({ url, zoned, tile, eager }: { url: string; zoned: boolean; ti
   )
 }
 
+/** cqh(방 세로 %)의 기준 상자 — 그늘 층만 감싼다. 방 전체에 걸면 안의 fixed 시트·모달이 방에 갇힌다 */
+const SHADE_CONTAINER: CSSProperties = { containerType: 'size' }
+
+/**
+ * L1' 그늘 판 — 틀(壇) 자리에서만 바닥재 위로 드러난다(⑦ 무대 · «두 바닥 마스크»).
+ * 바닥재와 같은 그림에서 창호 직사광만 뺀 한 장이라 널 이음매가 겹치고, 마스크 가장자리가 녹아
+ * 경계가 보이지 않는다. 틀이 옮겨 가면 마스크가 따라간다(floorShadeMask 가 오프셋 적용된 틀을 받는다).
+ */
+function FloorShade({
+  url,
+  altar,
+  zoned,
+  eager,
+}: {
+  url: string
+  altar: StageStructure
+  zoned: boolean
+  eager: boolean
+}) {
+  const mask = floorShadeMask(altar)
+  return (
+    <div aria-hidden className="absolute inset-0 pointer-events-none" style={SHADE_CONTAINER}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        srcSet={muralSrcSet(url)}
+        alt=""
+        aria-hidden
+        draggable={false}
+        decoding="async"
+        loading={zoned && !eager ? 'lazy' : undefined}
+        className={`absolute inset-x-0 bottom-0 w-full object-cover object-top pointer-events-none select-none${
+          zoned ? '' : ' rounded-b-[17px]'
+        }`}
+        style={{ ...FLOOR_BAND, maskImage: mask, WebkitMaskImage: mask }}
+        onError={hideOnError}
+      />
+    </div>
+  )
+}
+
+/** 그늘 판을 깔 틀 — 그늘 판·틀이 둘 다 있고 바닥이 한 장 그림(타일 아님)일 때만 */
+function shadeAltar(stage: StageSpec | null, tile: boolean): StageStructure | null {
+  if (!stage?.floorShadeUrl || !stage.flooringUrl || tile) return null
+  return stage.structures.find((s) => s.code.startsWith(GRAND_ALTAR_CODE_PREFIX)) ?? null
+}
+
 export function StageLayers({
   stage,
   themeCode,
@@ -211,6 +259,7 @@ export function StageLayers({
   eager = false,
 }: Props) {
   if (slot === 'ground') {
+    const altar = shadeAltar(stage, tile)
     if (zoned) {
       return (
         <>
@@ -223,6 +272,15 @@ export function StageLayers({
           )}
           {stage?.flooringUrl && (
             <Flooring key={`floor-${stage.flooringUrl}`} url={stage.flooringUrl} zoned tile={tile} eager={eager} />
+          )}
+          {altar && stage?.floorShadeUrl && (
+            <FloorShade
+              key={`shade-${stage.floorShadeUrl}`}
+              url={stage.floorShadeUrl}
+              altar={altar}
+              zoned
+              eager={eager}
+            />
           )}
         </>
       )
@@ -266,6 +324,15 @@ export function StageLayers({
             url={stage.flooringUrl}
             zoned={false}
             tile={tile}
+            eager={eager}
+          />
+        )}
+        {altar && stage.floorShadeUrl && (
+          <FloorShade
+            key={`shade-${stage.floorShadeUrl}`}
+            url={stage.floorShadeUrl}
+            altar={altar}
+            zoned={false}
             eager={eager}
           />
         )}

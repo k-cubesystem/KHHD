@@ -59,8 +59,10 @@ import {
   THEME_CODES,
   THEME_STAGE_WIDTH,
   THEME_STAGE_ZONE,
+  FLOOR_SHADE,
   buildThemeStage,
   buildThemeStageV4,
+  floorShadeMask,
   grandAltarHeadRoomY,
   grandAltarStructures,
   hasGrandAltar,
@@ -955,5 +957,99 @@ describe('동반 이동 SQL — 구운 좌표가 코드 상수와 같다', () =>
     // 「고정 살림 조절」 dy 를 뺀 값으로 판정한다 — 안 그러면 조절을 쓴 신당만 조용히 빠진다
     expect(statements).toContain("'deityStage' -> 'dy'")
     expect(statements).toContain("'familyShelf' -> 'dy'")
+  })
+})
+
+// ── ⑩ 반가 ⑦ 화풍 무대 · 두 바닥 마스크 (2026-09-23) ─────────────────
+
+describe('floorShadeMask — 그늘 판이 드러나는 자리', () => {
+  const [altar] = grandAltarStructures('banga')
+
+  it('기본 틀: 타원 중심이 밑동(접지선) + drop, 가로는 틀 x 그대로', () => {
+    const centerY = STAGE_GROUND_LINE_Y + FLOOR_SHADE.drop
+    const bandY = Math.round(((centerY - STAGE_FLOOR_LINE_Y) / STAGE_BANDS.floor) * 10000) / 100
+    expect(floorShadeMask(altar)).toBe(
+      `radial-gradient(ellipse ${FLOOR_SHADE.rx}cqh ${FLOOR_SHADE.ry}cqh at 50% ${bandY}%, #000 ${FLOOR_SHADE.core}%, transparent 100%)`
+    )
+  })
+
+  it('틀을 옮기면(고정 살림 조절) 그늘도 같은 만큼 따라간다 — 가로는 %, 세로는 밴드 안 비율', () => {
+    const at = (s: { x: number; y: number }): [number, number] => {
+      const m = /at ([\d.]+)% ([\d.]+)%/.exec(floorShadeMask(s))
+      if (!m) throw new Error('마스크 위치 없음')
+      return [Number(m[1]), Number(m[2])]
+    }
+    const [x0, y0] = at(altar)
+    const [x1, y1] = at({ x: altar.x + 8, y: altar.y + 4 })
+    expect(x1 - x0).toBeCloseTo(8, 6)
+    expect(y1 - y0).toBeCloseTo((4 / STAGE_BANDS.floor) * 100, 1)
+  })
+
+  it('반지름은 방 세로(cqh) — 틀 폭이 세로 기준이라 그늘도 세로를 따라야 전 기기에서 같은 비율이다', () => {
+    expect(floorShadeMask(altar)).toMatch(/ellipse [\d.]+cqh [\d.]+cqh/)
+    // 틀 반폭(세로 71.56 × 폭비 0.72 / 2 ≈ 25.8)보다 넓어야 다리 바깥까지 덮는다
+    expect(FLOOR_SHADE.rx).toBeGreaterThan((GRAND_ALTAR_BOX_H * 0.72) / 2)
+  })
+})
+
+describe('20260923 반가 ⑦ 마이그레이션', () => {
+  const sql = readFileSync(path.join(ROOT, 'supabase', 'migrations', '20260923_banga_painted_p7.sql'), 'utf8')
+  const body = sql
+    .split('\n')
+    .filter((l) => !l.trimStart().startsWith('--'))
+    .join('\n')
+  const urls = [...body.matchAll(/'(\/shrine\/stage\/banga\/[^']+)'::text/g)].map((m) => m[1])
+
+  it('대청 구역의 자산 네 자리만 바꾼다 — 좌표·앵커·광원·최상위 stage 는 그대로', () => {
+    // jsonb_set 의 대상 경로만 센다(가드의 `#>>` 읽기 경로는 바꾸는 자리가 아니다)
+    expect([...body.matchAll(/'\{zones,0,([^}]+)\}', to_jsonb/g)].map((m) => m[1]).sort()).toEqual(
+      ['floorShadeUrl', 'flooringUrl', 'structures,0,assetUrl', 'wallpaperUrl'].sort()
+    )
+    expect(body).not.toMatch(/'\{(structures|light|wallpaperUrl|flooringUrl)\}'/)
+  })
+
+  it('반가 1구역·grand-altar-banga 행에만 — 부분 적용·재실행이 안전하다', () => {
+    expect(body).toMatch(/where code = 'banga'/)
+    expect(body).toMatch(/jsonb_array_length\(coalesce\(stage -> 'zones', '\[\]'::jsonb\)\) = 1/)
+    expect(body).toMatch(/stage #>> '\{zones,0,structures,0,code\}' = 'grand-altar-banga'/)
+  })
+
+  it('가리키는 자산이 전부 public 에 있고, -v3 뮤럴은 -v3-sd 형제까지 있다(없으면 저DPR 기기에서 뮤럴이 사라진다)', () => {
+    expect(urls).toHaveLength(4)
+    for (const url of urls) {
+      expect([url, existsSync(path.join(ROOT, 'public', url))]).toEqual([url, true])
+      if (url.endsWith('-v3.webp')) {
+        const sd = url.replace(/-v3\.webp$/, '-v3-sd.webp')
+        expect([sd, existsSync(path.join(ROOT, 'public', sd))]).toEqual([sd, true])
+      }
+    }
+  })
+
+  it('되돌리기 SQL 이 현행 자산으로 돌아간다(원복 레버)', () => {
+    expect(sql).toContain("'/shrine/stage/banga/room-wall-mural-v3.webp'::text")
+    expect(sql).toContain("'/shrine/stage/banga/room-floor-mural-v3.webp'::text")
+    expect(sql).toContain("'/shrine/stage/banga/grand-altar-v2.webp'::text")
+    expect(sql).toContain("stage #- '{zones,0,floorShadeUrl}'")
+  })
+
+  it('파서를 통과하면 대청 무대가 그늘 판을 싣는다', () => {
+    const raw = {
+      zones: [
+        {
+          code: 'daecheong',
+          x0: 0,
+          x1: THEME_STAGE_WIDTH,
+          wallpaperUrl: urls[0],
+          flooringUrl: urls[1],
+          floorShadeUrl: urls[2],
+          structures: grandAltarStructures('banga').map((s) => ({ ...s, assetUrl: urls[3] })),
+        },
+      ],
+    }
+    const base = parseStageSpec(raw)
+    const world = parseWorld(base, raw)
+    const stage = zoneStage(daecheongZone(world), base)
+    expect(stage.floorShadeUrl).toBe('/shrine/stage/banga/room-floor-shade-p7-v3.webp')
+    expect(stage.structures[0]?.assetUrl).toBe('/shrine/stage/banga/grand-altar-p7.webp')
   })
 })

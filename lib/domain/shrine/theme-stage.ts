@@ -286,6 +286,38 @@ export const GRAND_ALTAR_CODE_PREFIX = 'grand-altar'
 export const GRAND_ALTAR_BOX_H = Math.round((STAGE_GROUND_LINE_Y - GEO.grandAltar.structures[0].y) * 2 * 100) / 100
 
 /**
+ * ★ 두 바닥 마스크의 모양 (⑦ 무대 · 2026-09-23) — 전부 **방 세로 %** 단위다.
+ *
+ * 빛은 틀 뒤 창호에서 들어와 앞(관람자 쪽)으로 떨어진다. 틀 몸통이 그 빛을 막으므로 그늘은
+ * 다리 사이(밑동 조금 위)에서 시작해 앞으로 뻗는다 — 그래서 타원 중심이 밑동보다 `drop` 만큼 아래다.
+ * 반지름을 방 세로로 적는 이유: 틀은 세로 기준으로 그려져(GRAND_ALTAR_BOX_H) 폭이 방 세로를 따른다.
+ * 가로 % 로 적으면 좁고 긴 폰에서는 틀보다 좁고 데스크톱에서는 넓어진다.
+ *   rx 30 ≈ 틀 반폭(71.56 × 비 0.72 / 2 ≈ 25.8) + 여유 · ry 11 · 중심은 밑동 + 2
+ *   core 45 — 반지름 45% 안은 그늘 판 그대로, 밖으로 갈수록 바닥재로 녹는다(경계선이 보이지 않게)
+ */
+export const FLOOR_SHADE = Object.freeze({ drop: 2, rx: 30, ry: 11, core: 45 })
+
+/**
+ * 그늘 판(StageSpec.floorShadeUrl)이 드러나는 자리 — CSS `mask-image` 값.
+ *
+ * 입력은 **오프셋이 적용된** 틀 구조물(x·y = 스프라이트 중심, 무대 상자 %)이다. 「고정 살림 조절」로
+ * 틀이 옮겨 가면 그늘도 같이 간다 — 호출측이 산수를 하지 않는다.
+ * 좌표계: 가로 위치는 바닥 밴드 요소 폭 % (= 무대 상자 폭, 틀 x 와 같은 기준) · 세로 위치는 바닥 밴드
+ * 요소 높이 % (방 y 를 밴드 안 비율로 옮긴다) · 반지름은 `cqh` — 기준 상자는 StageLayers 의 그늘 층
+ * 래퍼(container-type: size, 방 높이 그대로)다. cqh 를 모르는 브라우저는 선언을 버려 그늘 판이 바닥
+ * 전체에 깔린다(빛무늬가 사라질 뿐 깨지지 않는다).
+ */
+export function floorShadeMask(altar: { x: number; y: number }): string {
+  const centerY = altar.y + GRAND_ALTAR_BOX_H / 2 + FLOOR_SHADE.drop
+  const bandY = ((centerY - STAGE_FLOOR_LINE_Y) / STAGE_BANDS.floor) * 100
+  const r = (n: number): number => Math.round(n * 100) / 100
+  return (
+    `radial-gradient(ellipse ${FLOOR_SHADE.rx}cqh ${FLOOR_SHADE.ry}cqh at ${r(altar.x)}% ${r(bandY)}%, ` +
+    `#000 ${FLOOR_SHADE.core}%, transparent 100%)`
+  )
+}
+
+/**
  * 무속성 테마의 조명색 — 촛불 금색. 오행이 있는 테마는 EL_COLOR 를 그대로 쓴다
  * (기운 화면과 방의 빛이 같은 색세계를 쓰게 하는 것이 요점 — 색을 따로 정하지 않는다).
  */

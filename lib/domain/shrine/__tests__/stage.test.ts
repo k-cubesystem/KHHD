@@ -817,3 +817,25 @@ describe('배율 배선 — 룸이 도메인 함수를 실제로 쓰는가', () 
     expect(src).toMatch(/deityStandGrandeur\s*\(/)
   })
 })
+
+describe('parseStageSpec — 그늘 판 바닥(floorShadeUrl · ⑦ 두 바닥 마스크)', () => {
+  const RAW = { wallpaper: '/shrine/stage/banga/w.webp', flooring: '/shrine/stage/banga/f.webp' }
+
+  it('있으면 싣는다', () => {
+    expect(parseStageSpec({ ...RAW, floorShadeUrl: '/shrine/stage/banga/s.webp' })?.floorShadeUrl).toBe(
+      '/shrine/stage/banga/s.webp'
+    )
+  })
+
+  it('없으면 키 자체가 없다 — 기존 무대 객체의 모양이 그대로다(소비처 toEqual 회귀 0)', () => {
+    const spec = parseStageSpec(RAW)
+    expect(spec).not.toBeNull()
+    expect(Object.keys(spec ?? {}).sort()).toEqual(['flooringUrl', 'light', 'structures', 'wallpaperUrl'])
+  })
+
+  it('URL 규약 밖(스킴 탈출·따옴표)은 버린다 — CSS·src 로 그대로 들어가는 값이다', () => {
+    for (const bad of ['javascript:alert(1)', "/a'b.webp", '/a b.webp', 42]) {
+      expect(parseStageSpec({ ...RAW, floorShadeUrl: bad })).not.toHaveProperty('floorShadeUrl')
+    }
+  })
+})

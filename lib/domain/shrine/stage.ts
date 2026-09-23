@@ -51,6 +51,12 @@ export interface StageSpec {
   flooringUrl: string | null
   structures: StageStructure[]
   light: StageLight | null
+  /**
+   * 그늘 판 바닥 — 바닥재와 같은 그림에서 창호 직사광만 뺀 한 장(⑦ 무대 · «두 바닥 마스크»).
+   * 제단 자리에서만 바닥재 위로 드러나 «빛이 제단을 뚫고 지나간» 빛무늬를 지운다(theme-stage.floorShadeMask).
+   * 있을 때만 키를 싣는다 — 기존 무대 객체의 모양(키 집합)이 바뀌지 않아 소비처 회귀가 0 이다.
+   */
+  floorShadeUrl?: string
 }
 
 /** 접지 그림자 규격. width/height 는 아이템 폰트크기 기준 em 배수. */
@@ -619,11 +625,13 @@ export function parseStageSpec(v: unknown): StageSpec | null {
     }
   }
 
+  const floorShadeUrl = parseAssetUrl(pick(v, 'floorShadeUrl', 'floor_shade_url'))
   const spec: StageSpec = {
     wallpaperUrl: parseAssetUrl(pick(v, 'wallpaper', 'wallpaperUrl', 'wallpaper_url')),
     flooringUrl: parseAssetUrl(pick(v, 'flooring', 'flooringUrl', 'flooring_url')),
     structures,
     light: parseLight(pick(v, 'light')),
+    ...(floorShadeUrl ? { floorShadeUrl } : null),
   }
 
   const hasAnything =

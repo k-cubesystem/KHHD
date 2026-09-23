@@ -190,3 +190,36 @@ describe('jambSides — 문틀 그림자는 안쪽 경계에만 (6차 검수 "�
     expect(jambSides(w, { code: 'daecheong', x0: 0, x1: 170 } as never)).toEqual({ left: false, right: true })
   })
 })
+
+describe('zoneStage — 그늘 판은 바닥재와 짝이다', () => {
+  const SHADE = '/shrine/stage/banga/room-floor-shade-p7-v3.webp'
+  const baseWithShade = (): StageSpec => ({ ...singleStage(), floorShadeUrl: SHADE })
+
+  it('구역이 바닥재를 안 들면 테마 무대의 바닥재·그늘 판을 함께 물려받는다', () => {
+    const w = parseWorld(baseWithShade(), { zones: [{ code: 'daecheong', x0: 0, x1: 320 }] })
+    expect(zoneStage(daecheongZone(w), baseWithShade()).floorShadeUrl).toBe(SHADE)
+  })
+
+  it('구역이 제 바닥재를 들면 그 구역의 그늘 판만 쓴다 — 남의 바닥 그늘을 얹지 않는다', () => {
+    const raw = { zones: [{ code: 'daecheong', x0: 0, x1: 320, flooring: '/shrine/stage/banga/own-floor.webp' }] }
+    const w = parseWorld(baseWithShade(), raw)
+    expect(zoneStage(daecheongZone(w), baseWithShade())).not.toHaveProperty('floorShadeUrl')
+  })
+
+  it('구역이 바닥재와 그늘 판을 둘 다 들면 구역 것을 쓴다(반가 ⑦ 시드의 모양)', () => {
+    const own = '/shrine/stage/banga/own-shade.webp'
+    const raw = {
+      zones: [
+        { code: 'daecheong', x0: 0, x1: 320, flooring: '/shrine/stage/banga/own-floor.webp', floorShadeUrl: own },
+      ],
+    }
+    const w = parseWorld(baseWithShade(), raw)
+    expect(daecheongZone(w).floorShadeUrl).toBe(own)
+    expect(zoneStage(daecheongZone(w), baseWithShade()).floorShadeUrl).toBe(own)
+  })
+
+  it('그늘 판이 어디에도 없으면 키가 없다 — 기존 구역 무대의 모양 그대로', () => {
+    const w = parseWorld(singleStage(), { zones: [{ code: 'daecheong', x0: 0, x1: 320 }] })
+    expect(zoneStage(daecheongZone(w), singleStage())).not.toHaveProperty('floorShadeUrl')
+  })
+})
