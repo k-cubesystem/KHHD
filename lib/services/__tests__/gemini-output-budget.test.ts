@@ -10,8 +10,7 @@
  * 그래서 숫자 하나를 못 박는다: `GEMINI_OUTPUT_TOKENS_FLOOR`. 새 호출이 그 아래로 내려가면 여기서 막힌다.
  * (3.x 가 아닌 «생각 없는» 모델로 갈아타면 이 게이트의 전제가 사라진다 — 첫 번째 테스트가 그것을 지킨다.)
  */
-import { readdirSync, readFileSync, statSync } from 'fs'
-import { join, relative } from 'path'
+import { sourceFiles } from '../../../test/source-scan'
 import { GEMINI_FLASH, GEMINI_OUTPUT_TOKENS_FLOOR, GEMINI_PRO } from '@/lib/config/ai-models'
 
 jest.mock('@google/generative-ai', () => {
@@ -38,26 +37,7 @@ const { generateContent: mockGenerateContent, getGenerativeModel: mockGetGenerat
 ).__testMocks
 const { logger: mockLogger } = jest.requireMock('@/lib/utils/logger') as { logger: { warn: jest.Mock } }
 
-const ROOT = join(__dirname, '..', '..', '..')
-const SCAN_DIRS = ['app', 'lib']
-const SKIP_DIRS = new Set(['node_modules', '.next', '__tests__'])
-
-function sourceFiles(dir: string): string[] {
-  const out: string[] = []
-  for (const entry of readdirSync(dir)) {
-    if (SKIP_DIRS.has(entry)) continue
-    const full = join(dir, entry)
-    if (statSync(full).isDirectory()) out.push(...sourceFiles(full))
-    else if (/\.tsx?$/.test(full)) out.push(full)
-  }
-  return out
-}
-
-const FILES = SCAN_DIRS.flatMap((dir) => sourceFiles(join(ROOT, dir)))
-const SOURCES = FILES.map((file) => ({
-  file: relative(ROOT, file).replace(/\\/g, '/'),
-  src: readFileSync(file, 'utf8'),
-}))
+const SOURCES = sourceFiles()
 
 interface Cap {
   where: string

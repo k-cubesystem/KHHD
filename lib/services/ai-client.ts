@@ -1,15 +1,11 @@
 import { getModelConfig, GEMINI_OUTPUT_TOKENS_FLOOR, type AIProvider } from '@/lib/config/ai-models'
 import { generateWithClaude, type ImagePart } from '@/lib/services/claude-client'
-import { FinishReason, GoogleGenerativeAI, type UsageMetadata } from '@google/generative-ai'
+import { FinishReason, GoogleGenerativeAI } from '@google/generative-ai'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
+import { thoughtTokensOf } from '@/lib/domain/gemini/usage'
 import { logger } from '@/lib/utils/logger'
 
 const geminiApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || ''
-
-/** 생각 토큰 — SDK 0.24.1 의 `UsageMetadata` 타입에는 없지만 응답에는 온다(2026-09-23 실측). */
-function thoughtTokensOf(usage: UsageMetadata | undefined): number {
-  return (usage as (UsageMetadata & { thoughtsTokenCount?: number }) | undefined)?.thoughtsTokenCount ?? 0
-}
 
 export interface AIGenerateOptions {
   featureKey: string
@@ -36,6 +32,7 @@ export interface AIGenerateResult {
   provider: AIProvider
   model: string
   inputTokens: number
+  /** 본문 토큰. 🔴 Gemini 는 여기에 «생각»이 없다 — 원가는 logUsage 가 생각까지 더해서 센다. */
   outputTokens: number
 }
 
@@ -47,6 +44,8 @@ export async function generateAIContent(options: AIGenerateOptions): Promise<AIG
   const startedAt = Date.now()
 
   let result: AIGenerateResult
+  /** 출력 단가로 과금되지만 `candidatesTokenCount` 에는 없는 토큰. Claude 는 출력에 이미 포함(이중 계상 금지). */
+  let thoughtTokens = 0
 
   if (provider === 'claude') {
     const claude = await generateWithClaude({
@@ -81,13 +80,14 @@ export async function generateAIContent(options: AIGenerateOptions): Promise<AIG
     const gen = await genModel.generateContent(options.userPrompt)
     const response = gen.response
     const usage = response.usageMetadata
+    thoughtTokens = thoughtTokensOf(usage)
     // 🔴 잘림은 오류로 오지 않는다 — «짧은 답»으로 온다. 그래서 보이게 만든다(logger.warn = Sentry 경보).
     if (response.candidates?.[0]?.finishReason === FinishReason.MAX_TOKENS) {
       logger.warn('[ai-client] Gemini 응답이 출력 한도에서 잘렸다 — 한도는 «생각 + 본문»의 합이다', {
         actionType,
         model,
         maxOutputTokens,
-        thoughtsTokenCount: thoughtTokensOf(usage),
+        thoughtsTokenCount: thoughtTokens,
         candidatesTokenCount: usage?.candidatesTokenCount ?? 0,
       })
     }
@@ -107,6 +107,7 @@ export async function generateAIContent(options: AIGenerateOptions): Promise<AIG
     actionType,
     inputTokens: result.inputTokens,
     outputTokens: result.outputTokens,
+    thoughtTokens,
     latencyMs: Date.now() - startedAt,
     status: 'success',
   }).catch(() => {})

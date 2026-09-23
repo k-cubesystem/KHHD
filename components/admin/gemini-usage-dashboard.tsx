@@ -267,7 +267,7 @@ export function GeminiUsageDashboard({
         <StatTile
           label={`총 토큰 (${summary.range_label})`}
           value={summary.total_tokens}
-          hint={`입력 ${summary.input_tokens.toLocaleString()} · 출력 ${summary.output_tokens.toLocaleString()}`}
+          hint={`입력 ${summary.input_tokens.toLocaleString()} · 출력 ${summary.output_tokens.toLocaleString()} · 생각 ${summary.thought_tokens.toLocaleString()}`}
         />
         <StatTile
           label={`예상 비용 (${summary.range_label})`}

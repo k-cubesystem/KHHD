@@ -12,6 +12,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { logger } from '@/lib/utils/logger'
 import { estimateCostUsd, isImageModel } from '@/lib/domain/gemini/pricing'
+import { thoughtTokensOf } from '@/lib/domain/gemini/usage'
 
 // ============================================================
 // RateLimitError: sleep 없이 즉시 throw (Vercel 타임아웃 방지)
@@ -69,6 +70,12 @@ export interface LogUsageParams {
   actionType: string
   inputTokens?: number | null
   outputTokens?: number | null
+  /**
+   * 생각(thinking) 토큰 — **출력 단가로 과금**되지만 `candidatesTokenCount` 에는 없다.
+   * 칸을 따로 두는 이유: 합쳐 버리면 «집계 기준이 바뀐 날»을 과거 데이터와 구분할 수 없다.
+   * NULL = 계측 이전(2026-09-23 이전) 행.
+   */
+  thoughtTokens?: number | null
   latencyMs: number
   status: string
   errorCode?: string | null
@@ -78,7 +85,9 @@ export interface LogUsageParams {
 export async function logUsage(params: LogUsageParams): Promise<void> {
   try {
     const supabase = createAdminClient()
-    const totalTokens = (params.inputTokens ?? 0) + (params.outputTokens ?? 0)
+    const thoughtTokens = params.thoughtTokens ?? null
+    // 🔴 total 과 원가는 «생각까지» 센다 — 생각은 출력 단가로 과금된다(pricing.estimateCostUsd 주석).
+    const totalTokens = (params.inputTokens ?? 0) + (params.outputTokens ?? 0) + (thoughtTokens ?? 0)
     // 이미지 모델은 장당 고정 과금이라 토큰이 없어도(0/null) 비용을 산정한다.
     // 텍스트 모델은 입력·출력 토큰이 모두 있을 때만 산정(rate_limited/error 등은 null).
     const hasTokens =
@@ -88,7 +97,7 @@ export async function logUsage(params: LogUsageParams): Promise<void> {
       params.outputTokens !== undefined
     const estimatedCostUsd =
       isImageModel(params.model) || hasTokens
-        ? estimateCostUsd(params.model, params.inputTokens ?? 0, params.outputTokens ?? 0)
+        ? estimateCostUsd(params.model, params.inputTokens ?? 0, params.outputTokens ?? 0, thoughtTokens ?? 0)
         : null
 
     await supabase.from('gemini_api_logs').insert({
@@ -97,6 +106,7 @@ export async function logUsage(params: LogUsageParams): Promise<void> {
       action_type: params.actionType,
       input_tokens: params.inputTokens ?? null,
       output_tokens: params.outputTokens ?? null,
+      thought_tokens: thoughtTokens,
       total_tokens: totalTokens > 0 ? totalTokens : null,
       estimated_cost_usd: estimatedCostUsd,
       latency_ms: params.latencyMs,
@@ -159,6 +169,7 @@ export async function withGeminiRateLimit<T>(fn: () => Promise<T>, options: Gemi
     // 3. 토큰 사용량 추출 (Gemini response.usageMetadata)
     let inputTokens: number | null = null
     let outputTokens: number | null = null
+    let thoughtTokens: number | null = null
 
     const r = result as Record<string, unknown>
     const responseUsage = (r?.response as Record<string, unknown>)?.usageMetadata as Record<string, unknown> | undefined
@@ -166,7 +177,9 @@ export async function withGeminiRateLimit<T>(fn: () => Promise<T>, options: Gemi
     const usage = responseUsage ?? directUsage
     if (usage) {
       inputTokens = (usage.promptTokenCount as number) ?? null
+      // 🔴 본문(candidates)에는 생각이 없다 — 생각을 따로 읽지 않으면 원가가 과소계상된다.
       outputTokens = (usage.candidatesTokenCount as number) ?? null
+      thoughtTokens = thoughtTokensOf(usage)
     }
 
     // 4. 성공 기록 (비동기, 결과 대기 없음)
@@ -176,6 +189,7 @@ export async function withGeminiRateLimit<T>(fn: () => Promise<T>, options: Gemi
       actionType,
       inputTokens,
       outputTokens,
+      thoughtTokens,
       latencyMs,
       status: 'success',
       cached: false,

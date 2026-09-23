@@ -18,6 +18,7 @@ import { getSceneData } from '@/app/actions/shrine/scene'
 import { computeEnergy, indexCatalog, ELEMENTS, EL_KO } from '@/lib/domain/shrine/energy'
 import { awardDeityBondForUser } from '@/lib/services/deity-bond'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
+import { thoughtTokensOf } from '@/lib/domain/gemini/usage'
 import { chargeFeature } from '@/lib/services/feature-charge'
 import { loadWornMainDeity } from '@/lib/services/shrine-wear'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
@@ -694,6 +695,7 @@ export async function sendShamanChatMessage(
       actionType: 'shaman_chat',
       inputTokens: chatUsage?.promptTokenCount ?? null,
       outputTokens: chatUsage?.candidatesTokenCount ?? null,
+      thoughtTokens: thoughtTokensOf(chatUsage),
       latencyMs: Date.now() - chatStartedAt,
       status: 'success',
     }).catch(() => {})

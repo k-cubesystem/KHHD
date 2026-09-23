@@ -41,6 +41,8 @@ const REQUIRED_RPCS = [
   'calculate_yearly_fortune',
   'calculate_family_fortune',
   'get_analysis_stats',
+  // 광고 리워드 일일 예산 브레이커 (없으면 「오늘 쓴 돈」을 못 세고 발급이 보수적으로 멈춘다)
+  'get_ai_spend_usd_since',
   // 어드민
   'get_admin_dashboard_stats',
   'check_missing_rpcs',

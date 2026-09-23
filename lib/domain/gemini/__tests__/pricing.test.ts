@@ -46,6 +46,23 @@ describe('Gemini 비용 추정', () => {
       expect(estimateCostUsd('gemini-3.5-flash', 0, 0)).toBe(0)
     })
 
+    it('🔴 생각 토큰은 출력 단가로 과금된다 — "Response pricing is the sum of output tokens and thinking tokens"', () => {
+      const p = MODEL_PRICING[MODEL_FLASH]
+      // 생각 100만 = 출력 100만 과 같은 값
+      expect(estimateCostUsd(MODEL_FLASH, 0, 0, 1_000_000)).toBeCloseTo(p.output, 6)
+      // 본문과 생각은 한 주머니 — 나눠 넣든 몰아 넣든 합이 같으면 값이 같다
+      expect(estimateCostUsd(MODEL_FLASH, 0, 400_000, 600_000)).toBeCloseTo(p.output, 6)
+    })
+
+    it('생각을 안 넘기면 0 — Claude·Jev 처럼 출력에 이미 포함된 공급자를 이중 계상하지 않는다', () => {
+      expect(estimateCostUsd(MODEL_FLASH, 1_000, 2_000)).toBe(estimateCostUsd(MODEL_FLASH, 1_000, 2_000, 0))
+    })
+
+    it('이미지 모델은 생각과 무관하게 장당 고정', () => {
+      const price = IMAGE_MODEL_PRICE_USD['gemini-3.1-flash-image-preview']
+      expect(estimateCostUsd('gemini-3.1-flash-image-preview', 0, 0, 99_999)).toBeCloseTo(price, 6)
+    })
+
     it('🔴 지금 쓰는 텍스트 모델(ai-models 정본)은 단가표에 반드시 있다 — 모델을 올리고 단가를 빠뜨리면 원가가 폴백값으로 어긋난다', () => {
       for (const model of [MODEL_FLASH, MODEL_PRO]) {
         expect({ model, priced: model in MODEL_PRICING }).toEqual({ model, priced: true })

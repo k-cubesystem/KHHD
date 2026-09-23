@@ -8,7 +8,51 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-24(54차) · 라이브 브랜치 `claude/determined-yonath`(`715c477b` · 배포 `hhd-rco5dfdi5` · 직전 정상 `hhd-7pj0xgfje`)
+마지막 갱신: 2026-09-24(55차) · 라이브 브랜치 `claude/determined-yonath`(`715c477b` · 배포 `hhd-rco5dfdi5` · 직전 정상 `hhd-7pj0xgfje`) · **55차 배포 진행 중 — 마이그레이션이 배포보다 먼저다**
+
+**(55차 · 2026-09-24) Gemini 원가 집계가 «생각 토큰»을 빼고 세던 것 — 🟡 게이트 통과, 마이그레이션·배포 진행 중:**
+
+워크트리 `.claude/worktrees/lucid-panini-b9c171` · 브랜치 `fix/gemini-thought-token-cost`(`claude/determined-yonath` 에서 분기).
+
+- 🔴 **근인**: 생각 토큰은 **출력 단가로 과금**된다("Response pricing is the sum of output tokens and thinking
+  tokens" — ai.google.dev/gemini-api/docs/pricing). 그런데 `usageMetadata.candidatesTokenCount` 에는 생각이 없다.
+  우리는 그 값만 출력으로 세어 `gemini_api_logs.estimated_cost_usd` 에 넣고 있었다 → **/admin/analytics 의 원가와
+  광고 리워드 일일 예산 브레이커(`ai_daily_budget_usd`)가 같은 과소계상을 본다.**
+- **빠진 자리는 2곳이 아니라 5곳이었다** — `ai-client`·`gemini-rate-limiter` 외에 속풀이 액션
+  (`app/actions/ai/shaman-chat.ts`)·속풀이 스트림(`app/api/chat/stream/route.ts`)·천지인 비록(`lib/services/gemini.ts`)
+  이 같은 방식으로 세고 있었다. 다섯 곳 모두 `thoughtTokensOf(usage)`(신설 `lib/domain/gemini/usage.ts`)로 통일.
+- **결정 — 합치되 칸은 나눈다**: 원가·`total_tokens` 는 생각까지 세고(`estimateCostUsd(model, in, out, thought)`),
+  생각은 **새 칸 `gemini_api_logs.thought_tokens`** 에 따로 적는다. 과거 행은 NULL —
+  **그 NULL 이 「집계 기준이 바뀐 날」의 경계**다(NULL 구간의 원가를 뒤 구간과 그대로 비교하면 안 된다).
+  본문(`output_tokens`)은 그대로 «답의 길이»로 남는다. 대시보드 토큰 카드에 `· 생각 N` 을 덧붙여 기준 변경을 보이게 했다.
+- 🔴 **적용 순서 — 마이그레이션이 먼저**(`supabase/migrations/ai/20260923_gemini_logs_thought_tokens.sql`).
+  칸이 없는 채로 새 코드가 뜨면 로그 insert 가 통째로 실패하고, 로깅은 예외를 삼키므로 **사용량 기록이 무음으로 멈춘다**
+  — 그러면 예산 브레이커까지 「오늘 쓴 돈 0」으로 본다. 반대 순서(마이그레이션만 먼저)는 무해하다.
+- 🔴 **덤으로 나온 실제 구멍 — 예산 브레이커가 걸릴 수 없었다.** `isBudgetExhausted` 가 그 날 로그를 **전부 끌어와
+  JS 에서** 더하고 있었다. PostgREST 는 한 번에 주는 행 수에 상한(`db-max-rows`)이 있어 호출이 그만큼 쌓이는 날엔
+  합계가 조용히 멈춘다 — 그런데 $30 에 닿는 호출 수가 바로 그 근처다(아래 표). 합계를 DB 에서 내는
+  `get_ai_spend_usd_since(p_since)` RPC(service_role 전용)로 바꾸고 헬스체크 대조 목록에도 넣었다.
+- **새 기준에서 일일 예산($30)이 걸리는 지점** — 최근 30일 실사용 평균(호출당 입력 4,051 · 본문 824토큰, `gemini-3.8-flash` $1.5/$7.5):
+
+| 생각 토큰 가정              | 호출당 원가 | 옛 기준 대비 | $30 도달 호출수/일 |
+| --------------------------- | ----------- | ------------ | ------------------ |
+| 0 (옛 기준)                 | $0.012257   | 1.00×        | 2,448              |
+| 400 (요약·기억 수준)        | $0.015256   | 1.24×        | 1,966              |
+| 1,274 (09-23 실측 4건 평균) | $0.021812   | 1.78×        | 1,375              |
+| 2,851 (유료 테마 풀이 실측) | $0.033639   | 2.74×        | 892                |
+
+**즉 브레이커는 예전의 36~56% 호출량에서 걸린다.** 다만 실사용은 아직 하루 2.3회·$0.028 이고, 최근 30일 최다일
+(09-14, 14회 $0.097)도 새 기준으로 약 $0.23 — **여유 130배**라 지금 당장 발급이 멈추지는 않는다.
+
+- 🔴 **대표 보고 사항**: 배포하는 날부터 /admin/analytics 의 원가가 **1.2~2.7배로 뛴다.** 값이 오른 게 아니라
+  **그동안 덜 세고 있었다.** 옛 구간은 `thought_tokens IS NULL` 로 갈린다.
+- **회귀 게이트** `lib/services/__tests__/gemini-thought-tokens.test.ts` — ①생각이 칸·합계·원가에 실제로 흐르는지
+  (ai-client·withGeminiRateLimit 을 목 DB 로 끝까지) ②Claude 는 더하지 않는지(출력에 이미 포함 — 이중 계상 금지)
+  ③새 호출부가 `candidatesTokenCount` 만 세고 지나가지 못하는지(소스 스캔 — **호출 덩이 단위**로 본다.
+  파일 단위로 보면 `import` 만 남겨도 통과해서 게이트가 헛돈다. 실제로 그렇게 만들어 놓고 한 번 속았다).
+  스캐너는 `test/source-scan.ts` 로 빼 53차 출력예산 게이트와 공유.
+- 게이트: `tsc --noEmit` ✅ · `eslint --max-warnings=0` ✅ · `jest` 243스위트 5,465건 ✅ · `next build` ✅.
+  실호출은 하지 않았다(키·과금) — 토큰 숫자는 53차 실측치를 목으로 되쓴다.
 
 **(54차 · 2026-09-23~24) 신당 ⑦ 화풍 전면 확산(15테마·신물 53종) + 신위 탭 = 회전만 — ✅ 프로덕션 라이브(`715c477b` → 배포 `hhd-rco5dfdi5`, 09-24 00:31 KST):**
 

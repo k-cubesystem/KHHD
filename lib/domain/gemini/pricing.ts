@@ -77,12 +77,24 @@ export function isImageModel(model: string): boolean {
 /**
  * 호출 비용(USD) 추정.
  * - 이미지 모델: 장당 고정 단가(입력 토큰 무관).
- * - 텍스트 모델: (input×단가 + output×단가) / 1M.
+ * - 텍스트 모델: (input×단가 + (output + 생각)×단가) / 1M.
+ *
+ * 🔴 **생각(thinking) 토큰도 출력 단가로 과금된다** — 공식 문서 "Response pricing is the sum of
+ *    output tokens and thinking tokens"(https://ai.google.dev/gemini-api/docs/pricing · 확인일 2026-09-23).
+ *    Gemini 의 `candidatesTokenCount` 에는 생각이 **빠져 있어서** 그 값만 출력으로 세면 원가가
+ *    통째로 과소계상된다(실측: 유료 테마 풀이 한 건에 생각 2,851 + 본문 1,781).
+ *
+ *    생각을 안 넘기면 0 — Claude·Jev 처럼 출력 토큰에 생각이 이미 포함돼 오는 공급자는 그대로 두면 된다.
  */
-export function estimateCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+export function estimateCostUsd(
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  thoughtTokens: number = 0
+): number {
   if (isImageModel(model)) {
     return IMAGE_MODEL_PRICE_USD[model] ?? DEFAULT_IMAGE_PRICE_USD
   }
   const pricing = MODEL_PRICING[model] ?? FALLBACK_TEXT_PRICING
-  return (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000
+  return (inputTokens * pricing.input + (outputTokens + thoughtTokens) * pricing.output) / 1_000_000
 }

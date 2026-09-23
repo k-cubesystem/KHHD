@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, Part } from '@google/generative-ai'
 import { logger } from '@/lib/utils/logger'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
+import { thoughtTokensOf } from '@/lib/domain/gemini/usage'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
@@ -128,6 +129,7 @@ export async function generateFateReport(params: FateReportParams) {
       actionType: 'cheonjiin_report',
       inputTokens: usage?.promptTokenCount ?? null,
       outputTokens: usage?.candidatesTokenCount ?? null,
+      thoughtTokens: thoughtTokensOf(usage),
       latencyMs: Date.now() - startedAt,
       status: 'success',
     }).catch(() => {})

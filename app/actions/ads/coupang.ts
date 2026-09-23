@@ -73,17 +73,23 @@ async function loadAdSettings(): Promise<AdSettings> {
   }
 }
 
-/** AI 일일(KST) 지출이 예산에 닿았는지 — 닿으면 광고 «발급»만 멈춘다(유료 경로는 그대로). */
+/**
+ * AI 일일(KST) 지출이 예산에 닿았는지 — 닿으면 광고 «발급»만 멈춘다(유료 경로는 그대로).
+ *
+ * 🔴 합계는 **DB 에서** 낸다. 예전엔 그 날 로그를 전부 끌어와 JS 에서 더했는데, PostgREST 는
+ *    한 번에 주는 행 수에 상한(`db-max-rows`)이 있어 호출이 그만큼 쌓이는 날엔 합계가 조용히
+ *    낮게 나온다 — 즉 «예산에 닿았다»가 영영 오지 않는다. 2026-09-23 생각 토큰을 원가에 넣으면서
+ *    브레이커가 걸리는 호출 수가 절반 이하로 내려와(계산은 그 날 보고 참조) 더 가까워진 위험이다.
+ */
 async function isBudgetExhausted(budgetUsd: number): Promise<boolean> {
   if (budgetUsd <= 0) return false
   try {
     const adminClient = createAdminClient()
-    const { data } = await adminClient
-      .from('gemini_api_logs')
-      .select('estimated_cost_usd')
-      .gte('created_at', kstDayStartUtcIso(new Date()))
-    const spent = (data ?? []).reduce((sum, r) => sum + Number(r.estimated_cost_usd ?? 0), 0)
-    return spent >= budgetUsd
+    const { data, error } = await adminClient.rpc('get_ai_spend_usd_since', {
+      p_since: kstDayStartUtcIso(new Date()),
+    })
+    if (error) throw error
+    return Number(data ?? 0) >= budgetUsd
   } catch (e) {
     logger.warn('[isBudgetExhausted] 비용 집계 실패 — 보수적으로 발급 중단:', e)
     return true

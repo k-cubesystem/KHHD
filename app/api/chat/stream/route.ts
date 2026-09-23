@@ -11,6 +11,7 @@
 import { NextRequest } from 'next/server'
 import { logger } from '@/lib/utils/logger'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
+import { thoughtTokensOf } from '@/lib/domain/gemini/usage'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import {
   prepareShamanChat,
@@ -122,6 +123,7 @@ export async function POST(req: NextRequest) {
           actionType: 'shaman_chat',
           inputTokens: usage?.promptTokenCount ?? null,
           outputTokens: usage?.candidatesTokenCount ?? null,
+          thoughtTokens: thoughtTokensOf(usage),
           latencyMs: Date.now() - startedAt,
           status: 'success',
         }).catch(() => {})

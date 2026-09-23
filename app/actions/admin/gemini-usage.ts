@@ -328,6 +328,12 @@ export interface GeminiRangeSummary {
   cached_calls: number
   input_tokens: number
   output_tokens: number
+  /**
+   * 생각(thinking) 토큰 — **출력 단가로 과금**되는데 본문(output)에는 안 들어 있다.
+   * 2026-09-23 계측 시작. 그 전 행은 NULL 이라 0 으로 집계된다 — 기간에 옛 구간이 섞이면
+   * 「생각이 적었다」가 아니라 「그 땐 안 셌다」로 읽을 것.
+   */
+  thought_tokens: number
   total_tokens: number
   total_cost_usd: number
   total_cost_krw: number
@@ -357,6 +363,7 @@ export async function getGeminiRangeSummary(days: number = 0): Promise<GeminiRan
     cached_calls: 0,
     input_tokens: 0,
     output_tokens: 0,
+    thought_tokens: 0,
     total_tokens: 0,
     total_cost_usd: 0,
     total_cost_krw: 0,
@@ -369,7 +376,7 @@ export async function getGeminiRangeSummary(days: number = 0): Promise<GeminiRan
   const [{ data, error }, usdKrwRate] = await Promise.all([
     supabase
       .from('gemini_api_logs')
-      .select('status, cached, input_tokens, output_tokens, total_tokens, estimated_cost_usd')
+      .select('status, cached, input_tokens, output_tokens, thought_tokens, total_tokens, estimated_cost_usd')
       .gte('created_at', since),
     getUsdKrwRate(),
   ])
@@ -390,6 +397,7 @@ export async function getGeminiRangeSummary(days: number = 0): Promise<GeminiRan
     cached_calls: rows.filter((r) => r.cached).length,
     input_tokens: rows.reduce((s, r) => s + (Number(r.input_tokens) || 0), 0),
     output_tokens: rows.reduce((s, r) => s + (Number(r.output_tokens) || 0), 0),
+    thought_tokens: rows.reduce((s, r) => s + (Number(r.thought_tokens) || 0), 0),
     total_tokens: rows.reduce((s, r) => s + (Number(r.total_tokens) || 0), 0),
     total_cost_usd: usd,
     total_cost_krw: Math.round(usd * usdKrwRate),
