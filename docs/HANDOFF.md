@@ -8,7 +8,22 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-22(49차) · 라이브 브랜치 `claude/determined-yonath`(`74f94cb5` · 배포 `hhd-szu8ioer1` · 직전 정상 `hhd-kx84x5i9b`)
+마지막 갱신: 2026-09-23(50차) · 라이브 브랜치 `claude/determined-yonath`(`925805ed` · 배포 `hhd-aok2l57yb` · 직전 정상 `hhd-szu8ioer1`)
+
+**(50차 · 2026-09-23) prose 를 쓰던 분석 화면 3곳 확인·수복 — ✅ 프로덕션 라이브(`6501063a`·`9dbe3c79`·`925805ed` · 배포 `hhd-aok2l57yb`):**
+
+- 확인: 49차에서 남긴 «분석 화면 3곳». 로컬 prod 빌드에 커밋하지 않는 임시 확인 페이지를 붙여 실제 컴포넌트를 찍었다(로그인·이용권 없이).
+  - 사업 궁합(`business-compatibility-client`)만 진짜 `prose` 를 썼다 → AI 풀이의 번호 목록 1·2·3 과 글머리가 사라져 문단처럼 보였다.
+  - 전문 보기 아코디언은 `prose` 가 아니라 `analysis-prose` + styled-jsx. 런타임 삽입이라 목록 모양은 살아 있었다.
+    대신 `cleanAnalysisText` 가 빈 줄 문단을 개행으로만 이어 **문단이 한 줄로 붙었다**(기존 테스트가 이 출력을 정답 처리).
+  - 종합사주 폴백 본문은 같은 클래스인데 styled-jsx 범위 밖이라 글머리·소제목이 없었다.
+- 수정(결함 1건 = 커밋 1건): 사업 궁합은 `CategoryResultBody` 선례대로 `[&_ul]:list-disc [&_ol]:list-decimal …`(`6501063a`) ·
+  `analysis-prose` 규칙을 `globals.css` 로 이전(`9dbe3c79`) · 빈 줄을 `<p>` 로 끊고 `.analysis-prose p` 는 색·줄간격을 부모에서 받음(`925805ed`).
+  typography 플러그인은 전역으로 켜지 않았다(legal-doc 3곳과 같은 판단).
+- 회귀선: `app/__tests__/typography-prose.test.ts`(prose 는 legal-doc 과 같은 줄에서만) · `components/studio/__tests__/analysis-prose.test.ts` · `clean-analysis-text.test.ts`.
+- 실측: 빌드 CSS grep · 수정 전/후 캡처 · 라이브 로그인 3개 화면에서 computed style(문단 12px·`·`·`disc`/`decimal`) · 페이지 오류 0 · 주요 경로 정상.
+- 남은 것: 종합사주 v2 원문은 전부 `[[TAG: …]]` 안이라 «전문 보기»가 아예 안 뜬다(설계 판단 필요) · 사업 궁합의 `##` 은 `###` 보다 크게 보인다(기존 모양) ·
+  한글이 바로 붙은 `**…(木)**가` 굵게가 별표째 보인다(react-markdown, 별도 작업 칩) · `---` 가 글자로 보인다.
 
 **(49차 · 2026-09-22) 법률 문서 항 번호·글머리 복구 — ✅ 프로덕션 라이브(`b19dd38e` · 배포 `hhd-kx84x5i9b`, 23:0x KST):**
 
