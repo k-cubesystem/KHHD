@@ -24,7 +24,7 @@
  */
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 import { EL_COLOR, ELEMENTS } from '../energy'
@@ -1051,5 +1051,98 @@ describe('20260923 반가 ⑦ 마이그레이션', () => {
     const stage = zoneStage(daecheongZone(world), base)
     expect(stage.floorShadeUrl).toBe('/shrine/stage/banga/room-floor-shade-p7-v3.webp')
     expect(stage.structures[0]?.assetUrl).toBe('/shrine/stage/banga/grand-altar-p7.webp')
+  })
+})
+
+describe('20260923b ⑦ 15테마 확산 마이그레이션', () => {
+  const sql = readFileSync(path.join(ROOT, 'supabase', 'migrations', '20260923b_themes_painted_p7.sql'), 'utf8')
+  const statements = sql
+    .split('\n')
+    .filter((l) => !l.trimStart().startsWith('--'))
+    .join('\n')
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const REST = GRAND_ALTAR_THEMES.filter((c) => c !== 'banga')
+  const statementOf = (code: string): string => {
+    const found = statements.filter((s) => s.includes(`where code = '${code}'`))
+    expect(found).toHaveLength(1)
+    return found[0] ?? ''
+  }
+
+  it('반가를 뺀 틀 테마 전부를 한 번씩 — 빠진 테마도, 두 번 쓰는 테마도 없다', () => {
+    const codes = statements.map((s) => /where code = '([a-z]+)'/.exec(s)?.[1] ?? '')
+    expect([...codes].sort()).toEqual([...REST].sort())
+  })
+
+  it.each(REST)('%s — 대청 구역 자산 네 자리만, 제 테마 폴더의 실재 파일로, 제 틀 가드로', (code) => {
+    const stmt = statementOf(code)
+    expect([...stmt.matchAll(/'\{zones,0,([^}]+)\}', to_jsonb/g)].map((m) => m[1]).sort()).toEqual(
+      ['floorShadeUrl', 'flooringUrl', 'structures,0,assetUrl', 'wallpaperUrl'].sort()
+    )
+    const urls = [...stmt.matchAll(/'(\/shrine\/stage\/[^']+)'::text/g)].map((m) => m[1] ?? '')
+    expect(urls).toHaveLength(4)
+    for (const url of urls) {
+      expect(url.startsWith(`/shrine/stage/${code}/`)).toBe(true)
+      expect([url, existsSync(path.join(ROOT, 'public', url))]).toEqual([url, true])
+      if (url.endsWith('-v3.webp')) {
+        const sd = url.replace(/-v3\.webp$/, '-v3-sd.webp')
+        expect([sd, existsSync(path.join(ROOT, 'public', sd))]).toEqual([sd, true])
+      }
+    }
+    expect(stmt).toMatch(/jsonb_array_length\(coalesce\(stage -> 'zones', '\[\]'::jsonb\)\) = 1/)
+    expect(stmt).toContain(`stage #>> '{zones,0,structures,0,code}' = 'grand-altar-${code}'`)
+  })
+
+  it('되돌리기 SQL 이 15테마를 현행 v3·v2 자산으로 돌리고 그늘 판을 뗀다(원복 레버)', () => {
+    expect(sql).toContain("stage #- '{zones,0,floorShadeUrl}'")
+    expect(sql).toContain("'/shrine/stage/' || code || '/room-wall-mural-v3.webp'")
+    expect(sql).toContain("'/shrine/stage/' || code || '/room-floor-mural-v3.webp'")
+    expect(sql).toContain("'/shrine/stage/' || code || '/grand-altar-v2.webp'")
+    for (const code of REST) expect(sql).toContain(`'${code}'`)
+  })
+})
+
+describe('20260923c ⑦ 신물 마이그레이션', () => {
+  const sql = readFileSync(path.join(ROOT, 'supabase', 'migrations', '20260923c_items_painted_p7.sql'), 'utf8')
+  const body = sql
+    .split('\n')
+    .filter((l) => !l.trimStart().startsWith('--'))
+    .join('\n')
+  const listed = [...body.matchAll(/'(\/shrine\/items\/[a-z0-9-]+\.webp)'/g)].map((m) => m[1] ?? '')
+  const itemDir = path.join(ROOT, 'public', 'shrine', 'items')
+
+  it('items 폴더의 원본 스프라이트 전부를 한 번씩 — ⑦ 형제가 없는 원본은 없다', () => {
+    const originals = readdirSync(itemDir)
+      .filter((f) => f.endsWith('.webp') && !f.endsWith('-p7.webp'))
+      .map((f) => `/shrine/items/${f}`)
+    expect([...listed].sort()).toEqual(originals.sort())
+    for (const url of listed) {
+      const p7 = url.replace(/\.webp$/, '-p7.webp')
+      expect([p7, existsSync(path.join(ROOT, 'public', p7))]).toEqual([p7, true])
+    }
+  })
+
+  it('⑦ 스프라이트는 원본과 캔버스 치수가 같다 — 배치 좌표·표시 크기 규격이 그대로다', async () => {
+    const sharp = (await import('sharp')).default
+    for (const url of listed) {
+      const a = await sharp(path.join(ROOT, 'public', url)).metadata()
+      const b = await sharp(path.join(ROOT, 'public', url.replace(/\.webp$/, '-p7.webp'))).metadata()
+      expect([url, b.width, b.height]).toEqual([url, a.width, a.height])
+    }
+  })
+
+  it('기본 촛불·향로의 무대 소품만 asset_url 을 바꾼다 — 레거시·v2 크기 판정(asset≠sprite)이 유지된다', () => {
+    const props = [...body.matchAll(/'(\/shrine\/stage\/banga\/prop-[a-z]+\.webp)'/g)].map((m) => m[1] ?? '')
+    expect(props.sort()).toEqual(['/shrine/stage/banga/prop-candle.webp', '/shrine/stage/banga/prop-incense.webp'])
+    for (const url of props)
+      expect(existsSync(path.join(ROOT, 'public', url.replace(/\.webp$/, '-p7.webp')))).toBe(true)
+    expect(body).not.toMatch(/\/shrine\/guardians\//)
+  })
+
+  it('image_url 은 sprite_url 과 같던 행만 따라간다 · 되돌리기 SQL 동봉', () => {
+    expect(body).toContain("image_url = case when image_url = sprite_url then replace(image_url, '.webp', '-p7.webp')")
+    expect(sql).toContain("replace(sprite_url, '-p7.webp', '.webp')")
+    expect(sql).toContain("replace(asset_url, '-p7.webp', '.webp')")
   })
 })
