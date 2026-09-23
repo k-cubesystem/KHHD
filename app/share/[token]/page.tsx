@@ -9,6 +9,15 @@ interface SharePageProps {
   }>
 }
 
+/**
+ * 🔴 공유 링크는 **색인 금지**다.
+ *  · 토큰이 무한하므로 색인되면 검색엔진에 «얇은 페이지가 무한히 있는 사이트»로 집계된다.
+ *    잘못된 토큰도 서버는 200 을 돌려준다(유효성 판정을 클라이언트가 한다 — 아래 페이지 주석).
+ *  · 그리고 내용 자체가 남의 분석 결과다. 검색에 걸리면 그게 더 큰 사고다.
+ *  · 카톡·페북 공유 미리보기는 robots 와 무관하게 동작한다(크롤러가 og: 태그를 따로 읽는다).
+ */
+const SHARE_ROBOTS = { index: false, follow: false } as const
+
 // Metadata는 서버에서 "Best Effort"로 가져옴
 // 실패하더라도 페이지는 렌더링되어야 함 (Client Side Fetching으로 복구)
 export async function generateMetadata({ params }: SharePageProps): Promise<Metadata> {
@@ -20,6 +29,7 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
       return {
         title: '청담 해화당 - 운명 분석',
         description: 'AI가 분석한 상세한 운명 분석 결과를 확인하세요.',
+        robots: SHARE_ROBOTS,
       }
     }
 
@@ -44,6 +54,7 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
     return {
       title: fullTitle,
       description,
+      robots: SHARE_ROBOTS,
       openGraph: {
         title: fullTitle,
         description,
@@ -71,6 +82,7 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
     return {
       title: '청담 해화당 - 운명 분석',
       description: '당신의 운명을 분석해보세요.',
+      robots: SHARE_ROBOTS,
     }
   }
 }

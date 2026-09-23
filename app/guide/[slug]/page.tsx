@@ -15,8 +15,13 @@ import {
 } from '@/lib/content/guide'
 
 /**
- * 명리 가이드 본문 — 정적 생성(generateStaticParams). 동적 API 를 쓰지 않아 크롤러가 첫 HTML 에서
- * 본문 전체를 읽는다. 32편 전부가 빌드 시 HTML 로 나온다.
+ * 명리 가이드 본문 — 정적 생성(generateStaticParams). 이 페이지는 동적 API 를 쓰지 않는다.
+ *
+ * 🔴 그런데 2026-09-23 라이브 실측에서 첫 HTML 에 본문이 **0바이트**였다. 루트 레이아웃이
+ *    동적이고 루트에 loading.tsx(Suspense 경계)가 있어서, Next 가 스피너 셸을 먼저 내보내고
+ *    본문을 뒤에 스트리밍했다 — 79KB 를 받아도 <h2> 0개·JSON-LD 0개였다. 애드센스가
+ *    「가치가 별로 없는 콘텐츠」로 반려한 바로 그 자리다. 루트 경계를 치워서 되살렸다.
+ *    그러니 **루트에 loading.tsx 를 다시 만들지 말 것** — components/route-loading.tsx 참조.
  */
 
 interface PageProps {
@@ -30,12 +35,8 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
   const article = getGuideArticle(slug)
-  // 🔴 여기서 끊는다 — 페이지 본문의 notFound() 만으로는 **상태 코드가 200 으로 나갔다.**
-  //    라이브 실측(2026-09-08): 라우트가 매칭된 뒤 notFound() 를 부르면 404 «화면»은 뜨는데
-  //    HTTP 는 200 이다(소프트 404). generateMetadata 는 응답 스트리밍 이전에 도는 자리라
-  //    여기서 부르면 상태 코드가 제대로 404 로 나간다.
-  //    얇은 페이지가 무한히 200 으로 열리는 셈이라, 애드센스가 「가치가 별로 없는 콘텐츠」로
-  //    반려한 뒤 재검토를 기다리는 지금은 특히 방치할 수 없는 자리다.
+  // 없는 슬러그는 여기서 끊는다. 상태 코드가 제대로 404 로 나가는 조건은 **루트에 Suspense
+  // 경계가 없는 것**이다 — components/route-loading.tsx 의 설명을 볼 것.
   if (!article) notFound()
   const category = getGuideCategory(article.category)
   const ogTitle = article.hanja ? `${article.title} ${article.hanja}` : article.title
