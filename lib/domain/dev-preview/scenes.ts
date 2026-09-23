@@ -135,10 +135,10 @@ export const PREVIEW_SCENES = [
     note: '신위를 누르면 예비 동작 → 도약하며 한 바퀴 → 착지. 주변이 가라앉고 금가루가 핀다. 아래 버튼으로 17 신위를 바꿔 본다',
   },
   {
-    id: 'shrine-banga-p7',
-    label: '신당 — 반가 ⑦ 화풍 방(현행 비교)',
+    id: 'shrine-theme-p7',
+    label: '신당 — ⑦ 화풍 방 16테마(현행 비교)',
     group: '신당',
-    note: '벽·바닥·틀을 ⑦ 화풍으로. 틀 밑은 창호 빛무늬가 지워진 그늘 판(두 바닥 마스크) — 틀을 옮기면 그늘이 따라간다',
+    note: '벽·바닥·틀을 ⑦ 화풍으로. 틀 밑은 빛무늬가 지워진 그늘 판(두 바닥 마스크) — 틀을 옮기면 그늘이 따라간다. 방 아래는 신위 대화 입구 줄',
   },
 ] as const satisfies readonly PreviewScene[]
 

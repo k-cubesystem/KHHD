@@ -25,6 +25,7 @@ import { PassQuickViewBody } from '@/components/payment/pass-quick-view'
 import type { PassOverview } from '@/app/actions/payment/passes'
 import { useCallback, useMemo, useState } from 'react'
 import { DeityTurn } from '@/components/shrine/scene/DeityTurn'
+import { DeityTalkCard } from '@/components/shrine/scene/RitualDock'
 import { StageLayers } from '@/components/shrine/scene/StageLayers'
 import { deityTurnFrames } from '@/lib/domain/shrine/deities'
 import {
@@ -34,7 +35,7 @@ import {
   deityStandShift,
   type StageSpec,
 } from '@/lib/domain/shrine/stage'
-import { THEME_STAGE_WIDTH, grandAltarStructures } from '@/lib/domain/shrine/theme-stage'
+import { GRAND_ALTAR_THEMES, THEME_STAGE_WIDTH, grandAltarStructures } from '@/lib/domain/shrine/theme-stage'
 import { applyStageFixtureOffsets } from '@/lib/domain/shrine/fixture-offsets'
 
 // ── 복주머니 목 ───────────────────────────────────────────────────────────────
@@ -236,39 +237,46 @@ function DeitySpinScene() {
 
 // ── 표 ────────────────────────────────────────────────────────────────────────
 
-/** 반가 무대 두 벌 — 라이브 시드(20260810 v4 틀 시범)와 같은 모양. ⑦ 은 자산 URL 만 바뀐다 */
-const BANGA_DIR = '/shrine/stage/banga'
-const BANGA_STAGES: Record<'live' | 'p7', StageSpec> = {
-  live: {
-    wallpaperUrl: `${BANGA_DIR}/room-wall-mural-v3.webp`,
-    flooringUrl: `${BANGA_DIR}/room-floor-mural-v3.webp`,
-    structures: grandAltarStructures('banga'),
-    light: null,
-  },
-  p7: {
-    wallpaperUrl: `${BANGA_DIR}/room-wall-mural-p7-v3.webp`,
-    flooringUrl: `${BANGA_DIR}/room-floor-mural-p7-v3.webp`,
-    floorShadeUrl: `${BANGA_DIR}/room-floor-shade-p7-v3.webp`,
-    structures: grandAltarStructures('banga').map((s) => ({ ...s, assetUrl: `${BANGA_DIR}/grand-altar-p7.webp` })),
-    light: null,
-  },
+/** 테마 무대 두 벌 — 라이브 시드(v4 틀)와 같은 모양. ⑦ 은 자산 URL 만 바뀐다 */
+function themeStages(code: string): Record<'live' | 'p7', StageSpec> {
+  const dir = `/shrine/stage/${code}`
+  return {
+    live: {
+      wallpaperUrl: `${dir}/room-wall-mural-v3.webp`,
+      flooringUrl: `${dir}/room-floor-mural-v3.webp`,
+      structures: grandAltarStructures(code),
+      light: null,
+    },
+    p7: {
+      wallpaperUrl: `${dir}/room-wall-mural-p7-v3.webp`,
+      flooringUrl: `${dir}/room-floor-mural-p7-v3.webp`,
+      floorShadeUrl: `${dir}/room-floor-shade-p7-v3.webp`,
+      structures: grandAltarStructures(code).map((s) => ({ ...s, assetUrl: `${dir}/grand-altar-p7.webp` })),
+      light: null,
+    },
+  }
 }
 /** 카메라 — 세계(320%) 안에서 방 한 칸을 어디에 세우는가. 대청 한가운데가 입장 화면이다 */
-const BANGA_CAMS = { 왼쪽: 0, 가운데: (THEME_STAGE_WIDTH - 100) / 2, 오른쪽: THEME_STAGE_WIDTH - 100 } as const
+const THEME_CAMS = { 왼쪽: 0, 가운데: (THEME_STAGE_WIDTH - 100) / 2, 오른쪽: THEME_STAGE_WIDTH - 100 } as const
 
 /**
- * 신당 — 반가 방을 **실제 방과 같은 층 순서**로 세운다(벽·바닥 → 그늘 판 → 하단 암전 → 신위 → 틀).
- * 로그인·DB 없이 현행 시드와 ⑦ 을 번갈아 보고, 틀을 옮겨 그늘이 따라오는지 본다.
+ * 신당 — 테마 방을 **실제 방과 같은 층 순서**로 세운다(벽·바닥 → 그늘 판 → 하단 암전 → 신위 → 틀),
+ * 그 아래에 실제 방처럼 신위 대화 입구 줄을 붙인다. 로그인·DB 없이 현행 시드와 ⑦ 을 번갈아 보고,
+ * 틀을 옮겨 그늘이 따라오는지 본다.
  */
-function BangaPaintedScene() {
+function ThemePaintedScene() {
+  const [code, setCode] = useState('banga')
   const [look, setLook] = useState<'live' | 'p7'>('p7')
-  const [cam, setCam] = useState<keyof typeof BANGA_CAMS>('가운데')
+  const [cam, setCam] = useState<keyof typeof THEME_CAMS>('가운데')
   const [dx, setDx] = useState(0)
   const [spinning, setSpinning] = useState(false)
-  const stage = useMemo(() => applyStageFixtureOffsets(BANGA_STAGES[look], { deityStage: { dx, dy: 0 } }), [look, dx])
+  const stage = useMemo(
+    () => applyStageFixtureOffsets(themeStages(code)[look], { deityStage: { dx, dy: 0 } }),
+    [code, look, dx]
+  )
   const stand = useMemo(
-    () => deityStandShift(deityPodiumTopY('banga'), deityHeadRoomY('banga'), 0, deityStandGrandeur('banga')),
-    []
+    () => deityStandShift(deityPodiumTopY(code), deityHeadRoomY(code), 0, deityStandGrandeur(code)),
+    [code]
   )
   const frames = useMemo(() => deityTurnFrames('seongju'), [])
   const stop = useCallback(() => setSpinning(false), [])
@@ -277,32 +285,51 @@ function BangaPaintedScene() {
     `rounded border px-2 py-1 text-[11px] ${on ? 'border-gold-500 text-gold-500' : 'border-gold-500/20 text-ink-light/60'}`
   return (
     <div className="space-y-3">
-      <div
-        data-banga-room
-        className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-[18px]"
-        style={{ height: 'min(72vh, 620px)', backgroundColor: '#1a1308' }}
-      >
-        <div className="absolute inset-y-0" style={{ width: `${THEME_STAGE_WIDTH}%`, left: `${-BANGA_CAMS[cam]}%` }}>
-          <StageLayers stage={stage} themeCode="banga" slot="ground" zoned eager />
-          <div
-            className="absolute inset-x-0 bottom-0 h-[38%]"
-            style={{ background: 'linear-gradient(180deg,transparent,rgba(0,0,0,0.32))' }}
-          />
-          <DeityTurn
-            baseUrl="/shrine/deities/seongju/base.webp"
-            frames={frames}
-            name="seongju"
-            spinning={spinning}
-            onSpinEnd={stop}
-            onTap={spin}
-            interactive
-            idleGlow
-            podiumTopY={stand.podiumTopY}
-            headRoomY={stand.headRoomY}
-            offsetXPct={dx}
-          />
-          <StageLayers stage={stage} themeCode="banga" slot="structures" zoned widthScale={100 / THEME_STAGE_WIDTH} />
+      <div className="mx-auto w-full max-w-[520px]">
+        <div
+          data-theme-room
+          className="relative w-full overflow-hidden rounded-[18px]"
+          style={{ height: 'min(72vh, 620px)', backgroundColor: '#1a1308' }}
+        >
+          <div className="absolute inset-y-0" style={{ width: `${THEME_STAGE_WIDTH}%`, left: `${-THEME_CAMS[cam]}%` }}>
+            <StageLayers stage={stage} themeCode={code} slot="ground" zoned eager />
+            <div
+              className="absolute inset-x-0 bottom-0 h-[38%]"
+              style={{ background: 'linear-gradient(180deg,transparent,rgba(0,0,0,0.32))' }}
+            />
+            <DeityTurn
+              baseUrl="/shrine/deities/seongju/base.webp"
+              frames={frames}
+              name="seongju"
+              spinning={spinning}
+              onSpinEnd={stop}
+              onTap={spin}
+              interactive
+              idleGlow
+              podiumTopY={stand.podiumTopY}
+              headRoomY={stand.headRoomY}
+              offsetXPct={dx}
+            />
+            <StageLayers stage={stage} themeCode={code} slot="structures" zoned widthScale={100 / THEME_STAGE_WIDTH} />
+          </div>
         </div>
+        <DeityTalkCard name="성주신" onEnter={noEnter} />
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {GRAND_ALTAR_THEMES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            data-theme={c}
+            onClick={() => {
+              setSpinning(false)
+              setCode(c)
+            }}
+            className={pill(c === code)}
+          >
+            {c}
+          </button>
+        ))}
       </div>
       <div className="flex flex-wrap gap-1.5">
         <button type="button" data-look="live" onClick={() => setLook('live')} className={pill(look === 'live')}>
@@ -311,7 +338,7 @@ function BangaPaintedScene() {
         <button type="button" data-look="p7" onClick={() => setLook('p7')} className={pill(look === 'p7')}>
           ⑦
         </button>
-        {(Object.keys(BANGA_CAMS) as (keyof typeof BANGA_CAMS)[]).map((k) => (
+        {(Object.keys(THEME_CAMS) as (keyof typeof THEME_CAMS)[]).map((k) => (
           <button key={k} type="button" data-cam={k} onClick={() => setCam(k)} className={pill(cam === k)}>
             {k}
           </button>
@@ -325,6 +352,9 @@ function BangaPaintedScene() {
     </div>
   )
 }
+
+/** 미리보기에서는 계측하지 않는다 — 대화 입구 줄의 모양만 본다 */
+const noEnter = () => {}
 
 const PREVIEW_SCENE_VIEWS: Record<PreviewSceneId, () => React.ReactNode> = {
   // 🔴 아이콘이 이번 작업의 핵심이라 런처는 «그림이 실제로 뜨는가»를 보는 장면이다.
@@ -364,7 +394,7 @@ const PREVIEW_SCENE_VIEWS: Record<PreviewSceneId, () => React.ReactNode> = {
   'pass-popup-empty': () => <PassPopupScene overview={PASS_EMPTY} />,
 
   'shrine-deity-spin': () => <DeitySpinScene />,
-  'shrine-banga-p7': () => <BangaPaintedScene />,
+  'shrine-theme-p7': () => <ThemePaintedScene />,
 }
 
 /**
