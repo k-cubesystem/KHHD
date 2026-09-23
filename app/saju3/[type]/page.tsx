@@ -23,23 +23,19 @@ export function generateStaticParams() {
 }
 
 /**
- * 🔴 유형은 열 개로 고정이다 — 목록에 없는 슬러그는 **라우팅 층에서 404** 를 내야 한다.
+ * 유형은 열 개로 고정이다 — generateStaticParams 가 돌려주는 목록 밖은 받지 않는다.
  *
- * 라이브 실측(2026-09-08): 이게 없어서 /saju3/아무거나 가 「페이지를 찾을 수 없습니다」 내용을
- * **HTTP 200** 으로 돌려줬다(소프트 404). 페이지 안의 notFound() 만으로는 상태 코드가 200 으로
- * 나갔다. 검색엔진에는 «얇은 페이지가 무한히 있는 사이트»로 보이고, 하필 지금 애드센스가
- * 「가치가 별로 없는 콘텐츠」로 한 번 반려한 상태라 그대로 두면 안 되는 자리다.
+ * ⚠️ 이 게이트 하나만으로는 소프트 404 가 낫지 않았다(2026-09-08 실측). 루트 레이아웃이
+ *    next-intl 로 쿠키를 읽어 앱 전체가 동적 렌더라 정적 파라미터 게이트가 관여하지 않는다.
+ *    상태 코드를 실제로 되살린 것은 루트 Suspense 경계 제거다(components/route-loading.tsx).
+ *    의미상 맞는 선언이라 남겨 둔다.
  */
 export const dynamicParams = false
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { type } = await params
-  // 🔴 여기서 끊는다 — 페이지 본문의 notFound() 만으로는 **상태 코드가 200 으로 나갔다.**
-  //    라이브 실측(2026-09-08): 라우트가 매칭된 뒤 notFound() 를 부르면 404 «화면»은 뜨는데
-  //    HTTP 는 200 이다(소프트 404). generateMetadata 는 응답 스트리밍 이전에 도는 자리라
-  //    여기서 부르면 상태 코드가 제대로 404 로 나간다.
-  //    얇은 페이지가 무한히 200 으로 열리는 셈이라, 애드센스가 「가치가 별로 없는 콘텐츠」로
-  //    반려한 뒤 재검토를 기다리는 지금은 특히 방치할 수 없는 자리다.
+  // 목록에 없는 슬러그는 여기서 끊는다. 상태 코드가 제대로 404 로 나가는 조건은 **루트에
+  // Suspense 경계가 없는 것**이다 — components/route-loading.tsx 의 설명을 볼 것.
   if (!isTypeSlug(type)) notFound()
   const info = typeBySlug(type)
   const title = `「${info.title}」 — 3초 사주`

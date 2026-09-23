@@ -10,6 +10,15 @@ interface ShareSajuPageProps {
   }>
 }
 
+/**
+ * 🔴 공유 링크는 **색인 금지**다.
+ *  · 토큰이 무한하므로 색인되면 검색엔진에 «얇은 페이지가 무한히 있는 사이트»로 집계된다.
+ *    잘못된 토큰도 서버는 200 을 돌려준다(유효성 판정을 클라이언트가 한다 — 아래 페이지 주석).
+ *  · 그리고 내용 자체가 남의 분석 결과다. 검색에 걸리면 그게 더 큰 사고다.
+ *  · 카톡·페북 공유 미리보기는 robots 와 무관하게 동작한다(크롤러가 og: 태그를 따로 읽는다).
+ */
+const SHARE_ROBOTS = { index: false, follow: false } as const
+
 export async function generateMetadata({ params }: ShareSajuPageProps): Promise<Metadata> {
   try {
     const { token } = await params
@@ -19,6 +28,7 @@ export async function generateMetadata({ params }: ShareSajuPageProps): Promise<
       return {
         title: '사주풀이 결과 - 청담 해화당',
         description: 'AI가 풀어드리는 정밀 사주 분석 결과를 확인하세요.',
+        robots: SHARE_ROBOTS,
       }
     }
 
@@ -44,6 +54,7 @@ export async function generateMetadata({ params }: ShareSajuPageProps): Promise<
     return {
       title: fullTitle,
       description: summary,
+      robots: SHARE_ROBOTS,
       openGraph: {
         title: fullTitle,
         description: summary,
@@ -71,6 +82,7 @@ export async function generateMetadata({ params }: ShareSajuPageProps): Promise<
     return {
       title: '사주풀이 결과 - 청담 해화당',
       description: 'AI가 풀어드리는 정밀 사주 분석 결과를 확인하세요.',
+      robots: SHARE_ROBOTS,
     }
   }
 }
