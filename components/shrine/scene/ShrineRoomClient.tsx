@@ -12,7 +12,7 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Volume2, VolumeX, Wrench, Check, Settings, LayoutGrid, Lock, MessageCircle } from 'lucide-react'
+import { Volume2, VolumeX, Wrench, Check, Settings, LayoutGrid, Lock } from 'lucide-react'
 import type { Element, Layer, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { deityTurnFrames } from '@/lib/domain/shrine/deities'
@@ -109,7 +109,7 @@ import { StageLayers } from './StageLayers'
 import { AmbientBackdrop, ambientEmitPlan } from './AmbientBackdrop'
 import { TimeTint } from './TimeTint'
 import { Moonlight, SeasonalMark } from './SkyOmens'
-import { RitualDock } from './RitualDock'
+import { DeityTalkCard, RitualDock } from './RitualDock'
 import { GenericPlaqueBand } from './WindowPlaques'
 import { RitualHall, RITUAL_HALL_UNIT } from './RitualHall'
 import { FixtureHandle, type FixtureBox } from './FixtureHandle'
@@ -412,13 +412,6 @@ export function ShrineRoomClient({
   // ── 신위 탭 회전 (안2.3 ④) ──
   /** 회전 재생 중. true 인 동안 재탭은 무시된다(부록 C ④ 탭 잠금) */
   const [deitySpinning, setDeitySpinning] = useState(false)
-  /**
-   * 회전이 끝난 뒤 뜨는 「이야기를 나눌까요?」 확인 (CEO 6차 지시 ⑥).
-   * 지시는 "모시는 신을 누르면 채팅창으로 가게 하되 한번 물어보고 이동"이다 —
-   * 물어보는 단계를 둔 이유가 곧 이 상태의 존재 이유다: 신위 탭은 회전을 보려고 누르는 손짓이기도 해서
-   * 곧장 이동시키면 방을 구경하다 대화방으로 튕겨 나간다.
-   */
-  const [askChat, setAskChat] = useState(false)
   /**
    * 회전 허용 여부 = 연출 게이트 on + 모션 최소화 아님. matchMedia 는 마운트 후에만 읽는다
    * (렌더 중 호출하면 SSR 과 첫 클라 렌더가 갈린다 — #418 전례). false 면 탭 반응만 남는다.
@@ -1537,37 +1530,26 @@ export function ShrineRoomClient({
     [play, cinVibrate]
   )
 
+  /**
+   * 신위 탭은 **회전 연출만** 한다(CEO 2026-09-23 — 종전 6차 지시 ⑥의 «돌고 나서 대화 물음»을 걷었다).
+   * 대화의 문은 방 아래 「○○과 이야기 나누기」 줄(DeityTalkCard)로 옮겼다 — 회전을 보려고 누른 손이
+   * 매번 확인창을 닫아야 하던 마찰이 사라지고, 대화 입구는 누르기 전부터 보인다.
+   */
   const onTapDeity = useCallback(() => {
-    if (editing || deitySpinning || askChat) return
+    if (editing || deitySpinning) return
     onTapKeeper({ x: deityPos.x, y: deityPos.y })
-    if (!spinAllowed) {
-      // 회전이 불가한 기기(모션 최소화·게이트 오프)라도 **묻는 단계는 남는다** —
-      // 여기서 곧장 이동시키면 접근성 설정을 켠 사람만 확인 없이 대화방으로 끌려간다.
-      if (isOwner) setAskChat(true)
-      return
-    }
+    if (!spinAllowed) return
     setDeitySpinning(true)
     trackEvent({ action: 'deity_spin', category: 'shrine', label: scene.mainDeity?.code ?? 'none' })
-  }, [editing, deitySpinning, askChat, onTapKeeper, spinAllowed, scene.mainDeity, isOwner, deityPos])
+  }, [editing, deitySpinning, onTapKeeper, spinAllowed, scene.mainDeity, deityPos])
 
-  /**
-   * 회전이 끝나면 확인을 띄운다 (CEO 6차 지시 ⑥ "한번 물어보고 이동").
-   * ⚠️ 회전 연출 자체는 손대지 않았다 — DeityTurn 은 그대로고, 룸은 종전처럼 spinning 을 내릴 뿐
-   *    그 **뒤에** 물음을 얹는다. 두 차례 검수를 거친 9국면 회전을 확인창이 잡아먹으면 안 된다.
-   * 방문자 뷰(isOwner=false)는 묻지 않는다 — 남의 신당에서 눌러 내 대화방으로 가는 것은 뜬금없다.
-   */
-  const onDeitySpinEnd = useCallback(() => {
-    setDeitySpinning(false)
-    if (isOwner) setAskChat(true)
-  }, [isOwner])
+  const onDeitySpinEnd = useCallback(() => setDeitySpinning(false), [])
 
   const router = useRouter()
   /** 신위와의 대화 = 고민상담(해화지기). 좌정 主神을 서버가 시딩하므로 새 경로를 만들지 않는다. */
-  const goDeityChat = useCallback(() => {
-    setAskChat(false)
+  const onDeityChatEnter = useCallback(() => {
     trackEvent({ action: 'deity_chat_enter', category: 'shrine', label: scene.mainDeity?.code ?? 'none' })
-    router.push('/protected/ai-shaman')
-  }, [router, scene.mainDeity])
+  }, [scene.mainDeity])
 
   // ── 창방 「액막이」 팻말 → 방 하단 액막이 스트립과 **같은 시트**를 연다 (CEO 6차 지시 ⑦) ──
   /**
@@ -2280,6 +2262,11 @@ export function ShrineRoomClient({
           창방 「액막이」 팻말이 여는 시트도 **이 독의 것**이다(openAekmakSheet → aekmakRef) — 문은 하나다.
           오방기·백일기도는 전용 페이지로 나갔고(CEO 지시 2026-07-30) 여기 남는 것은 그 문이다.
           창방 팻말과 같은 주소를 가리키되, 팻말이 없는 테마·좁은 화면에서도 문은 늘 여기 있다. */}
+      {isOwner && !editing && scene.mainDeity && (
+        <div className="px-1">
+          <DeityTalkCard name={scene.mainDeity.name} onEnter={onDeityChatEnter} />
+        </div>
+      )}
       {isOwner && !editing && (
         <div className="px-1">
           <RitualDock
@@ -2393,53 +2380,6 @@ export function ShrineRoomClient({
           안내는 전 화면에서 걷어냈고(app/protected/layout.tsx 주석 참조), 안내·공지는 상단 바의
           종(components/guide/GuideBell.tsx)이 진다. 여기에 다시 마운트하지 말 것.
           컴포넌트(ShrineGuideBar)와 할 일 계산은 되살리기 쉽게 남겨 둔다. */}
-
-      {/* 신위 대화 확인 — 회전이 끝난 뒤 한 번 묻는다 (CEO 6차 지시 ⑥).
-          z-toast 라 가이드 바(z-125)와 방 UI(z-30) 위다. 바깥을 누르면 그냥 닫힌다 —
-          "아니오"가 기본값이어야 방을 구경하다 실수로 대화방에 들어가지 않는다. */}
-      {askChat && (
-        <div
-          className="fixed inset-0 z-toast flex items-center justify-center px-6"
-          role="dialog"
-          aria-modal="true"
-          aria-label="신위와 이야기 나누기"
-          onClick={() => setAskChat(false)}
-        >
-          <div className="absolute inset-0 bg-black/65 backdrop-blur-[2px]" />
-          <div
-            className="hanji-card relative w-full max-w-[320px] rounded-2xl border border-gold-500/30 p-5 text-center"
-            style={{ background: '#16140F' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span
-              className="mx-auto grid h-10 w-10 place-items-center rounded-full"
-              style={{ background: 'rgba(201,168,76,0.16)', boxShadow: '0 0 14px rgba(201,168,76,0.25)' }}
-            >
-              <MessageCircle className="h-5 w-5 text-gold-300" />
-            </span>
-            <p className="mt-3 font-serif text-[14px] leading-relaxed text-ink-primary">
-              {scene.mainDeity ? `${scene.mainDeity.name}과 이야기를 나누시겠습니까?` : '이야기를 나누시겠습니까?'}
-            </p>
-            <p className="mt-1.5 font-sans text-[11px] text-ink-primary/45">속풀이 화면으로 모십니다</p>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setAskChat(false)}
-                className="flex-1 rounded-xl border border-white/10 bg-surface py-2.5 font-serif text-[12.5px] text-ink-primary/60"
-              >
-                아니오
-              </button>
-              <button
-                type="button"
-                onClick={goDeityChat}
-                className="flex-1 rounded-xl border border-gold-500/45 bg-gold-500/[0.14] py-2.5 font-serif text-[12.5px] font-bold text-gold-200"
-              >
-                예, 나눌게요
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

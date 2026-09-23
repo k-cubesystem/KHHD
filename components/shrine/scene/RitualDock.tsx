@@ -20,8 +20,9 @@
 
 import Link from 'next/link'
 import type { MouseEvent, RefObject } from 'react'
-import { Flag, Flame, Coins } from 'lucide-react'
+import { Flag, Flame, Coins, MessageCircle, ChevronRight } from 'lucide-react'
 import type { AekmakStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
+import { withGwaWa } from '@/lib/domain/analysis/family-resemblance'
 import { formatPassUnits } from '@/lib/domain/entitlement/pass'
 import type { SoundKey } from '@/lib/domain/shrine/types'
 import { useRitualTransition, type RitualNavigate } from '@/hooks/use-ritual-transition'
@@ -103,6 +104,31 @@ export function RitualDock({
         {prayedToday !== null && <PrayerRow prayedToday={prayedToday} onOpen={onOpenPrayer} />}
       </div>
     </section>
+  )
+}
+
+/**
+ * 좌정 主神과의 대화로 나가는 문 — 방 바로 아래 한 줄 카드 (CEO 2026-09-23).
+ * 종전에는 신위를 누르면 돌고 나서 «이야기를 나누시겠습니까?» 를 물었다. 신위 탭은 회전 연출만
+ * 남기고 물음은 이 줄로 옮겼다 — 누르는 것 자체가 의사 표시라 확인창을 두지 않는다.
+ * 의식이 아니므로 「오늘의 의식」 카드 밖에 따로 선다(행 문법은 같다).
+ */
+export function DeityTalkCard({ name, onEnter }: { name: string; onEnter: () => void }) {
+  return (
+    <Link
+      href="/protected/ai-shaman"
+      onClick={onEnter}
+      className={`hanji-card mt-3 rounded-xl border border-gold-500/[0.18] ${ROW_CLASS}`}
+    >
+      <span className={`${PLATE_CLASS} border-gold-500/40 bg-gold-500/[0.14]`}>
+        <MessageCircle className="h-3.5 w-3.5 text-gold-200" />
+      </span>
+      <span className={NAME_CLASS}>{withGwaWa(name)} 이야기 나누기</span>
+      <span className="flex-1 truncate text-left font-sans text-[11px] text-ink-primary/55">
+        속풀이 화면으로 모십니다
+      </span>
+      <ChevronRight aria-hidden className="h-4 w-4 flex-shrink-0 text-gold-500/60" />
+    </Link>
   )
 }
 
