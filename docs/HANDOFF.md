@@ -10,6 +10,18 @@
 
 마지막 갱신: 2026-09-23(51차) · 라이브 브랜치 `claude/determined-yonath`(`d6550c8a` · 배포 `hhd-9jzk6eo2m` · 직전 정상 `hhd-aok2l57yb`)
 
+**(52차 · 2026-09-23) 신당 반가 방 → ⑦ 「캐릭터 화풍 시네마틱」 — 🟡 프로덕션 배포 진행 중(`0aebd393`·`382a432e`·`6fc66a9e` · 브랜치 `feature/shrine-restyle`):**
+
+- 대표 결정(09-23): ⑦ 화풍(신위와 같은 붓으로 방을 다시 그림) · 감실 뒤 빛나는 창호 · 제단 이동·크기 조절 유지(두 바닥 마스크) · «배포».
+- 자산 `scripts/shrine-assets/stage-painted.mjs` — 현행 v3 파노라마를 구도 참조로 16:9·4K 한 장(기둥·문·수평선 유지) → 현행과 **같은 치수**로
+  벽·바닥·그늘 판(바닥 직사광만 뺀 판)·대제단(`grand-altar-p7`, 랜드마크 4줄 v2 와 0.5% 안). 벽 445KB · 바닥 185 · 그늘 155 · 틀 170.
+- 코드: `StageSpec/WorldZone.floorShadeUrl`(있을 때만 키) · `theme-stage.floorShadeMask`(오프셋 적용된 틀 → 타원, 반지름 cqh) ·
+  StageLayers 그늘 층(`container-type: size` 전용 래퍼 — 방 전체에 걸면 fixed 시트·모달이 방에 갇힌다).
+- DB: `supabase/migrations/20260923_banga_painted_p7.sql` — 반가 대청 구역 URL 네 자리만(좌표·앵커·광원 불변) · 🔴 **코드 배포 뒤 적용**.
+- 🔴 **애드센스 소프트404 수정(`fix/soft-404-status` `162c5639`)은 회전(`b9df4a00`)까지만 합쳐져 있다 — 배포 전에 이 라이브 끝(⑦ 포함)을 다시 합칠 것.**
+  그대로 배포하면 ⑦ 코드가 되돌아간다(DB 가 ⑦ URL 을 가리켜 그림은 남지만 틀 밑 그늘 판이 빠진다).
+- 검증: 프리뷰 장면 `shrine-banga-p7`(현행↔⑦·틀 ±8·세계 양끝) 폰 390·DPR3 / 데스크톱 캡처 · jest 5,446 · tsc 0 · lint 0.
+
 **(51차 · 2026-09-23) 신위 탭 회전 → Veo 영상 기반 실제 애니메이션 — ✅ 프로덕션 라이브(`94de0270`·`4a9ec84d`·`f982d277` · 배포 `hhd-9jzk6eo2m`, 16:47 KST · 워크트리 `.claude/worktrees/shrine` · 브랜치 `feature/shrine-restyle`):**
 
 - 대표 지시 «터치하면 한 바퀴 도는 모습도 실제 애니메이션처럼» + 연출 결 «B 통통 + C 신령»(시안 비교 후 선택) · «회전만 먼저 배포».
