@@ -8,9 +8,9 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-24(55차) · 라이브 브랜치 `claude/determined-yonath`(`715c477b` · 배포 `hhd-rco5dfdi5` · 직전 정상 `hhd-7pj0xgfje`) · **55차 배포 진행 중 — 마이그레이션이 배포보다 먼저다**
+마지막 갱신: 2026-09-24(55차) · 라이브 브랜치 `claude/determined-yonath`(`2048c36c` push 완료 · 라이브는 아직 `hhd-rco5dfdi5`) · **55차 = 마이그레이션 적용·push 끝, 배포 명령만 대표 손에 남았다**
 
-**(55차 · 2026-09-24) Gemini 원가 집계가 «생각 토큰»을 빼고 세던 것 — 🟡 게이트 통과, 마이그레이션·배포 진행 중:**
+**(55차 · 2026-09-24) Gemini 원가 집계가 «생각 토큰»을 빼고 세던 것 — 🟡 마이그레이션 적용·push 완료, 배포 명령 대기:**
 
 워크트리 `.claude/worktrees/lucid-panini-b9c171` · 브랜치 `fix/gemini-thought-token-cost`(`claude/determined-yonath` 에서 분기).
 
@@ -51,8 +51,32 @@
   ③새 호출부가 `candidatesTokenCount` 만 세고 지나가지 못하는지(소스 스캔 — **호출 덩이 단위**로 본다.
   파일 단위로 보면 `import` 만 남겨도 통과해서 게이트가 헛돈다. 실제로 그렇게 만들어 놓고 한 번 속았다).
   스캐너는 `test/source-scan.ts` 로 빼 53차 출력예산 게이트와 공유.
-- 게이트: `tsc --noEmit` ✅ · `eslint --max-warnings=0` ✅ · `jest` 243스위트 5,465건 ✅ · `next build` ✅.
-  실호출은 하지 않았다(키·과금) — 토큰 숫자는 53차 실측치를 목으로 되쓴다.
+- 게이트(54차 위로 리베이스한 뒤 다시): `tsc --noEmit` ✅ · `eslint --max-warnings=0` ✅ ·
+  `jest` 243스위트 5,486건 ✅ · `next build` ✅. 실호출은 하지 않았다(키·과금) — 토큰 숫자는 53차 실측치를 목으로 되쓴다.
+  ⚠️ 리베이스 직후 빌드가 `next/font/google queries have exactly one entry` 372건으로 죽었는데 **폰트와 무관한
+  Turbopack 캐시 오염**이었다 — `rm -rf .next` 로 통과. 글꼴 코드는 한 줄도 안 바뀌었다.
+
+**진행 상태 (2026-09-24 01:4x KST)**
+
+1. ✅ **마이그레이션 적용**(MCP `gemini_logs_thought_tokens`) — 실측 확인: `thought_tokens` 칸 존재 ·
+   기존 175행 전부 NULL(옛 구간 경계) · `get_ai_spend_usd_since` 동작(30일 $0.956 · 오늘 $0.126) ·
+   실행 권한 `postgres`·`service_role` 뿐(anon·authenticated 없음).
+2. ✅ **push 완료** — `claude/determined-yonath` = `2048c36c`(`a69d2a0f` 위 fast-forward).
+3. 🔴 **배포만 남았다** — 에이전트의 `vercel deploy --prod` 가 **또 분류기에 거부**(51·54차와 같은 사유).
+   워크트리는 배포 준비가 끝난 상태(`.vercel/project.json` = `hhd` 확인 · `.next` 제거 · 트리 깨끗).
+   **대표가 실행할 명령**:
+
+   ```bash
+   cd D:/anti/haehwadang/.claude/worktrees/lucid-panini-b9c171 && npx vercel deploy --prod --yes
+   ```
+
+   배포 직전 라이브 실측: 별칭 → `hhd-rco5dfdi5`(`dpl_BjcPaZzjgJ1jtXcTn59RQMcF13mL`, 00:31 KST) ·
+   `/` 200 · **사이트맵 `<loc>` 60개**(정본. 8이면 main 이 올라간 것이다).
+   되돌리기: `vercel alias set hhd-rco5dfdi5-cubesystems-projects.vercel.app k-haehwadang.com`
+   (마이그레이션은 덧붙이기만 해서 되돌릴 필요가 없다 — 구 코드는 새 칸을 쓰지 않는다).
+
+4. 배포 뒤 확인할 것: `/admin/analytics` 토큰 카드에 «생각» 이 보이고, 새 호출 한 건 뒤
+   `select thought_tokens from gemini_api_logs order by created_at desc limit 1` 이 NULL 이 아닌지.
 
 **(54차 · 2026-09-23~24) 신당 ⑦ 화풍 전면 확산(15테마·신물 53종) + 신위 탭 = 회전만 — ✅ 프로덕션 라이브(`715c477b` → 배포 `hhd-rco5dfdi5`, 09-24 00:31 KST):**
 
