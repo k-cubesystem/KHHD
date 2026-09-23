@@ -8,9 +8,9 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-23(50차) · 라이브 브랜치 `claude/determined-yonath`(`925805ed` · 배포 `hhd-aok2l57yb` · 직전 정상 `hhd-szu8ioer1`)
+마지막 갱신: 2026-09-23(51차) · 라이브 브랜치 `claude/determined-yonath`(`d6550c8a` · 배포 `hhd-9jzk6eo2m` · 직전 정상 `hhd-aok2l57yb`)
 
-**(51차 · 2026-09-23) 신위 탭 회전 → Veo 영상 기반 실제 애니메이션 — 🟡 프로덕션 배포 진행 중(`f982d277` 포함 tip, 워크트리 `.claude/worktrees/shrine` · 브랜치 `feature/shrine-restyle`):**
+**(51차 · 2026-09-23) 신위 탭 회전 → Veo 영상 기반 실제 애니메이션 — ✅ 프로덕션 라이브(`94de0270`·`4a9ec84d`·`f982d277` · 배포 `hhd-9jzk6eo2m`, 16:47 KST · 워크트리 `.claude/worktrees/shrine` · 브랜치 `feature/shrine-restyle`):**
 
 - 대표 지시 «터치하면 한 바퀴 도는 모습도 실제 애니메이션처럼» + 연출 결 «B 통통 + C 신령»(시안 비교 후 선택) · «회전만 먼저 배포».
 - 종전: 굽은 자세 넷을 45°마다 갈아 끼우고 뒤 반 바퀴는 좌우 반전(두루마리가 반대 손으로 넘어감) — 초당 6장 «그림 교체».
@@ -24,6 +24,10 @@
   가라앉힘 최대 0.49 · 45칸째 정지 스프라이트 복귀 · 종료 후 캔버스 정리 · 종전 CSS 회전 미적용 · 콘솔 오류 0. jest 5,431 · tsc 0 · lint 0 · build ✓.
 - 🔴 로컬에서 **실제 신당 방은 못 봤다** — 메인 `.env.local` 의 공개 Supabase 주소가 죽은 구 프로젝트이고, QA 계정(qa@)이 비회원이라 신당 관문에서 막힌다.
   실제 방 확인은 배포 후 대표 기기에서.
+- 배포: 깨끗한 detached 워크트리(`d6550c8a`)에서 CLI 배포(자동 모드 분류기가 에이전트의 `vercel deploy --prod` 를 거부해 대표가 실행).
+  실측: 별칭 → `hhd-9jzk6eo2m` · `/`·`/auth/login`·`/terms`·`/webtoon` 200 · `/protected`·`/protected/shrine` 307 · `spin.json`·`spin.webp` 17/17 200(`image/webp`).
+- 되돌리기: `vercel alias set hhd-aok2l57yb-cubesystems-projects.vercel.app k-haehwadang.com` (DB 변경 없음 — 코드만 되돌리면 된다. 시트만 빼도 종전 회전으로 돈다).
+- 남은 것: 대표 실기기 확인(방에서 탭) · 반가 ⑦ 배경·제단(두 바닥 마스크) 적용 착수.
 
 **(50차 · 2026-09-23) prose 를 쓰던 분석 화면 3곳 확인·수복 — ✅ 프로덕션 라이브(`6501063a`·`9dbe3c79`·`925805ed` · 배포 `hhd-aok2l57yb`):**
 
