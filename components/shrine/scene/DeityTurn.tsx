@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type JSX } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type JSX } from 'react'
 import { deityStandBox } from '@/lib/domain/shrine/stage'
 import type { DeityTurnFrames } from '@/lib/domain/shrine/deities'
 import {
@@ -18,6 +18,19 @@ import {
   type DeityTurnTier,
   type TurnLayer,
 } from '@/lib/domain/shrine/deity-turn'
+import {
+  HOP_HEIGHT,
+  frameRect,
+  parseSpinManifest,
+  sparksAt,
+  spinLandIndex,
+  spinTimeline,
+  type DeitySpinManifest,
+  type SpinCue,
+} from '@/lib/domain/shrine/deity-spin'
+import { logger } from '@/lib/utils/logger'
+// 겹 프레임을 숨기는 규칙(.deity-turn-frame)까지 여기 있다 — 방 밖(프리뷰)에서 세우면 겹 8장이 전부 드러난다
+import '@/app/shrine-scene.css'
 
 /**
  * 좌정 신위 — 제단 위 스탠드 + **탭 한 바퀴 회전(턴어라운드)** (PRD-shrine-gamefeel-v1 부록 C ③④ / 안2.3).
@@ -41,6 +54,13 @@ import {
  *
  * ⚠️ 연출 CSS 는 전부 app/shrine-scene.css 에 있다 — styled-jsx 는 App Router 산출물에 실리지 않는다.
  *    키프레임 %는 도메인 표에서 파생되며, 둘의 일치는 lib/domain/shrine/__tests__/deity-turn.test.ts 가 지킨다.
+ *
+ * ── 영상 등급 (2026-09-23 — 위 사다리의 맨 윗단)
+ * 시트(spin.webp·spin.json)가 있는 신위는 Veo 로 찍은 진짜 한 바퀴를 캔버스에 넘긴다(lib/domain/shrine/deity-spin.ts).
+ * 여기서만은 JS 가 박자를 쥔다 — 칸 44장을 겹 `<img>` 로 쌓으면 44장이 한꺼번에 디코딩·합성되고,
+ * 도약·찌그러짐·금가루가 칸마다 달라 CSS 키프레임으로 옮기면 표를 두 벌 들게 된다.
+ * 재생 중 모드는 **회전이 시작된 순간** 정한다 — 시트가 종전 회전 도중에 도착해도 그 회전은 끝까지 CSS 로 돈다.
+ * 몸이 다 돌면(착지) 곧장 onSpinEnd 를 알리고, 금가루 꼬리는 부모와 상관없이 스스로 마저 진다.
  */
 
 /** CSS 사용자 정의 속성은 CSSProperties 에 없다 — 교차 타입으로 좁혀 any 를 피한다. */
@@ -118,6 +138,159 @@ function probeTier(frames: DeityTurnFrames): Promise<DeityTurnTier> {
   ).then((keys) => turnTier(new Set(keys.filter((k): k is BakedFrameKey => k !== null))))
   tierProbes.set(cacheKey, p)
   return p
+}
+
+/** 영상 등급 자산 — 규격 · 디코딩까지 끝난 시트 · 타임라인 */
+interface SpinAssets {
+  manifest: DeitySpinManifest
+  sheet: HTMLImageElement
+  cues: readonly SpinCue[]
+}
+
+const spinProbes = new Map<string, Promise<SpinAssets | null>>()
+
+/**
+ * 영상 등급 판정 겸 프리로드. 시트를 **디코딩까지** 끝내 둔다 — 탭한 순간 첫 칸이 디코딩을 기다리면
+ * 회전 첫 박자가 빈다. 규격 404 는 «아직 안 구운 신위»라는 정상 상태라 조용히 null(종전 등급)이고,
+ * 규격은 있는데 깨졌거나 시트가 모자라면 굽기 사고라 경고를 남긴다.
+ */
+function probeSpin(frames: DeityTurnFrames): Promise<SpinAssets | null> {
+  const cached = spinProbes.get(frames.spinSheet)
+  if (cached) return cached
+  const broken = (): null => {
+    logger.warn('[DeityTurn] 회전 시트 불량 — 종전 회전으로 내려간다', frames.spinManifest)
+    return null
+  }
+  const p = fetch(frames.spinManifest)
+    .then(async (res): Promise<SpinAssets | null> => {
+      if (!res.ok) return null
+      const raw: unknown = await res.json()
+      const manifest = parseSpinManifest(raw)
+      if (!manifest) return broken()
+      const sheet = new Image()
+      sheet.decoding = 'async'
+      sheet.src = frames.spinSheet
+      const decoded = await sheet.decode().then(
+        () => true,
+        () => false
+      )
+      const rows = Math.ceil(manifest.count / manifest.cols)
+      if (
+        !decoded ||
+        sheet.naturalWidth < manifest.cols * manifest.frameW ||
+        sheet.naturalHeight < rows * manifest.frameH
+      ) {
+        return broken()
+      }
+      return { manifest, sheet, cues: spinTimeline(manifest) }
+    })
+    // 네트워크 끊김 — 다음 방문에 다시 잰다(실패를 캐시에 남기지 않는다)
+    .catch(() => {
+      spinProbes.delete(frames.spinSheet)
+      return null
+    })
+  spinProbes.set(frames.spinSheet, p)
+  return p
+}
+
+/** 한 번의 영상 회전이 쓰는 무대 치수(CSS px, 스탠드 왼쪽 위 기준) — 재생 시작 때 한 번 잰다 */
+interface SpinStage {
+  /** 스탠드 폭·높이 — 높이가 곧 정면 인물 키다 */
+  w: number
+  h: number
+  /** 캔버스 상자 */
+  left: number
+  top: number
+  width: number
+  height: number
+  /** 캔버스 안 발 중심 */
+  footX: number
+  footY: number
+  /** CSS px → 캔버스 픽셀(DPR × 조상 배율) */
+  ratio: number
+}
+
+/**
+ * 캔버스는 스탠드보다 크다 — 도는 동안 소지품·동반물이 정면보다 넓게 벌어지고(시트 칸 폭),
+ * 도약만큼 위로, 금가루만큼 옆으로 나간다. 전부 스탠드 높이 단위라 기기와 무관하게 같은 비율이다.
+ */
+function measureSpinStage(stand: HTMLElement, m: DeitySpinManifest): SpinStage {
+  const w = stand.offsetWidth
+  const h = stand.offsetHeight
+  const s = h / m.baseH
+  const pad = 0.03 * h
+  const cellLeft = (m.baseX + m.baseW / 2) * s
+  const cellRight = (m.frameW - m.baseX - m.baseW / 2) * s
+  const halfW = Math.max(cellLeft * 1.06, cellRight * 1.06, 0.56 * h) + pad
+  const up = Math.max((m.baseY + m.baseH) * s * 1.035 + HOP_HEIGHT * h, 0.98 * h) + pad
+  const down = Math.max((m.frameH - m.baseY - m.baseH) * s, 0.04 * h) + pad
+  // 조상 배율(카메라 줌)까지 곱해야 확대된 화면에서 캔버스가 뭉개지지 않는다. DPR 은 2 에서 끊는다 —
+  // 움직이는 동안이라 3배 해상도는 보이지 않고 채우기 비용만 는다.
+  const zoom = h > 0 ? stand.getBoundingClientRect().height / h : 1
+  const ratio = Math.min(3, Math.min(2, window.devicePixelRatio || 1) * zoom)
+  return { w, h, left: w / 2 - halfW, top: h - up, width: halfW * 2, height: up + down, footX: halfW, footY: up, ratio }
+}
+
+function sizeCanvas(canvas: HTMLCanvasElement, st: SpinStage): CanvasRenderingContext2D | null {
+  canvas.style.left = `${st.left}px`
+  canvas.style.top = `${st.top}px`
+  canvas.style.width = `${st.width}px`
+  canvas.style.height = `${st.height}px`
+  canvas.width = Math.max(1, Math.round(st.width * st.ratio))
+  canvas.height = Math.max(1, Math.round(st.height * st.ratio))
+  const ctx = canvas.getContext('2d')
+  if (ctx) ctx.imageSmoothingQuality = 'high'
+  return ctx
+}
+
+/** 몸 — 발 중심을 축으로 뜨고 늘고 눌린다. 정면 상자가 스탠드 상자에 겹치도록 그린다(배율 = 스탠드 높이 / baseH). */
+function drawFigure(ctx: CanvasRenderingContext2D, st: SpinStage, a: SpinAssets, cue: SpinCue): void {
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  if (cue.frame === null) return
+  const m = a.manifest
+  const s = st.h / m.baseH
+  const { sx, sy } = frameRect(m, cue.frame)
+  ctx.setTransform(st.ratio, 0, 0, st.ratio, 0, 0)
+  ctx.translate(st.footX, st.footY - cue.lift * st.h)
+  ctx.scale(cue.scaleX * s, cue.scaleY * s)
+  ctx.drawImage(a.sheet, sx, sy, m.frameW, m.frameH, -(m.baseX + m.baseW / 2), -(m.baseY + m.baseH), m.frameW, m.frameH)
+}
+
+/** 금가루 — 발치에서 피어올라 사그라든다(피는 자리·때는 도메인 표). 몸과 다른 캔버스라 그림자가 묻지 않는다. */
+function drawSparks(ctx: CanvasRenderingContext2D, st: SpinStage, cue: SpinCue): void {
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  if (cue.sparkClock === null) return
+  ctx.setTransform(st.ratio, 0, 0, st.ratio, 0, 0)
+  for (const p of sparksAt(cue.sparkClock)) {
+    const x = st.footX + p.x * st.h
+    const y = st.footY - p.y * st.h
+    const r = p.r * st.h * 2.4
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r)
+    g.addColorStop(0, `rgba(255,251,232,${p.a})`)
+    g.addColorStop(0.35, `rgba(255,217,120,${0.85 * p.a})`)
+    g.addColorStop(1, 'rgba(255,176,0,0)')
+    ctx.fillStyle = g
+    ctx.beginPath()
+    ctx.arc(x, y, r, 0, Math.PI * 2)
+    ctx.fill()
+  }
+}
+
+/**
+ * 가라앉힘 — 신위 둘레(몸통 중심에서 키의 0.58배)는 밝게 두고 1.05배 밖을 어둡게. 판은 키의 8배라
+ * 화면을 넘게 덮는다. 불투명도(0~0.5)만 칸마다 바꾼다 — 합성기만 일한다.
+ */
+function placeDim(dim: HTMLElement, st: SpinStage): void {
+  const size = 8 * st.h
+  // 판을 칠하기 전에 투명부터 — 첫 rAF 전 한 번의 페인트에 화면이 통째로 어두워지지 않게
+  dim.style.opacity = '0'
+  dim.style.left = `${st.w / 2 - size / 2}px`
+  dim.style.top = `${0.45 * st.h - size / 2}px`
+  dim.style.width = `${size}px`
+  dim.style.height = `${size}px`
+  dim.style.background = `radial-gradient(circle at 50% 50%, rgba(0,0,0,0) ${0.58 * st.h}px, #000 ${1.05 * st.h}px)`
 }
 
 /**
@@ -198,12 +371,116 @@ export function DeityTurn({
   const tier: DeityTurnTier = frames && probed?.key === frames.side ? probed.tier : 'none'
   const framed = tier !== 'none'
 
-  // 회전 종료 통보 — 유일한 JS 타이머. 잔상이 늦게 끝나는 프레임 모드만 총 길이를 쓴다.
+  /**
+   * 영상 등급 자산. 식별자(시트 URL)를 함께 담는 까닭은 위 probed 와 같다.
+   * 시트는 수백 KB 라 방의 첫 그림(벽화·제단)과 대역폭을 다투지 않게 **한가할 때** 받는다.
+   */
+  const [spinProbed, setSpinProbed] = useState<{ key: string; assets: SpinAssets } | null>(null)
+
   useEffect(() => {
-    if (!spinning) return
+    if (!frames) return
+    let alive = true
+    const key = frames.spinSheet
+    const start = (): void => {
+      void probeSpin(frames).then((assets) => {
+        if (alive && assets) setSpinProbed({ key, assets })
+      })
+    }
+    // requestIdleCallback 이 없는 사파리는 시간으로 미룬다
+    const idle =
+      typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback(start, { timeout: 4000 }) : null
+    const timer = idle === null ? window.setTimeout(start, 1500) : null
+    return () => {
+      alive = false
+      if (idle !== null) window.cancelIdleCallback(idle)
+      if (timer !== null) window.clearTimeout(timer)
+    }
+  }, [frames])
+
+  const spinAssets = frames && spinProbed?.key === frames.spinSheet ? spinProbed.assets : null
+
+  /**
+   * 회전 모드는 **spinning 이 서는 순간** 정한다 — 렌더 중 이전 값과 비교한다(이펙트로 미루면 첫 프레임에
+   * 종전 CSS 회전이 걸렸다 풀린다). 영상 재생은 run 이 쥐고, 착지 뒤 금가루 꼬리까지 spinning 과
+   * 상관없이 돈다. key 는 꼬리 도중 다시 탭했을 때 처음부터 다시 걸기 위한 것이다.
+   */
+  const [prevSpinning, setPrevSpinning] = useState(spinning)
+  const [run, setRun] = useState<{ key: number; assets: SpinAssets } | null>(null)
+  if (spinning !== prevSpinning) {
+    setPrevSpinning(spinning)
+    if (spinning && spinAssets) setRun({ key: (run?.key ?? 0) + 1, assets: spinAssets })
+  }
+  /** 종전(CSS) 회전 — 영상 재생이 걸리지 않은 회전만. 클래스·잔상·타이머가 전부 이 값을 본다. */
+  const cssSpinning = spinning && run === null
+
+  // 종전 회전의 종료 통보 — 유일한 JS 타이머. 잔상이 늦게 끝나는 프레임 모드만 총 길이를 쓴다.
+  useEffect(() => {
+    if (!cssSpinning) return
     const t = window.setTimeout(onSpinEnd, framed ? SPIN_TOTAL_MS : SPIN_MS)
     return () => window.clearTimeout(t)
-  }, [spinning, framed, onSpinEnd])
+  }, [cssSpinning, framed, onSpinEnd])
+
+  const standRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLSpanElement>(null)
+  const dimRef = useRef<HTMLSpanElement>(null)
+  const figureRef = useRef<HTMLCanvasElement>(null)
+  const sparkRef = useRef<HTMLCanvasElement>(null)
+  const notifySpinEnd = useEffectEvent(() => onSpinEnd())
+
+  /**
+   * 영상 회전 재생 — rAF 한 줄기. 칸 번호는 경과 시간에서 뽑는다(느린 기기는 칸을 건너뛰지 길이가 늘지 않는다).
+   * 정지 스프라이트 숨김·가라앉힘은 React 상태가 아니라 **같은 rAF 안의 DOM 쓰기**다 — 한 렌더라도
+   * 어긋나면 정면 스프라이트와 캔버스 첫 칸이 겹쳐 보이거나 둘 다 비는 프레임이 생긴다.
+   */
+  useEffect(() => {
+    if (!run) return
+    const standEl = standRef.current
+    const body = bodyRef.current
+    const dim = dimRef.current
+    const figure = figureRef.current
+    const spark = sparkRef.current
+    if (!standEl || !body || !dim || !figure || !spark) return
+    const { assets } = run
+    const st = measureSpinStage(standEl, assets.manifest)
+    const figureCtx = sizeCanvas(figure, st)
+    const sparkCtx = sizeCanvas(spark, st)
+    placeDim(dim, st)
+    const land = spinLandIndex(assets.manifest)
+    let landed = false
+    const settle = (): void => {
+      if (landed) return
+      landed = true
+      notifySpinEnd()
+    }
+    const t0 = performance.now()
+    let last = -1
+    let raf = 0
+    const tick = (now: number): void => {
+      const i = Math.floor(((now - t0) * assets.manifest.fps) / 1000)
+      const cue = assets.cues[i]
+      // 끝 — 탭이 백그라운드였다 돌아와 칸을 통째로 건너뛰어도 착지 통보는 빠뜨리지 않는다
+      if (!cue || !figureCtx || !sparkCtx) {
+        body.style.opacity = ''
+        settle()
+        setRun(null)
+        return
+      }
+      if (i !== last) {
+        last = i
+        drawFigure(figureCtx, st, assets, cue)
+        drawSparks(sparkCtx, st, cue)
+        body.style.opacity = cue.frame === null ? '' : '0'
+        dim.style.opacity = String(cue.dim)
+        if (i >= land) settle()
+      }
+      raf = window.requestAnimationFrame(tick)
+    }
+    raf = window.requestAnimationFrame(tick)
+    return () => {
+      window.cancelAnimationFrame(raf)
+      body.style.opacity = ''
+    }
+  }, [run])
 
   /**
    * 세로 정합의 단일 출처 — 발이 **단상 상면**에 닿고 머리는 머리 여백 줄에 선다
@@ -213,7 +490,7 @@ export function DeityTurn({
   const stand = useMemo(() => deityStandBox(podiumTopY, headRoomY), [podiumTopY, headRoomY])
 
   const layers = useMemo(() => layersForTier(tier), [tier])
-  const spinClass = spinning ? ` ${turnSpinClass(tier)}` : ''
+  const spinClass = cssSpinning ? ` ${turnSpinClass(tier)}` : ''
   const vars = useMemo<CssVars>(() => ({ '--deity-spin-ms': `${SPIN_MS}ms` }), [])
 
   /**
@@ -244,6 +521,7 @@ export function DeityTurn({
 
   return (
     <div
+      ref={standRef}
       className={`deity-stand absolute left-1/2 z-[3] -translate-x-1/2${interactive ? '' : ' pointer-events-none'}`}
       // 가로 이동은 0 일 때 **키 자체를 얹지 않는다** — DOM 이 한 글자도 바뀌지 않아야 회귀 진단이 산다
       style={{
@@ -253,13 +531,15 @@ export function DeityTurn({
         ...(offsetXPct !== 0 ? { left: `calc(50% + ${offsetXPct}%)` } : null),
       }}
     >
+      {/* 영상 회전의 가라앉힘 — 스탠드 안 맨 아래 겹이라 방은 덮고 신위(캔버스)는 덮지 않는다. 치수는 재생 때 잰다. */}
+      {run && <span ref={dimRef} aria-hidden className="pointer-events-none absolute" />}
       {/* 발밑 접지 글로우 — 스탠드 박스 기준이라 접지 y 가 바뀌면 자동으로 따라온다(같은 계약).
           회전 중에는 국면 표와 위상을 동조시켜 좁아졌다 넓어진다(등급마다 곡선이 다르다). */}
       <span
         aria-hidden
         className={`absolute left-1/2 -translate-x-1/2 rounded-full pointer-events-none${
           idleGlow ? ' shrine-glow-breathe' : ''
-        }${spinning ? ` ${turnShadowClass(tier)}` : ''}`}
+        }${cssSpinning ? ` ${turnShadowClass(tier)}` : ''}`}
         style={{
           bottom: '-6%',
           width: '86%',
@@ -281,7 +561,7 @@ export function DeityTurn({
         {/* 옷자락 트레일 — 같은 애니메이션을 겹당 45ms 늦춘 시간 이동 복제(잔상). 프레임 모드에서만.
             폴백(rotateY)은 90° 근처 모션블러가 같은 역할을 하고, 3D 회전 복제는 겹칠수록 탁해진다.
             ⚠️ 본체보다 **먼저** 그린다 — 잔상은 지나온 자리라 뒤에 남아야 한다(뒤 DOM = 위에 덮임). */}
-        {spinning &&
+        {cssSpinning &&
           framed &&
           Array.from({ length: GHOST_LAYERS }, (_, i) => (
             <span
@@ -293,11 +573,18 @@ export function DeityTurn({
               <FrameStack urls={urls} layers={layers} ghost />
             </span>
           ))}
-        <span className="deity-turn-body relative block h-full">
+        <span ref={bodyRef} className="deity-turn-body relative block h-full">
           <FrameStack urls={urls} layers={layers} ghost={false} />
           <span aria-hidden className="deity-turn-sweep" style={sweepStyle} />
         </span>
       </button>
+      {/* 영상 회전 — 몸(정지 스프라이트와 같은 그림자) 위에 금가루. 탭은 아래 버튼이 받는다. */}
+      {run && (
+        <>
+          <canvas ref={figureRef} aria-hidden className="pointer-events-none absolute" style={FRAME_SHADOW} />
+          <canvas ref={sparkRef} aria-hidden className="pointer-events-none absolute" />
+        </>
+      )}
     </div>
   )
 }

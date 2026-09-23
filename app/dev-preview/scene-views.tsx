@@ -23,6 +23,9 @@ import { Bell, Home } from 'lucide-react'
 import { IconGunghap, IconPass } from '@/components/icons/traditional-icons'
 import { PassQuickViewBody } from '@/components/payment/pass-quick-view'
 import type { PassOverview } from '@/app/actions/payment/passes'
+import { useCallback, useMemo, useState } from 'react'
+import { DeityTurn } from '@/components/shrine/scene/DeityTurn'
+import { deityTurnFrames } from '@/lib/domain/shrine/deities'
 
 // ── 복주머니 목 ───────────────────────────────────────────────────────────────
 
@@ -148,6 +151,79 @@ function PassPopupScene({ overview }: { overview: PassOverview }) {
   )
 }
 
+// ── 신당 목 ─────────────────────────────────────────────────────────────────────
+
+/** 회전 시트를 구운 17 신위 — 경로 규약(deityTurnFrames)만 쓰고 DB 는 보지 않는다 */
+const SPIN_DEITIES = [
+  'seongju',
+  'samsin',
+  'jowang',
+  'teoju',
+  'dongja',
+  'seonnyeo',
+  'daegam',
+  'dokkaebi',
+  'bari',
+  'eopsin',
+  'choiyoung',
+  'gwanseong',
+  'baekma',
+  'chilseong',
+  'yongwang',
+  'sansin',
+  'okhwang',
+] as const
+
+/**
+ * 신당 — 방 한 칸에 신위만 세운다(제단·살림 없음). 실제 방과 같은 컴포넌트·같은 스탠드 기하라
+ * 캔버스 몸과 정지 스프라이트의 이음매·도약·가라앉힘·금가루를 로그인 없이 본다.
+ */
+function DeitySpinScene() {
+  const [code, setCode] = useState<(typeof SPIN_DEITIES)[number]>('seongju')
+  const [spinning, setSpinning] = useState(false)
+  const frames = useMemo(() => deityTurnFrames(code), [code])
+  const stop = useCallback(() => setSpinning(false), [])
+  const spin = useCallback(() => setSpinning(true), [])
+  return (
+    <div className="space-y-3">
+      <div
+        className="relative mx-auto h-[62vh] w-full max-w-[430px] overflow-hidden rounded-xl bg-cover bg-center"
+        style={{ backgroundImage: 'url(/shrine/themes/banga/room.webp)' }}
+      >
+        <DeityTurn
+          key={code}
+          baseUrl={`/shrine/deities/${code}/base.webp`}
+          frames={frames}
+          name={code}
+          spinning={spinning}
+          onSpinEnd={stop}
+          onTap={spin}
+          interactive
+          idleGlow
+        />
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {SPIN_DEITIES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            data-deity={c}
+            onClick={() => {
+              setSpinning(false)
+              setCode(c)
+            }}
+            className={`rounded border px-2 py-1 text-[11px] ${
+              c === code ? 'border-gold-500 text-gold-500' : 'border-gold-500/20 text-ink-light/60'
+            }`}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── 표 ────────────────────────────────────────────────────────────────────────
 
 const PREVIEW_SCENE_VIEWS: Record<PreviewSceneId, () => React.ReactNode> = {
@@ -186,6 +262,8 @@ const PREVIEW_SCENE_VIEWS: Record<PreviewSceneId, () => React.ReactNode> = {
   'pass-popup-free': () => <PassPopupScene overview={PASS_FREE} />,
   'pass-popup-member': () => <PassPopupScene overview={PASS_MEMBER} />,
   'pass-popup-empty': () => <PassPopupScene overview={PASS_EMPTY} />,
+
+  'shrine-deity-spin': () => <DeitySpinScene />,
 }
 
 /**
