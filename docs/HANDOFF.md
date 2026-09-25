@@ -8,7 +8,35 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-24(55차) · 라이브 브랜치 `claude/determined-yonath`(`2048c36c` push 완료 · 라이브는 아직 `hhd-rco5dfdi5`) · **55차 = 마이그레이션 적용·push 끝, 배포 명령만 대표 손에 남았다**
+마지막 갱신: 2026-09-25(56차) · 라이브 브랜치 `claude/determined-yonath`(`eda8b1cb` push 완료 · 라이브는 아직 `hhd-rco5dfdi5`) · **56차 = Sentry 요청 본문·쿠키 차단, 코드·게이트 완료·미push(대표 결정 대기) · 55차 배포 명령도 대표 손에 남아 있다**
+
+**(56차 · 2026-09-25) Sentry 서버 이벤트에 요청 본문·쿠키를 싣지 않는다 — ✅ 코드·회귀 게이트 완료, push·배포는 대표 결정 대기:**
+
+워크트리 `.claude/worktrees/sentry-request-body` · 브랜치 `fix/sentry-request-body`(`claude/determined-yonath` `eda8b1cb` 에서 분기, **미push**).
+
+- **무엇을 바꿨나**: `sentry.server.config.ts` 에 `Sentry.requestDataIntegration({ include: { data: false, cookies: false } })` 한 줄.
+  Node 런타임에서 나가는 모든 서버 이벤트(logger.error/warn 의 captureException·captureMessage, **트랜잭션 포함**)에서
+  `request.data`·`request.cookies`·`headers.cookie` 가 빠진다. `url`·`method`·`query_string`·나머지 헤더는 그대로 남아 디버깅 정보는 잃지 않는다.
+- **왜 이 방법인가(SDK 10.43.0 실측)**: 요청 스코프의 정보를 `event.request` 로 옮기는 코드는 `@sentry/core` 의 RequestData 통합
+  **한 곳**뿐이고, 그 기본값이 본문·쿠키를 포함한다(`sendDefaultPii` 와 무관 — SDK 코드에 «v11 에서 바꾸겠다»는 TODO 만 있다).
+  같은 이름의 통합을 `integrations` 로 주면 기본 인스턴스가 대체되므로, `@sentry/nextjs` 가 자체 옵션(`disableIncomingRequestSpans: true`)으로
+  얹는 Http 통합은 건드리지 않는다.
+  - 택하지 않은 것: `httpIntegration({ maxIncomingRequestBodySize: 'none' })` 은 본문만 막고 **쿠키는 그대로**이며(실측) Http 통합을
+    덮어써야 해서 nextjs 옵션 유실 위험이 생긴다. `beforeSend` 는 오류 이벤트만 보고 **트랜잭션은 못 덮는다**.
+- **실측(로컬 `next dev`, Next 16.1.6 · SDK 10.43.0 · 가짜 DSN + `beforeSend`/`beforeSendTransaction` 에서 가로채 전송은 막음)**:
+  - 기본 설정: 라우트 핸들러·서버 액션 요청 중에 잡힌 오류 이벤트와 **트랜잭션 양쪽**에 요청 정보(`request.data`·`cookies`)가 붙는다. 미들웨어가 앞에서 본문을 복제하느냐에 따라 본문이 붙는 범위가 달라지지만 쿠키는 항상 붙는다.\n - 수정 설정: 같은 네 조건(기본/수정 × 미들웨어 on/off) 전부에서 `data`·`cookies`·`headers.cookie` 가 빠지고 `url`·`method` 는 남는다. SDK 단독 프로브(4가지 본문 소비 방식)도 같은 결과.
+- **Edge 런타임**(`sentry.edge.config.ts`): Edge SDK 는 `sendDefaultPii` 를 켤 때만 RequestData 를 얹으므로 지금은 요청 정보가 붙지 않는다 —
+  손대지 않고 그 전제를 테스트로 고정.
+- **Vercel**: Node 런타임은 `(req, res)` 핸들러를 실제 `http.createServer` 뒤에 두고 undici 로 요청을 넘긴다
+  (vercel/vercel `packages/node/src/serverless-functions/serverless-handler.mts` · Next 런처 `packages/next/src/server-launcher.ts` 도 `(req, res)` 핸들러를 내보낸다).
+  SDK 의 본문 캡처 훅은 Node `diagnostics_channel`(`http.server.request.start`) 이라 거기서도 걸린다. 다만 Vercel 런타임 자체는 로컬에서
+  못 돌리므로 **배포 뒤 Sentry 에서 서버 이벤트 하나를 열어 Request 섹션에 Body·Cookies 가 없는 것을 보는 것이 「됐다」의 정의**다.
+- **회귀 게이트** `__tests__/sentry.server.config.test.ts`: 설정 파일을 실제로 읽어 `init` 에 넘긴 RequestData 통합을 실제 `@sentry/core`
+  구현으로 돌려, 본문·쿠키·IP 가 빠지고 url·method·헤더는 남는지 고정. Edge 는 `sendDefaultPii` 가 꺼져 있는지.
+- 🟡 **후속 결정**: `request.headers.authorization` 은 여전히 실린다(크론 라우트의 Bearer 등). 헤더 전체를 끄면 user-agent 등
+  디버깅 정보도 사라지므로 별도 결정.
+- 게이트: `tsc --noEmit` ✅ · `eslint . --max-warnings=0` ✅ · `jest` 244스위트 5,489건 ✅(1 skipped). 실호출·배포 없음.
+- **대표가 할 일**: ① `fix/sentry-request-body` push → `claude/determined-yonath` 에 합치기 ② 배포 ③ 배포 뒤 Sentry 서버 이벤트의 Request 섹션 확인.
 
 **(55차 · 2026-09-24) Gemini 원가 집계가 «생각 토큰»을 빼고 세던 것 — 🟡 마이그레이션 적용·push 완료, 배포 명령 대기:**
 
