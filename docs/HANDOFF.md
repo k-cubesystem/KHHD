@@ -56,13 +56,19 @@
   ⚠️ 리베이스 직후 빌드가 `next/font/google queries have exactly one entry` 372건으로 죽었는데 **폰트와 무관한
   Turbopack 캐시 오염**이었다 — `rm -rf .next` 로 통과. 글꼴 코드는 한 줄도 안 바뀌었다.
 
-**진행 상태 (2026-09-24 01:4x KST)**
+**진행 상태 (2026-09-25 12:0x KST 재실측 — 이 항목은 보고할 때마다 다시 재는 것이 규칙이다)**
+
+> 🔴 **아직 라이브가 아니다.** 09-25 실측: 별칭 → `hhd-rco5dfdi5`(09-24 00:31 · 2일 전) ·
+> 마이그레이션 이후 쌓인 호출 3건의 `thought_tokens` 가 **전부 NULL** = 프로덕션은 구 코드다.
+> 지금은 «구 코드 + 새 칸»이라 아무것도 깨지지 않는다(구 코드는 새 칸을 쓰지 않는다) — 미뤄도 손해가 없다.
 
 1. ✅ **마이그레이션 적용**(MCP `gemini_logs_thought_tokens`) — 실측 확인: `thought_tokens` 칸 존재 ·
    기존 175행 전부 NULL(옛 구간 경계) · `get_ai_spend_usd_since` 동작(30일 $0.956 · 오늘 $0.126) ·
    실행 권한 `postgres`·`service_role` 뿐(anon·authenticated 없음).
 2. ✅ **push 완료** — `claude/determined-yonath` = `2048c36c`(`a69d2a0f` 위 fast-forward).
-3. 🔴 **배포만 남았다** — 에이전트의 `vercel deploy --prod` 가 **또 분류기에 거부**(51·54차와 같은 사유).
+3. 🔴 **배포만 남았다** — 에이전트의 `vercel deploy --prod` 가 **두 번(09-24·09-25) 다 분류기에 거부**
+   (51·54차와 같은 사유. 두 번째 거부는 «같은 결과를 다른 경로로 좇지 말라»는 명시가 붙어 나왔다 —
+   이 한 단계는 구조적으로 대표 손이다).
    워크트리는 배포 준비가 끝난 상태(`.vercel/project.json` = `hhd` 확인 · `.next` 제거 · 트리 깨끗).
    **대표가 실행할 명령**:
 
@@ -75,8 +81,11 @@
    되돌리기: `vercel alias set hhd-rco5dfdi5-cubesystems-projects.vercel.app k-haehwadang.com`
    (마이그레이션은 덧붙이기만 해서 되돌릴 필요가 없다 — 구 코드는 새 칸을 쓰지 않는다).
 
-4. 배포 뒤 확인할 것: `/admin/analytics` 토큰 카드에 «생각» 이 보이고, 새 호출 한 건 뒤
-   `select thought_tokens from gemini_api_logs order by created_at desc limit 1` 이 NULL 이 아닌지.
+4. 배포 뒤 확인할 것 — **이 세 가지가 「됐다」의 정의다**:
+   ① 별칭이 새 배포를 가리키고 사이트맵 `<loc>` 이 여전히 **60개**(8이면 main 이 올라간 것 → 즉시 되돌릴 것)
+   ② `/admin/analytics` 토큰 카드에 «생각 N» 이 보인다
+   ③ 새 AI 호출 한 건 뒤 `select thought_tokens from gemini_api_logs order by created_at desc limit 1` 이 **NULL 이 아니다**
+   (이게 NULL 이면 칸은 있는데 새 코드가 안 올라간 것이다)
 
 **(54차 · 2026-09-23~24) 신당 ⑦ 화풍 전면 확산(15테마·신물 53종) + 신위 탭 = 회전만 — ✅ 프로덕션 라이브(`715c477b` → 배포 `hhd-rco5dfdi5`, 09-24 00:31 KST):**
 
