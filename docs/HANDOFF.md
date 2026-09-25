@@ -8,7 +8,24 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-25(58차) · 라이브 브랜치 `claude/determined-yonath`(57·58차 push 완료 · 라이브는 아직 `hhd-rco5dfdi5`) · **55·57·58차 = push 끝, 배포 명령만 대표 손** — 배포하는 워크트리를 원격 tip 으로 올린 뒤 55차 「진행 상태」의 명령을 실행하면 둘이 함께 나간다(56차는 DB 만이라 배포 불필요)
+마지막 갱신: 2026-09-25(59차) · 라이브 브랜치 `claude/determined-yonath`(57·58·59차 push 완료 · 라이브는 아직 `hhd-rco5dfdi5`) · **55·57·58·59차 = push 끝, 배포 명령만 대표 손** — 배포하는 워크트리를 원격 tip 으로 올린 뒤 55차 「진행 상태」의 명령을 실행하면 전부 함께 나간다(56차는 DB 만이라 배포 불필요)
+
+**(59차 · 2026-09-25) 루트 `app/loading.tsx` 제거 — 소프트 404 + «본문 없는 첫 HTML»(애드센스 반려 근인) — ✅ push 완료 · 🟡 다음 배포에 포함:**
+
+- 09-23 에 게이트까지 통과한 `fix/soft-404-status` 의 `eaf191af` 가 라이브 브랜치에 안 들어간 채 52~58차가 쌓였다 →
+  머지 커밋(`162c5639`)은 버리고 **그 커밋 한 개만** 최신 위에 다시 올렸다(충돌 0). 원격 `fix/soft-404-status` 는 지우지 않았다.
+- 근인·수정은 커밋 메시지와 `components/route-loading.tsx` 머리 주석이 정본: 루트 레이아웃이 동적(next-intl 쿠키)이라 루트 Suspense
+  경계가 폴백 셸을 200 으로 먼저 내보냈다 → ①`notFound()` 가 200(소프트 404) ②크롤러 첫 HTML 에 본문 0(가이드 32편 `<h2>` 0개 —
+  09-02 애드센스 «가치가 별로 없는 콘텐츠» 반려 자리). 루트 경계 삭제 · 경계는 `app/protected`(유지)·`/admin`·`/shrine` 에만 ·
+  `/share/*` noindex. 🔴 **루트에 `loading.tsx` 를 다시 만들지 말 것.**
+- 게이트: tsc 0 · lint 0 · jest 243스위트 5,488 통과 · build ✓. 57차 위로 리베이스한 뒤 tsc·lint·jest(247스위트 5,653) 재확인.
+  🟡 전체 jest 에서 신당 `theme-stage.test.ts` 의 «⑦ 스프라이트 치수» 1건이 두 번 다 5초 시간초과(동시 부하) — 단독 재실행 221/221 통과. 이 변경과 무관.
+- 실측(로컬 prod, Supabase 공개 env 자리표시): `/guide/sipseong` 첫 HTML 113KB · `<h2>` **7** · JSON-LD 1 · 「십성」 63회 · 스피너 0 ·
+  없는 가이드·`/saju3` 없는 유형·`/webtoon/9999` **404** · 사이트맵의 가이드 32편·`/saju3` 10유형 전부 200 · `/share/…`·`/share/saju/…` noindex ·
+  `/protected`·`/protected/analysis`·`/protected/shrine`·`/admin` 307 → `/auth/login`.
+- 알고 남긴 것: `/shrine/<없는 id>` 는 새 `/shrine` 경계 때문에 여전히 200(본문은 404 화면 + `noindex`). 공개 신당은 사이트맵 밖이다.
+- 배포 뒤: 라이브 `/guide/sipseong` 을 curl 로 받아 `<h2>` 개수 확인 → 404 세 곳 상태 확인. **애드센스 재검토 요청은 대표가
+  서치 콘솔 색인을 확인한 뒤**.
 
 **(58차 · 2026-09-25) 처방전·그룹 지도 AI 풀이 프롬프트 v2 — 쉬운 해요체·물건은 «떠올리는 신호» — ✅ push 완료 · 🟡 다음 배포에 포함(에이전트 `vercel deploy` 는 분류기에 막힘):**
 
@@ -258,8 +275,8 @@
 - 코드: `StageSpec/WorldZone.floorShadeUrl`(있을 때만 키) · `theme-stage.floorShadeMask`(오프셋 적용된 틀 → 타원, 반지름 cqh) ·
   StageLayers 그늘 층(`container-type: size` 전용 래퍼 — 방 전체에 걸면 fixed 시트·모달이 방에 갇힌다).
 - DB: `supabase/migrations/20260923_banga_painted_p7.sql` — 반가 대청 구역 URL 네 자리만(좌표·앵커·광원 불변) · 🔴 **코드 배포 뒤 적용**.
-- 🔴 **애드센스 소프트404 수정(`fix/soft-404-status` `162c5639`)은 회전(`b9df4a00`)까지만 합쳐져 있다 — 배포 전에 이 라이브 끝(⑦ 포함)을 다시 합칠 것.**
-  그대로 배포하면 ⑦ 코드가 되돌아간다(DB 가 ⑦ URL 을 가리켜 그림은 남지만 틀 밑 그늘 판이 빠진다).
+- ~~애드센스 소프트404 수정(`fix/soft-404-status` `162c5639`)은 회전(`b9df4a00`)까지만 합쳐져 있다~~ → **59차에서 해소**(`eaf191af` 한 개만
+  라이브 끝 위로 다시 올림). 옛 머지 커밋 `162c5639` 을 배포하면 ⑦ 코드가 되돌아가니 쓰지 말 것.
 - 검증: 프리뷰 장면 `shrine-banga-p7`(현행↔⑦·틀 ±8·세계 양끝) 폰 390·DPR3 / 데스크톱 캡처 · jest 5,446 · tsc 0 · lint 0 · build ✓ · CSS 게이트 115종.
 - 배포: 깨끗한 detached 워크트리(`d3e7d2a5`)에서 CLI 배포 → 별칭 `hhd-4vqaa30ed` 확인 → **그 뒤** MCP 로 마이그레이션 적용.
   실측: `/`·`/auth/login`·`/terms` 200 · `/protected/shrine` 307 · ⑦ 자산 7종 200(`image/webp`) · DB 반가 zones[0] = ⑦ URL 넷, 틀 x50·y46.22·앵커 5 불변.
