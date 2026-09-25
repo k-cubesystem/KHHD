@@ -144,14 +144,22 @@ export async function dispatchDailyFortuneAlimtalk(templateOverride?: string): P
             '#{날짜}': dateStr,
             '#{앱링크}': `${SITE_URL}/protected/fortune`,
           })
-
-          await logNotification(supabase, userId, templateCode, send.success ? 'SENT' : 'FAILED', send.error ?? null)
-
           if (!send.success) throw new Error(send.error || '알림톡 발송 실패')
+
           result.sent++
+          await logNotification(supabase, userId, templateCode, 'SENT', null)
         } catch (err) {
           logger.error(`[DailyFortune] 발송 실패 user=${userId}:`, err)
           result.errors++
+          // 실패도 한 줄 남긴다 — 어드민 화면에서 «누가 왜 못 받았는지»가 보여야 한다.
+          // 운세 생성 단계에서 넘어진 것도 여기로 모인다(한 사람당 정확히 한 줄).
+          await logNotification(
+            supabase,
+            userId,
+            templateCode,
+            'FAILED',
+            err instanceof Error ? err.message : String(err)
+          )
         }
       })
     )
@@ -171,11 +179,15 @@ async function logNotification(
   status: 'SENT' | 'FAILED',
   errorMessage: string | null
 ): Promise<void> {
-  const { error } = await supabase.from('notification_logs').insert({
-    user_id: userId,
-    template_id: templateId,
-    status,
-    error_message: errorMessage,
-  })
-  if (error) logger.error('[DailyFortune] notification_logs 기록 실패:', error)
+  try {
+    const { error } = await supabase.from('notification_logs').insert({
+      user_id: userId,
+      template_id: templateId,
+      status,
+      error_message: errorMessage,
+    })
+    if (error) logger.error('[DailyFortune] notification_logs 기록 실패:', error)
+  } catch (e) {
+    logger.error('[DailyFortune] notification_logs 기록 예외:', e)
+  }
 }

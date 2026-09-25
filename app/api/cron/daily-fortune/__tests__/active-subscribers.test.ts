@@ -133,11 +133,12 @@ describe('오늘의 운세 크론 — 발송 경로', () => {
     }
   })
 
-  it('notification_logs 는 실제 칸만 쓴다 — `type` 칸은 없다', () => {
+  it('notification_logs 는 실제 칸만 쓴다 — `type` 칸은 없다 · 한 사람당 한 줄', () => {
     const logs = inserted.filter((i) => i.table === 'notification_logs')
     expect(logs).toHaveLength(2)
     for (const { row } of logs) {
       expect(row).not.toHaveProperty('type')
+      expect(Object.keys(row).sort()).toEqual(['error_message', 'status', 'template_id', 'user_id'])
       expect(row).toMatchObject({ status: 'SENT', template_id: 'KA01TP221025072818052xMkTLBLCcmm' })
     }
   })
