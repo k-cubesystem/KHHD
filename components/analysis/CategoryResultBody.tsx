@@ -2,7 +2,7 @@
 
 import type { AnalysisHistory } from '@/app/actions/user/history'
 import { BookOpen, Sun, Home, User, TrendingUp, Sparkles, Heart } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
+import { Markdown } from '@/components/shared/markdown'
 
 const Section = ({
   icon: Icon,
@@ -209,7 +209,7 @@ export function CategoryResultBody({ record, full = false }: { record: AnalysisH
       {typeof json.content === 'string' && json.content && (
         <Section icon={BookOpen} title="분석 내용">
           <div className={`${markdownClass} ${clamp('line-clamp-[16]')}`}>
-            <ReactMarkdown>{json.content}</ReactMarkdown>
+            <Markdown>{json.content}</Markdown>
           </div>
         </Section>
       )}

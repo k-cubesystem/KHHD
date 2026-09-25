@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import ReactMarkdown from 'react-markdown'
+import { Markdown } from '@/components/shared/markdown'
 import {
   getBusinessPartnerCandidates,
   calculateBusinessCompatibilityAction,
@@ -244,7 +244,7 @@ export function BusinessCompatibilityClient() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="[&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-gold-500 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:mt-4 [&_h3]:mb-2 [&_p]:text-white/70 [&_p]:text-sm [&_p]:leading-relaxed [&_li]:text-white/70 [&_li]:text-sm [&_strong]:text-gold-500/90 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_ul]:space-y-1 [&_ol]:space-y-1">
-                    <ReactMarkdown>{result.aiAnalysis}</ReactMarkdown>
+                    <Markdown>{result.aiAnalysis}</Markdown>
                   </CardContent>
                 </Card>
               </motion.div>
