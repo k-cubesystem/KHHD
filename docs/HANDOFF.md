@@ -300,7 +300,7 @@
 - 회귀선: `app/__tests__/typography-prose.test.ts`(prose 는 legal-doc 과 같은 줄에서만) · `components/studio/__tests__/analysis-prose.test.ts` · `clean-analysis-text.test.ts`.
 - 실측: 빌드 CSS grep · 수정 전/후 캡처 · 라이브 로그인 3개 화면에서 computed style(문단 12px·`·`·`disc`/`decimal`) · 페이지 오류 0 · 주요 경로 정상.
 - 남은 것: 종합사주 v2 원문은 전부 `[[TAG: …]]` 안이라 «전문 보기»가 아예 안 뜬다(설계 판단 필요) · 사업 궁합의 `##` 은 `###` 보다 크게 보인다(기존 모양) ·
-  한글이 바로 붙은 `**…(木)**가` 굵게가 별표째 보인다(react-markdown, 별도 작업 칩) · `---` 가 글자로 보인다.
+  ~~한글이 바로 붙은 `**…(木)**가` 굵게가 별표째 보인다~~ → `fix/markdown-cjk-bold` 수복(공용 `components/shared/markdown.tsx`) · `---` 가 글자로 보인다.
 
 **(49차 · 2026-09-22) 법률 문서 항 번호·글머리 복구 — ✅ 프로덕션 라이브(`b19dd38e` · 배포 `hhd-kx84x5i9b`, 23:0x KST):**
 
