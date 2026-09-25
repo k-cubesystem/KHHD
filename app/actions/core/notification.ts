@@ -1,15 +1,17 @@
 'use server'
 
 /**
- * 카카오 알림톡(Alimtalk) 서버 액션
- * Solapi를 통해 알림톡 발송 및 알림 설정 관리
+ * 알림 설정 서버 액션 (사용자 화면용)
  * Edge Function 전환 지원: EDGE_NOTIFICATION=true 시 Edge Function 호출
+ *
+ * 🔴 «발송» 자체는 여기 없다. `'use server'` 의 export 는 전부 공개 엔드포인트라,
+ *    번호·템플릿을 인자로 받는 발송 함수를 여기 두면 아무나 대량 발송을 시킬 수 있다.
+ *    발송 정본: lib/services/solapi(한 통) · lib/services/daily-fortune-dispatch(오늘의 운세 일괄).
  */
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { logger } from '@/lib/utils/logger'
-import { getSolapiClient, ALIMTALK_TEMPLATES, SOLAPI_PFID, SOLAPI_SENDER } from '@/lib/services/solapi'
+import { sendAlimtalkMessage, ALIMTALK_TEMPLATES, type AlimtalkSendResult } from '@/lib/services/solapi'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { getSiteUrl } from '@/lib/utils/site-url'
@@ -18,120 +20,12 @@ const SITE_URL = getSiteUrl()
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────
 
-export interface AlimtalkVariable {
-  [key: string]: string
-}
-
-export interface SendAlimtalkResult {
-  success: boolean
-  messageId?: string
-  error?: string
-}
-
 export interface NotificationPreferences {
   phone_number: string | null
   alimtalk_enabled: boolean
   daily_fortune_enabled: boolean
   attendance_reward_enabled: boolean
   payment_enabled: boolean
-}
-
-// ─── 알림톡 발송 ──────────────────────────────────────────────────────────────
-
-/**
- * 단일 알림톡 발송
- * @param phoneNumber 수신자 전화번호 (010-XXXX-XXXX 또는 01000000000)
- * @param templateCode Solapi 알림톡 템플릿 코드
- * @param variables 템플릿 변수 (#{변수명} 치환)
- */
-export async function sendAlimtalk(
-  phoneNumber: string,
-  templateCode: string,
-  variables: AlimtalkVariable = {}
-): Promise<SendAlimtalkResult> {
-  const client = getSolapiClient()
-  if (!client) {
-    return { success: false, error: 'Solapi 클라이언트가 초기화되지 않았습니다.' }
-  }
-
-  if (!SOLAPI_PFID) {
-    return { success: false, error: 'SOLAPI_PFID 환경변수가 설정되지 않았습니다.' }
-  }
-
-  // 전화번호 정규화 (하이픈 제거)
-  const normalizedPhone = phoneNumber.replace(/-/g, '')
-
-  try {
-    const response = await client.sendOne({
-      to: normalizedPhone,
-      from: SOLAPI_SENDER,
-      kakaoOptions: {
-        pfId: SOLAPI_PFID,
-        templateId: templateCode,
-        variables,
-      },
-    })
-
-    return {
-      success: true,
-      messageId: response.messageId,
-    }
-  } catch (err: unknown) {
-    logger.error('[Alimtalk] 발송 실패:', err)
-    const msg = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.'
-    return {
-      success: false,
-      error: msg,
-    }
-  }
-}
-
-// ─── 오늘의 운세 알림톡 ────────────────────────────────────────────────────────
-
-/**
- * 오늘의 운세 요약 알림톡 발송
- * 사용자의 알림 설정 및 전화번호를 확인한 후 발송
- */
-export async function sendDailyFortuneNotification(userId: string): Promise<SendAlimtalkResult> {
-  const adminClient = createAdminClient()
-
-  // 1. 알림 설정 확인
-  const { data: prefs, error: prefsError } = await adminClient
-    .from('notification_preferences')
-    .select('phone_number, alimtalk_enabled, daily_fortune_enabled')
-    .eq('user_id', userId)
-    .maybeSingle()
-
-  if (prefsError) {
-    return { success: false, error: '알림 설정을 불러오지 못했습니다.' }
-  }
-
-  if (!prefs?.alimtalk_enabled || !prefs?.daily_fortune_enabled) {
-    return { success: false, error: '사용자가 알림을 비활성화했습니다.' }
-  }
-
-  if (!prefs?.phone_number) {
-    return { success: false, error: '전화번호가 등록되지 않았습니다.' }
-  }
-
-  // 2. 사용자 이름 조회
-  const { data: profile } = await adminClient.from('profiles').select('full_name').eq('id', userId).maybeSingle()
-
-  // 3. 오늘 날짜 (한국어)
-  const today = new Date()
-  const dateStr = today.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-  })
-
-  // 4. 알림톡 발송
-  return sendAlimtalk(prefs.phone_number, ALIMTALK_TEMPLATES.DAILY_FORTUNE, {
-    '#{이름}': profile?.full_name || '회원',
-    '#{날짜}': dateStr,
-    '#{앱링크}': `${SITE_URL}/protected/fortune`,
-  })
 }
 
 // ─── 알림 설정 CRUD ───────────────────────────────────────────────────────────
@@ -218,9 +112,9 @@ export async function saveNotificationPreferences(
 
 /**
  * 알림톡 수신 테스트 발송
- * 설정 페이지에서 "테스트 발송" 버튼 클릭 시 사용
+ * 설정 페이지에서 "테스트 발송" 버튼 클릭 시 사용 — **본인 번호로만** 나간다.
  */
-export async function sendTestAlimtalk(): Promise<SendAlimtalkResult> {
+export async function sendTestAlimtalk(): Promise<AlimtalkSendResult> {
   if (isEdgeEnabled('notification')) {
     return invokeEdgeSafe('notification', { action: 'sendTest' })
   }
@@ -252,7 +146,7 @@ export async function sendTestAlimtalk(): Promise<SendAlimtalkResult> {
     weekday: 'short',
   })
 
-  return sendAlimtalk(prefs.phone_number, ALIMTALK_TEMPLATES.DAILY_FORTUNE, {
+  return sendAlimtalkMessage(prefs.phone_number, ALIMTALK_TEMPLATES.DAILY_FORTUNE, {
     '#{이름}': profile?.full_name || '회원',
     '#{날짜}': today,
     '#{앱링크}': `${SITE_URL}/protected/fortune`,

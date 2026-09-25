@@ -55,7 +55,9 @@ describe('기록 저장 — 푼 것은 남는다', () => {
 
   it('무료 풀이도 기록을 남긴다 (오늘의 운세·흐름·신년)', () => {
     // 무료라고 안 남기면 「어제 본 그 풀이」를 다시 못 찾는다 — 재방문의 이유가 사라진다.
-    for (const path of ['app/actions/fortune/daily.ts', 'app/actions/ai/trend.ts', 'app/actions/ai/year2026.ts']) {
+    // 오늘의 운세 본체는 lib/services/daily-fortune 로 옮겼다(2026-09-25) — 공개 서버 액션에서
+    // reader 를 받으면 남의 명식을 읽는 문이 열려서다. 액션은 그 본체를 세션 권한으로만 부른다.
+    for (const path of ['lib/services/daily-fortune.ts', 'app/actions/ai/trend.ts', 'app/actions/ai/year2026.ts']) {
       const saves = /saveAnalysisHistory(Observed)?\(/.test(read(path))
 
       expect({ path, saves }).toEqual({ path, saves: true })
@@ -63,7 +65,7 @@ describe('기록 저장 — 푼 것은 남는다', () => {
   })
 
   it('🔴 코드가 쓰는 category 는 전부 DB CHECK 제약 안에 있다', () => {
-    const sources = [...PAID_ANALYSIS_ACTIONS, 'app/actions/fortune/daily.ts', 'app/actions/ai/year2026.ts']
+    const sources = [...PAID_ANALYSIS_ACTIONS, 'lib/services/daily-fortune.ts', 'app/actions/ai/year2026.ts']
     const used = new Set<string>()
 
     for (const path of sources) {

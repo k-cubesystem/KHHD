@@ -1,25 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { generateDailyFortune } from '@/app/actions/fortune/daily'
-import { sendKakaoNotification } from '@/app/actions/fortune/notification'
+import { dispatchDailyFortuneAlimtalk } from '@/lib/services/daily-fortune-dispatch'
 import { logger } from '@/lib/utils/logger'
-import { getSiteUrl } from '@/lib/utils/site-url'
-import {
-  MEMBERSHIP_LIVE_STATUSES,
-  MEMBERSHIP_PERIOD_COLUMNS,
-  isLiveMembershipRow,
-  type MembershipPeriodRow,
-} from '@/lib/auth/subscription'
-
-const SITE_URL = getSiteUrl()
-
-interface SubscriberRow extends MembershipPeriodRow {
-  user_id: string
-}
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // Allow 1 minute execution
 
+/**
+ * 오늘의 운세 알림톡 크론.
+ * 대상 선정·생성·발송·기록은 전부 lib/services/daily-fortune-dispatch 가 한다(어드민 수동 실행과 같은 경로).
+ * 여기서는 «부를 자격»과 «전역 스위치»만 본다.
+ */
 export async function GET(req: NextRequest) {
   // 1. Authorization
   const authHeader = req.headers.get('authorization')
@@ -34,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   const supabase = createAdminClient()
 
-  // 2. Check Global Toggle
+  // 2. 전역 스위치 — 켜는 건 승인 템플릿·PFID 가 들어온 뒤 대표가 결정한다.
   const { data: setting } = await supabase
     .from('system_settings')
     .select('value')
@@ -45,75 +36,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: 'Daily fortune automation is disabled' })
   }
 
-  // 3. Get Template ID
+  // 3. 템플릿 코드 — 승인 코드를 배포 없이 갈아끼우는 자리(비어 있으면 상수 기본값).
   const { data: tmplSetting } = await supabase
     .from('system_settings')
     .select('value')
     .eq('key', 'kakao_template_id')
     .single()
-  const templateId = tmplSetting?.value || 'DAILY_FORTUNE_V1'
 
-  // 4. 활성 구독자 — 멤버십 게이트와 같은 판정(ACTIVE·해지 예약 + 기간 미만료), 한 사람에 한 번
-  const { data, error: subError } = await supabase
-    .from('subscriptions')
-    .select(`user_id, ${MEMBERSHIP_PERIOD_COLUMNS}`)
-    .in('status', [...MEMBERSHIP_LIVE_STATUSES])
+  const stats = await dispatchDailyFortuneAlimtalk(tmplSetting?.value)
 
-  if (subError) {
-    return NextResponse.json({ error: subError.message }, { status: 500 })
-  }
-
-  const subscriberRows = (data ?? []) as SubscriberRow[]
-  const userIds = [...new Set(subscriberRows.filter((row) => isLiveMembershipRow(row)).map((row) => row.user_id))]
-
-  if (userIds.length === 0) {
-    return NextResponse.json({ message: 'No active subscribers found' })
-  }
-
-  // 5. Process Batch
-  const results = {
-    total: userIds.length,
-    generated: 0,
-    sent: 0,
-    errors: 0,
-  }
-
-  // 동시성 제한: 최대 5개 병렬 처리 (Gemini API 과부하 방지)
-  const CONCURRENCY_LIMIT = 5
-  const chunks: string[][] = []
-  for (let i = 0; i < userIds.length; i += CONCURRENCY_LIMIT) {
-    chunks.push(userIds.slice(i, i + CONCURRENCY_LIMIT))
-  }
-
-  for (const chunk of chunks) {
-    const promises = chunk.map(async (userId) => {
-      try {
-        const genResult = await generateDailyFortune(userId, userId, 'USER')
-        if (!genResult.success) throw new Error('error' in genResult ? genResult.error : 'Fortune generation failed')
-
-        if (genResult.content) {
-          const sendResult = await sendKakaoNotification(userId, templateId, {
-            content: genResult.content.substring(0, 100) + '...',
-            link: `${SITE_URL}/protected/analysis?tab=daily`,
-          })
-
-          if (sendResult.success) results.sent++
-          else throw new Error(sendResult.error)
-        }
-
-        results.generated++
-      } catch (err) {
-        logger.error(`Error processing user ${userId}:`, err)
-        results.errors++
-      }
-    })
-
-    await Promise.allSettled(promises)
+  if (!stats.ok) {
+    logger.error('[Cron] 오늘의 운세 발송이 시작도 못 했다:', stats.blocked)
+    return NextResponse.json({ success: false, message: stats.blocked, stats }, { status: 503 })
   }
 
   return NextResponse.json({
     success: true,
     message: 'Batch processing completed',
-    stats: results,
+    stats,
   })
 }
