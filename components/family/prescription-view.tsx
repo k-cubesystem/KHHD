@@ -400,7 +400,7 @@ export function PrescriptionView({
               kind="prescription"
               targetKey={targetId}
               initial={narrative}
-              title="AI 풀이 — 이 처방전을 신당의 말로"
+              title="AI 풀이 — 이 처방전을 쉬운 말로"
             />
           </>
         ) : (

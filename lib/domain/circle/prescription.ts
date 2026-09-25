@@ -15,7 +15,13 @@
 import type { Element } from '@/lib/domain/shrine/types'
 import { EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
 import { COMPLEMENT_MIN_GAP, highestElement, lowestElement } from '@/lib/domain/shrine/energy-map'
-import { avoidRemedies, elementRemedies, REMEDY_TABLE, type RemedyItem } from '@/lib/domain/remedy/remedy'
+import {
+  avoidRemedies,
+  elementRemedies,
+  REMEDY_TABLE,
+  type RemedyItem,
+  type RemedyKind,
+} from '@/lib/domain/remedy/remedy'
 import { ELEMENT_LORE, HANJA_OF, MOTHER_OF } from './element-lore'
 
 /** 신당 살림 후보 — 카탈로그에서 오행·세기만(신물은 무료라 값이 없다). */
@@ -67,6 +73,7 @@ export interface Filler {
 }
 
 export interface LifeItem {
+  kind: RemedyKind
   label: string
   value: string
   action: string
@@ -84,11 +91,15 @@ export interface Prescription {
   lore: { lacking: string; gains: string }
   /** 명식의 용신이 lacking 과 다를 때만 — 둘을 나란히 말하는 한 줄. */
   mansikNote: string | null
+  /** mansikNote 의 기운 — AI 풀이가 한자·용어 없이 다시 말할 때 쓴다. */
+  mansikLacking: Element | null
   /** 명식의 희신이 «낳아 주는 기운»과 다를 때만. */
   sideNote: string | null
   fillers: readonly Filler[]
   /** 같은 기운이 몰리는 사람이 있을 때 — 그 기운을 더 보태지 말라는 한 줄. */
   caution: string | null
+  /** caution 의 상대 이름. */
+  cautionWith: string | null
   items: {
     shrine: readonly PrescriptionCatalogItem[]
     real: { desk: string; home: string; gifts: readonly string[] }
@@ -108,7 +119,7 @@ function label(el: Element): string {
 }
 
 function toLifeItem(item: RemedyItem): LifeItem {
-  return { label: item.label, value: item.value, action: item.action }
+  return { kind: item.kind, label: item.label, value: item.value, action: item.action }
 }
 
 /**
@@ -185,10 +196,10 @@ export function buildPrescription(input: PrescriptionInput): Prescription {
     ? `${crowd.name}님과는 ${label(avoidElement)} 기운이 함께 몰립니다. 그 기운을 더 보태는 물건은 나란히 두지 않습니다.`
     : null
 
-  const mansikNote =
-    mansik?.yongsin && mansik.yongsin !== lacking
-      ? `명식이 채우라 하는 기운은 ${label(mansik.yongsin)}이고, 타고난 오행 비율로는 ${label(lacking)} 자리가 가장 옅습니다. 둘 다 곁에 두어도 됩니다.`
-      : null
+  const mansikLacking = mansik?.yongsin && mansik.yongsin !== lacking ? mansik.yongsin : null
+  const mansikNote = mansikLacking
+    ? `명식이 채우라 하는 기운은 ${label(mansikLacking)}이고, 타고난 오행 비율로는 ${label(lacking)} 자리가 가장 옅습니다. 둘 다 곁에 두어도 됩니다.`
+    : null
 
   const sideNote =
     mansik?.huisin && mansik.huisin !== mother && mansik.huisin !== lacking
@@ -209,9 +220,11 @@ export function buildPrescription(input: PrescriptionInput): Prescription {
     energyLive: input.energyLive,
     lore: { lacking: lore.lacking, gains: lore.gains },
     mansikNote,
+    mansikLacking,
     sideNote,
     fillers,
     caution,
+    cautionWith: crowd?.name ?? null,
     items: {
       shrine: pickShrineItems(input.catalog, lacking),
       real: { desk: lore.deskItem, home: REMEDY_TABLE.SPACE[hanjaLacking], gifts: lore.gifts },

@@ -85,6 +85,7 @@ describe('buildPrescription — 다섯 블록', () => {
     expect(p.items.real.gifts).toHaveLength(3)
     expect(p.items.life).toHaveLength(LIFE_KINDS.length)
     expect(p.items.life[0].value).toBe('남쪽을 보고 앉기')
+    expect(p.items.life.map((l) => l.kind)).toEqual([...LIFE_KINDS])
   })
 
   it('덜어낼 것 — 명식 기신이 없으면 지금 가장 넘치는 기운을, 있으면 기신을 덜어낸다', () => {
@@ -100,18 +101,22 @@ describe('buildPrescription — 다섯 블록', () => {
   it('같은 기운이 몰리는 사람이 있으면 주의 한 줄, 없으면 null', () => {
     const p = buildPrescription(input({ mansik: { yongsin: 'fire', huisin: 'wood', gisin: 'water' } }))
     expect(p.caution).toContain('아버지님과는 수(水) 기운이 함께 몰립니다')
+    expect(p.cautionWith).toBe('아버지')
     const alone = buildPrescription(input({ mates: [] }))
     expect(alone.caution).toBeNull()
+    expect(alone.cautionWith).toBeNull()
   })
 
   it('명식의 용신이 지도의 모자란 기운과 다를 때만 한 줄을 더 말한다', () => {
     const same = buildPrescription(input({ mansik: { yongsin: 'fire', huisin: 'wood', gisin: 'water' } }))
     expect(same.mansikNote).toBeNull()
+    expect(same.mansikLacking).toBeNull()
     expect(same.sideNote).toBeNull()
 
     const differ = buildPrescription(input({ mansik: { yongsin: 'earth', huisin: 'metal', gisin: 'water' } }))
     expect(differ.mansikNote).toContain('토(土)')
     expect(differ.mansikNote).toContain('화(火)')
+    expect(differ.mansikLacking).toBe('earth')
     expect(differ.sideNote).toContain('금(金)')
   })
 

@@ -77,7 +77,7 @@ const VITALITY_WORD: Record<Vitality, string> = {
   weak: '쉽게 지치는 편 — 먼저 쉬어서 채워야 힘이 나는 사람',
 }
 
-const KIND_CONTEXT: Partial<Record<CircleKind, string>> = {
+export const KIND_CONTEXT: Partial<Record<CircleKind, string>> = {
   family: '가족이에요.',
   work: '직장 동료예요. 이미 함께 일하는 사람끼리 더 잘 지내기 위한 풀이예요.',
   friends: '친구·모임 사람들이에요.',
@@ -121,7 +121,10 @@ export function togetherJargonHits(text: string, ignore: readonly string[] = [])
   return out
 }
 
-const BANNED_ALL: readonly string[] = [...LORE_BANNED_WORDS.efficacy, ...LORE_BANNED_WORDS.hiring]
+export const BANNED_ALL: readonly string[] = [...LORE_BANNED_WORDS.efficacy, ...LORE_BANNED_WORDS.hiring]
+
+/** 자연스러운 말 속에 금지어 조각이 새는 자리 — 바꿔 쓸 말을 쥐여 준다(«코드를 뽑아»의 «뽑»이 거르기에 걸렸다, v2c). */
+export const PLAIN_SWAPS = `'매일'→'아침마다'·'틈날 때마다', '낫다'→'좋다', '반드시'·'무조건'→'꼭', '확실히'→'분명히', '성공'→'잘 풀림', '최고'→'제일 좋은', '뽑다'→'빼다'(코드를 빼요), '잘라 말하다'→'딱 부러지게 말하다', '평가'→'살펴보기'`
 
 export const TOGETHER_SYSTEM_PROMPT = `<역할>
 사주 속 다섯 기운(나무·불·흙·쇠·물)을 쉬운 말로 풀어 주는 이야기꾼이에요. 명리를 잘 알지만, 설명은 동네에서 제일 말이 잘 통하는 선배가 커피 한잔하며 들려주는 말투로 해요.
@@ -180,7 +183,7 @@ export const TOGETHER_SYSTEM_PROMPT = `<역할>
 - 명리 용어: 결, 옅다, 두껍다, 두텁다, 용신, 기신, 일간, 상생, 상극, 십성, 신강, 신약, 명식, 그리고 한자(木·火·土·金·水 같은 글자)
 - 누구에게나 해당하는 말: ${TOGETHER_CLICHES.map((c) => `"${c}"`).join(', ')}
 - 아래 낱말은 한 글자도 쓰지 않아요: ${BANNED_ALL.join(', ')}
-  자주 새는 말은 이렇게 바꿔요: '매일'→'아침마다'·'틈날 때마다', '낫다'→'좋다', '반드시'·'무조건'→'꼭', '확실히'→'분명히', '성공'→'잘 풀림', '최고'→'제일 좋은', '뽑다'→'빼다'(코드를 빼요), '잘라 말하다'→'딱 부러지게 말하다', '평가'→'살펴보기'
+  자주 새는 말은 이렇게 바꿔요: ${PLAIN_SWAPS}
 - 점수, 퍼센트, 순위
 </쓰지 않는 말>
 
@@ -212,7 +215,7 @@ export const TOGETHER_SYSTEM_PROMPT = `<역할>
 수빈님은 같이 밥 먹는 시간이 힘이 돼요. 활기가 모자라서 혼자 두면 금방 가라앉거든요. 난로에 장작을 한꺼번에 밀어 넣으면 오히려 불이 죽잖아요. 그래서 긴 약속보다 따뜻한 점심 한 끼가 맞아요. 기분이 처져 보이면 좋은 소식부터 꺼내 주세요. 쌓아 둔 부탁을 한꺼번에 하는 건 피해 주세요.
 </예시>`
 
-function word(el: Element): string {
+export function elementWord(el: Element): string {
   return `${ELEMENT_WORD[el].name} 기운(${ELEMENT_WORD[el].power})`
 }
 
@@ -220,8 +223,8 @@ function personLines(e: CircleMemberEnergy, ce: CircleEnergy): (string | null)[]
   const care = ce.care.find((c) => c.targetId === e.targetId)
   return [
     `- ${e.name}님 (${e.relation})`,
-    `  넉넉한 기운: ${word(e.strongest)} — ${ELEMENT_PLAIN[e.strongest].rich}`,
-    `  모자란 기운: ${word(e.yongsin)} — ${ELEMENT_PLAIN[e.yongsin].lacking}`,
+    `  넉넉한 기운: ${elementWord(e.strongest)} — ${ELEMENT_PLAIN[e.strongest].rich}`,
+    `  모자란 기운: ${elementWord(e.yongsin)} — ${ELEMENT_PLAIN[e.yongsin].lacking}`,
     e.vitality ? `  체력 타입: ${VITALITY_WORD[e.vitality]}` : null,
     care ? `  같이 있을 때 맞는 방법: ${care.label} — ${care.together}` : null,
     care ? `  그 이유: ${care.why.replace(/\s*\((신강|신약)\)/g, '')}` : null,
@@ -231,12 +234,12 @@ function personLines(e: CircleMemberEnergy, ce: CircleEnergy): (string | null)[]
 }
 
 /** 엔진의 관계 판정 하나를 쉬운 말 한 줄로 — 판정(라벨·주는 쪽·받는 쪽·기운)은 그대로, 용어와 한자는 뺀다. */
-function pairLine(pr: PairRelation, ce: CircleEnergy): string {
+export function pairLine(pr: PairRelation, ce: CircleEnergy): string {
   const find = (id: string | null) => (id ? ce.entries.find((e) => e.targetId === id) : undefined)
   const giver = find(pr.giverId)
   const receiver = find(pr.receiverId)
   const head = `- ${pr.aName}님 ↔ ${pr.bName}님`
-  const element = pr.element ? word(pr.element) : null
+  const element = pr.element ? elementWord(pr.element) : null
 
   switch (pr.label) {
     case 'complement': {
@@ -246,7 +249,7 @@ function pairLine(pr: PairRelation, ce: CircleEnergy): string {
       const a = find(pr.aId)
       const b = find(pr.bId)
       if (a && b) {
-        return `${head}: 서로 채워 주는 사이 · ${a.name}님에게 모자란 ${word(a.yongsin)}은 ${b.name}님이 넉넉해요 · ${b.name}님에게 모자란 ${word(b.yongsin)}은 ${a.name}님이 넉넉해요`
+        return `${head}: 서로 채워 주는 사이 · ${a.name}님에게 모자란 ${elementWord(a.yongsin)}은 ${b.name}님이 넉넉해요 · ${b.name}님에게 모자란 ${elementWord(b.yongsin)}은 ${a.name}님이 넉넉해요`
       }
       return `${head}: 서로 채워 주는 사이`
     }
@@ -275,7 +278,17 @@ function pairLine(pr: PairRelation, ce: CircleEnergy): string {
   }
 }
 
-function needsLine(label: string, el: Element): string {
+/**
+ * 같이 있을 때 조심할 짝 — 엔진 문장 그대로, 괄호 한자만 뺀다.
+ * «같은 기운 과열» 문장은 화면용 라벨(«화(火)»)을 쓴다 — 모델이 한자를 따라 쓰지 않게.
+ */
+export function cautionLines(ce: CircleEnergy): string[] {
+  return ce.cautions.length > 0
+    ? ce.cautions.map((c) => `- ${c.text.replace(/\([一-鿿]\)/g, '')}`)
+    : ['- 뚜렷하게 부딪히는 짝은 없어요']
+}
+
+export function needsLine(label: string, el: Element): string {
   const n = elementNeeds(el)
   const desk = n.desk.replace(/^책상 위에\s*/, '')
   return `- ${label}: 책상에 둘 것: ${desk} · 집 안 자리: ${n.home} · 선물: ${n.gifts.join(', ')} · 어울리는 색: ${n.color} · 방향: ${n.direction} · 그 힘이 도는 시간: ${n.hourBand}`
@@ -299,13 +312,10 @@ export function togetherPrompt(ce: CircleEnergy): string {
     ...(ce.pairs.length > 0 ? ce.pairs.map((pr) => pairLine(pr, ce)) : ['- 둘씩 볼 짝이 없어요']),
     '',
     '[같이 있을 때 조심할 것 — 이 목록 밖의 갈등은 지어내지 않아요]',
-    // 조심할 짝 문장 중 «같은 기운 과열»은 화면용 라벨(«화(火)»)을 쓴다 — 모델이 한자를 따라 쓰지 않게 괄호 한자를 뺀다.
-    ...(ce.cautions.length > 0
-      ? ce.cautions.map((c) => `- ${c.text.replace(/\([一-鿿]\)/g, '')}`)
-      : ['- 뚜렷하게 부딪히는 짝은 없어요']),
+    ...cautionLines(ce),
     '',
     '[다 같이 있을 때]',
-    `- 다 같이 모자란 기운: ${word(ce.lowest)} — ${ELEMENT_PLAIN[ce.lowest].lacking}`,
+    `- 다 같이 모자란 기운: ${elementWord(ce.lowest)} — ${ELEMENT_PLAIN[ce.lowest].lacking}`,
     ce.holders.length > 0
       ? `- 이 힘이 넉넉한 사람: ${ce.holders.map((h) => `${h.name}님`).join(', ')}`
       : `- 이 힘이 넉넉한 사람은 없어요. 다 같이 쓰는 자리에 둘 물건: ${ce.fallbackItem}`,

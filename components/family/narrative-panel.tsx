@@ -96,7 +96,7 @@ export function NarrativePanel({
         </div>
       ) : (
         <p className="text-[12px] leading-relaxed text-ink-light/55" style={{ wordBreak: 'keep-all' }}>
-          위의 값은 엔진이 정한 것입니다. AI 는 그 값을 신당의 말로 풀어 씁니다 — 무엇이 왜 그런지, 오늘 무엇을 할지 세
+          위의 값은 엔진이 정한 것입니다. AI 는 그 값을 쉬운 말로 풀어 씁니다 — 무엇이 왜 그런지, 오늘 무엇을 할지 세
           문단으로.
         </p>
       )}

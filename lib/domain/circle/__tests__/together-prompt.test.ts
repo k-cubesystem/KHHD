@@ -11,6 +11,7 @@ import {
   TOGETHER_GENERATION,
   TOGETHER_JARGON_MAX,
   TOGETHER_SECTIONS,
+  PLAIN_SWAPS,
   TOGETHER_SYSTEM_PROMPT,
   togetherJargonHits,
   togetherPrompt,
@@ -90,6 +91,7 @@ describe('TOGETHER_SYSTEM_PROMPT — 해요체 이야기꾼 한 목소리', () =
   it('🔴 물건은 «떠올리는 신호»로만 — 효과를 약속하지 않게 하는 규칙과 짧은 문장 기준을 싣는다(v2b)', () => {
     expect(TOGETHER_SYSTEM_PROMPT).toContain('<물건>')
     expect(TOGETHER_SYSTEM_PROMPT).toContain("'뽑다'→'빼다'")
+    expect(TOGETHER_SYSTEM_PROMPT).toContain(`자주 새는 말은 이렇게 바꿔요: ${PLAIN_SWAPS}\n`)
     expect(TOGETHER_SYSTEM_PROMPT).toContain('물건이 기운·마음·분위기·운을 바꿔 준다고 말하지 않아요')
     expect(TOGETHER_SYSTEM_PROMPT).toContain('40자 안팎')
   })
@@ -178,9 +180,10 @@ describe('togetherRetryNote — 다시 쓰라는 말도 해요체', () => {
     expect(togetherRetryNote('UNKNOWN')).toContain('규칙에 맞지 않았어요')
   })
 
-  it('함께 보기 호출은 이 말을 쓰고, 다른 갈래는 옛 안내를 그대로 쓴다', () => {
-    expect(narrativeRequestFor('together').retryNote('SCORE')).toBe(togetherRetryNote('SCORE'))
-    expect(narrativeRequestFor('prescription').retryNote('SCORE')).toContain('«SCORE»')
+  it('세 갈래 모두 이 말을 쓴다 — 처방전·그룹도 해요체 v2(2026-09-25)', () => {
+    for (const kind of ['together', 'prescription', 'circle'] as const) {
+      expect(narrativeRequestFor(kind).retryNote('SCORE')).toBe(togetherRetryNote('SCORE'))
+    }
   })
 })
 

@@ -33,6 +33,7 @@ jest.mock('@/lib/domain/circle/narrative', () => ({
   ...jest.requireActual('@/lib/domain/circle/narrative'),
   prescriptionPrompt: jest.fn(() => '처방 프롬프트'),
   prescriptionFingerprint: jest.fn(() => 'fp-prescription'),
+  prescriptionNames: jest.fn(() => ['민수']),
   togetherPrompt: jest.fn(() => '함께 프롬프트'),
   togetherFingerprint: jest.fn(() => 'fp-together'),
 }))

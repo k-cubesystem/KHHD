@@ -15,13 +15,13 @@ import { logger } from '@/lib/utils/logger'
 import { FAMILY_CIRCLE_ID, TOGETHER_MAX, TOGETHER_MIN } from '@/lib/domain/circle/circle'
 import {
   NARRATIVE_CACHE_DAYS,
-  NARRATIVE_MAX_CHARS_TOGETHER,
-  TOGETHER_JARGON_MAX,
-  TOGETHER_SECTIONS,
   circleFingerprint,
+  circleNames,
   circlePrompt,
+  narrativeCheckOptionsFor,
   narrativeRequestFor,
   prescriptionFingerprint,
+  prescriptionNames,
   prescriptionPrompt,
   togetherFingerprint,
   togetherPrompt,
@@ -197,17 +197,18 @@ export async function getRecentTogether(limit = 5): Promise<RecentTogether[]> {
   return out
 }
 
-/** 엔진 값 → (프롬프트, 지문, 함께 보기면 사람 조합). 대상이 없으면 null. */
+/** 엔진 값 → (프롬프트, 지문, 프롬프트에 실린 이름, 함께 보기면 사람 조합). 대상이 없으면 null. */
 async function materialOf(
   kind: NarrativeKind,
   targetKey: string
-): Promise<{ prompt: string; fingerprint: string; meta?: TogetherMeta } | null> {
+): Promise<{ prompt: string; fingerprint: string; names: string[]; meta?: TogetherMeta } | null> {
   if (kind === 'prescription') {
     const payload = await getPrescription(targetKey)
     if (!payload || payload.access !== 'full') return null
     return {
       prompt: prescriptionPrompt(payload.prescription),
       fingerprint: prescriptionFingerprint(payload.prescription),
+      names: prescriptionNames(payload.prescription),
     }
   }
   if (kind === 'together') {
@@ -215,15 +216,21 @@ async function materialOf(
     if (!ids) return null
     const payload = await getTogetherEnergy(ids)
     if (!payload || payload.energy.entries.length < TOGETHER_MIN) return null
+    const names = circleNames(payload.energy)
     return {
       prompt: togetherPrompt(payload.energy),
       fingerprint: togetherFingerprint(payload.energy),
-      meta: { ids: payload.energy.entries.map((e) => e.targetId), names: payload.energy.entries.map((e) => e.name) },
+      names,
+      meta: { ids: payload.energy.entries.map((e) => e.targetId), names },
     }
   }
   const payload = await getCircleEnergy(targetKey)
   if (!payload || payload.energy.entries.length < 2) return null
-  return { prompt: circlePrompt(payload.circle.name, payload.energy), fingerprint: circleFingerprint(payload.energy) }
+  return {
+    prompt: circlePrompt(payload.circle.name, payload.energy),
+    fingerprint: circleFingerprint(payload.energy),
+    names: circleNames(payload.energy),
+  }
 }
 
 export async function generateNarrative(kind: NarrativeKind, targetKey: string): Promise<NarrativeResult> {
@@ -275,15 +282,7 @@ export async function generateNarrative(kind: NarrativeKind, targetKey: string):
 
     // 시스템 프롬프트·온도·한도는 도메인 한 곳(narrativeRequestFor)이 정한다 — A/B 하네스와 같은 값.
     const request = narrativeRequestFor(kind)
-    const checkOptions =
-      kind === 'together'
-        ? {
-            headings: TOGETHER_SECTIONS,
-            maxChars: NARRATIVE_MAX_CHARS_TOGETHER,
-            jargonMax: TOGETHER_JARGON_MAX,
-            ignore: material.meta?.names ?? [],
-          }
-        : undefined
+    const checkOptions = narrativeCheckOptionsFor(kind, material.names)
     let text: string | null = null
     let lastReason = ''
     for (let attempt = 0; attempt < 2 && !text; attempt++) {
