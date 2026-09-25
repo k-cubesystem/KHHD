@@ -1125,12 +1125,19 @@ describe('20260923c ⑦ 신물 마이그레이션', () => {
 
   it('⑦ 스프라이트는 원본과 캔버스 치수가 같다 — 배치 좌표·표시 크기 규격이 그대로다', async () => {
     const sharp = (await import('sharp')).default
-    for (const url of listed) {
-      const a = await sharp(path.join(ROOT, 'public', url)).metadata()
-      const b = await sharp(path.join(ROOT, 'public', url.replace(/\.webp$/, '-p7.webp'))).metadata()
+    const pairs = await Promise.all(
+      listed.map(async (url) => {
+        const [a, b] = await Promise.all([
+          sharp(path.join(ROOT, 'public', url)).metadata(),
+          sharp(path.join(ROOT, 'public', url.replace(/\.webp$/, '-p7.webp'))).metadata(),
+        ])
+        return { url, a, b }
+      })
+    )
+    for (const { url, a, b } of pairs) {
       expect([url, b.width, b.height]).toEqual([url, a.width, a.height])
     }
-  })
+  }, 30_000)
 
   it('기본 촛불·향로의 무대 소품만 asset_url 을 바꾼다 — 레거시·v2 크기 판정(asset≠sprite)이 유지된다', () => {
     const props = [...body.matchAll(/'(\/shrine\/stage\/banga\/prop-[a-z]+\.webp)'/g)].map((m) => m[1] ?? '')
