@@ -8,7 +8,19 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-24(55차) · 라이브 브랜치 `claude/determined-yonath`(`2048c36c` push 완료 · 라이브는 아직 `hhd-rco5dfdi5`) · **55차 = 마이그레이션 적용·push 끝, 배포 명령만 대표 손에 남았다**
+마지막 갱신: 2026-09-25(56차) · 라이브 브랜치 `claude/determined-yonath`(`2048c36c` push 완료 · 라이브는 아직 `hhd-rco5dfdi5`) · **55차 = 마이그레이션 적용·push 끝, 배포 명령만 대표 손에 남았다**
+
+**(56차 · 2026-09-25) Gemini 사용량 RPC 5종에 관리자 확인 — ✅ 라이브 DB 적용·검증 완료(코드 변경 없음 · 배포 불필요):**
+
+- 대상: `update_gemini_rpm` · `get_gemini_daily_stats` · `get_gemini_action_stats` · `get_gemini_today_summary` · `get_gemini_recent_logs`.
+  함수 첫 줄에 «로그인 세션이면 관리자만» 확인(`auth.uid()` 가 있으면 `is_admin()`), anon·PUBLIC 실행 권한 명시 회수.
+  조회 4종은 sql → plpgsql 로 바뀌며 varchar 칸에 `::text` 캐스트(없으면 42804).
+- 파일 `supabase/migrations/20260919_gemini_rpc_admin_guard.sql`(09-19 작성·드라이런 → 09-25 MCP `gemini_rpc_admin_guard` 로 적용).
+  적용 직전 라이브 함수 본문이 드라이런 때와 같은지 대조했다(55차 마이그레이션은 이 5개를 건드리지 않음).
+- 적용 뒤 라이브 검증(되돌림 블록 — 끝에 RAISE 로 전부 롤백): 일반 회원 5/5 거부(42501) · 관리자 조회 4/4 통과 ·
+  service_role(헬스 크론이 부르는 daily·action·recent_logs) 3/3 통과.
+- 앱 쪽 확인(`app/actions/admin/gemini-usage.ts` 의 `requireAdmin`)은 이미 라이브 코드에 있다.
+- 되돌리기: 필요 없을 것으로 본다. 되돌려야 하면 `ai/20260217_gemini_rate_and_usage.sql`·`admin/20260217_fix_admin_dashboard.sql` 의 정의를 다시 적용.
 
 **(55차 · 2026-09-24) Gemini 원가 집계가 «생각 토큰»을 빼고 세던 것 — 🟡 마이그레이션 적용·push 완료, 배포 명령 대기:**
 
