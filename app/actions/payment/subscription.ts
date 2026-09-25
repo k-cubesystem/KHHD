@@ -799,6 +799,17 @@ export async function getSubscriptionPayments(limit: number = 10): Promise<Subsc
 // ============================================
 // 결제 수단 변경 (빌링키 재발급)
 // ============================================
+
+/**
+ * 결제 수단 변경 «접수» — 토스 인증창에 쓸 새 customerKey 를 발급한다.
+ *
+ * 🔴 여기서 customer_key 를 바꾸지 않는다.
+ *    예전에는 인증창을 열기 «전»에 덮어썼다. 회원이 인증을 그만두면 빌링키는 옛 키에 묶인 채
+ *    customer_key 만 새 값이 되어, 다음 갱신 청구가 토스에서 키 불일치로 거절되고
+ *    재시도 3회 뒤 PAYMENT_FAILED 로 떨어졌다 — 멀쩡한 구독이 카드만 만지면 죽었다.
+ *    새 키는 대기 칸(pending_customer_key)에만 두고, 인증이 성공한 뒤
+ *    completeBillingMethodChange 가 빌링키와 «함께» 한 번에 바꾼다.
+ */
 export async function changeBillingMethod(): Promise<{
   success: boolean
   customerKey?: string
@@ -813,34 +824,199 @@ export async function changeBillingMethod(): Promise<{
     return { success: false, error: '로그인이 필요합니다.' }
   }
 
-  const { data: subscription } = await supabase
+  const rateLimited = await guardBillingRate('change-billing', user.id)
+  if (rateLimited) return { success: false, error: rateLimited }
+
+  const { data: activeSubs, error: findError } = await supabase
     .from('subscriptions')
-    .select('*')
+    .select('id, billing_key, next_billing_date')
     .eq('user_id', user.id)
     .eq('status', 'ACTIVE')
-    .single()
+    .order('created_at', { ascending: false })
 
-  if (!subscription) {
-    return { success: false, error: '활성화된 구독이 없습니다.' }
+  if (findError) {
+    logger.error('[Subscription] 결제 수단 변경 — 구독 조회 실패:', findError.message)
+    return { success: false, error: '구독 상태를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.' }
   }
 
-  // 새 customerKey로 빌링키 재발급
+  // 자동 결제가 걸려 있는 구독만 «수단»을 바꿀 수 있다 — 관리자가 결제 없이 부여한 구독은
+  // 청구할 것이 없어, 카드를 등록해도 쓰이지 않는다.
+  const subscription = (activeSubs ?? []).find((s) => !!s.billing_key || !!s.next_billing_date)
+  if (!subscription) {
+    return {
+      success: false,
+      error: (activeSubs ?? []).length > 0 ? '자동 결제 중인 멤버십이 아닙니다.' : '활성화된 구독이 없습니다.',
+    }
+  }
+
   const newCustomerKey = `HHD_${user.id.slice(0, 8)}_${Date.now()}`
 
-  // 임시로 새 customerKey 저장 — subscriptions 쓰기는 service_role 전용(S1b R1)
+  // subscriptions 쓰기는 service_role 전용(S1b R1)
   const adminDb = createAdminClient()
   if (!adminDb) {
     return { success: false, error: '서버 설정 오류입니다. 잠시 후 다시 시도해주세요.' }
   }
   const { error: updateError } = await adminDb
     .from('subscriptions')
-    .update({ customer_key: newCustomerKey })
+    .update({ pending_customer_key: newCustomerKey })
     .eq('id', subscription.id)
     .eq('user_id', user.id)
   if (updateError) {
-    logger.error('[Subscription] Change billing method error:', updateError)
+    logger.error('[Subscription] 결제 수단 변경 접수 실패:', updateError)
     return { success: false, error: '결제 수단 변경에 실패했습니다.' }
   }
 
   return { success: true, customerKey: newCustomerKey }
+}
+
+/**
+ * 결제 수단 변경 «완료» — 토스 인증이 성공해 돌아온 authKey 로 빌링키를 발급하고,
+ * 같은 구독 행의 billing_key·customer_key 를 한 번에 바꾼다.
+ *
+ * 🔴 이 경로는 청구하지 않는다. 수단만 바꾸는 자리에서 돈을 받으면 이번 주기를 두 번 받는다
+ *    — executeFirstPayment 를 부르지 않는다. 다음 청구는 갱신 크론이 한다.
+ */
+export async function completeBillingMethodChange(
+  authKey: string,
+  customerKey: string
+): Promise<{
+  success: boolean
+  error?: string
+}> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { success: false, error: '로그인이 필요합니다.' }
+  }
+
+  const rateLimited = await guardBillingRate('change-billing-complete', user.id)
+  if (rateLimited) return { success: false, error: rateLimited }
+
+  const adminDb = createAdminClient()
+  if (!adminDb) {
+    return { success: false, error: '서버 설정 오류입니다. 잠시 후 다시 시도해주세요.' }
+  }
+
+  const { data: subscription, error: findError } = await adminDb
+    .from('subscriptions')
+    .select('id, billing_key, customer_key, retry_count')
+    .eq('user_id', user.id)
+    .eq('pending_customer_key', customerKey)
+    .maybeSingle()
+
+  if (findError) {
+    logger.error('[Subscription] 결제 수단 변경 — 대기 중인 요청 조회 실패:', findError.message)
+    return { success: false, error: '결제 수단 변경을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.' }
+  }
+
+  if (!subscription) {
+    // 이미 끝난 요청이면 성공으로 답한다 — 복귀 화면을 새로고침해도 같은 결과를 봐야 한다
+    // (authKey 는 일회성이라 토스를 다시 부르면 실패한다).
+    const { data: applied } = await adminDb
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('customer_key', customerKey)
+      .not('billing_key', 'is', null)
+      .maybeSingle()
+    if (applied) return { success: true }
+    return { success: false, error: '결제 수단 변경 요청을 찾을 수 없습니다. 다시 시도해주세요.' }
+  }
+
+  // Toss API: 새 빌링키 발급
+  const response = await fetch('https://api.tosspayments.com/v1/billing/authorizations/issue', {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${basicAuth}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ authKey, customerKey }),
+  })
+
+  const result = (await response.json()) as { billingKey?: unknown; code?: unknown; message?: unknown }
+  const billingKey = typeof result.billingKey === 'string' ? result.billingKey : null
+
+  if (!response.ok || !billingKey) {
+    logger.error(new Error('[Subscription] 결제 수단 변경 — 빌링키 발급 실패'), {
+      userId: user.id,
+      subscriptionId: subscription.id,
+      code: typeof result.code === 'string' ? result.code : null,
+      message: typeof result.message === 'string' ? result.message : null,
+    })
+    // 대기 키만 비운다 — 기존 customer_key·billing_key 는 그대로다(옛 결제 수단으로 계속 청구된다).
+    await adminDb
+      .from('subscriptions')
+      .update({ pending_customer_key: null })
+      .eq('id', subscription.id)
+      .eq('pending_customer_key', customerKey)
+    return {
+      success: false,
+      error: typeof result.message === 'string' ? result.message : '빌링키 발급에 실패했습니다.',
+    }
+  }
+
+  // 두 키는 «함께» 바뀐다 — 하나만 바뀐 상태가 이 결함의 정체였다.
+  const patch: Record<string, string | null> = {
+    billing_key: billingKey,
+    customer_key: customerKey,
+    pending_customer_key: null,
+  }
+  // 갱신 재시도 중이었다면 다음 확인을 지금으로 당긴다 — 카드를 고친 회원이 하루를 더 기다리지 않게.
+  // 🔴 재시도 차수는 되돌리지 않는다. 갱신 주문번호가 차수를 쓰므로, 0 으로 되돌리면 이미 실패한
+  //    주문번호를 다시 써서 토스가 거절한다.
+  if ((subscription.retry_count ?? 0) > 0) {
+    patch.next_billing_date = new Date().toISOString()
+  }
+
+  const { data: swapped, error: swapError } = await adminDb
+    .from('subscriptions')
+    .update(patch)
+    .eq('id', subscription.id)
+    .eq('user_id', user.id)
+    // 대기 키가 아직 그대로일 때만 바꾼다 — 같은 복귀가 두 번 들어와도 한 번만 적용된다.
+    .eq('pending_customer_key', customerKey)
+    .select('id')
+    .maybeSingle()
+
+  if (swapError || !swapped) {
+    logger.error(new Error('[Subscription] 결제 수단 변경 — 키 교체 실패'), {
+      userId: user.id,
+      subscriptionId: subscription.id,
+      message: swapError?.message ?? '대기 중인 요청이 사라짐',
+    })
+    return { success: false, error: `결제 수단을 바꾸지 못했습니다. ${SUPPORT_ASK}` }
+  }
+
+  // 옛 빌링키는 새 키가 자리를 잡은 «뒤에» 지운다.
+  // 🔴 순서를 뒤집지 말 것 — 삭제 통지(BILLING_KEY.DELETED)는 customerKey 로 구독을 찾아 해지한다.
+  //    교체를 먼저 끝내면 그 통지가 찾는 옛 customerKey 를 가진 행이 남아 있지 않다.
+  //    (통지 처리기도 지워진 빌링키를 «지금 쓰는» 구독만 해지하도록 함께 막아 두었다.)
+  if (subscription.billing_key && subscription.billing_key !== billingKey) {
+    await deleteTossBillingKey(subscription.billing_key, { userId: user.id, subscriptionId: subscription.id })
+  }
+
+  logger.log('[Subscription] 결제 수단 변경 완료:', subscription.id)
+  return { success: true }
+}
+
+/** 더 쓰지 않는 빌링키를 토스에서 지운다. 실패해도 구독은 새 키로 이미 돌아간다 — 기록만 남긴다. */
+async function deleteTossBillingKey(billingKey: string, context: Record<string, string>): Promise<void> {
+  try {
+    const response = await fetch(`https://api.tosspayments.com/v1/billing/${billingKey}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Basic ${basicAuth}` },
+    })
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as { code?: unknown }
+      logger.error(new Error('[Subscription] 옛 빌링키 삭제 실패'), {
+        ...context,
+        code: typeof body.code === 'string' ? body.code : String(response.status),
+      })
+    }
+  } catch (e) {
+    logger.error(e instanceof Error ? e : new Error('[Subscription] 옛 빌링키 삭제 예외'), context)
+  }
 }

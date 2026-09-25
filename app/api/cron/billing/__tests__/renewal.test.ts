@@ -227,3 +227,23 @@ describe('갱신 크론 — 이중 청구 방지', () => {
     expect(chargedOrderIds()).toEqual([])
   })
 })
+
+/**
+ * 결제 수단을 바꾸면 구독 행의 billing_key·customer_key 가 «함께» 새 값으로 바뀐다.
+ * 크론은 그 행을 그대로 읽어 청구한다 — 두 값이 어긋난 채로 청구하면 토스가 키 불일치로 거절한다.
+ */
+describe('갱신 크론 — 바뀐 결제 수단', () => {
+  it('🔴 재시도 중에 수단을 바꿔도 새 빌링키와 새 customerKey 로 «짝을 맞춰» 청구한다', async () => {
+    adminStub({
+      subscriptions: [subscriptionRow({ billing_key: 'bk_new', customer_key: 'HHD_user1_new', retry_count: 2 })],
+    })
+
+    await GET(cronRequest())
+
+    const [charge] = fetchSpy.mock.calls.filter((call) => String(call[0]).includes('/v1/billing/'))
+    expect(String(charge[0])).toContain('/v1/billing/bk_new')
+    expect(JSON.parse(String((charge[1] as RequestInit).body))).toMatchObject({ customerKey: 'HHD_user1_new' })
+    // 차수가 살아 있어 주문번호가 실패한 시도와 겹치지 않는다.
+    expect(chargedOrderIds()).toEqual(['SUB_11111111-2222-3333-4444-555555555555_20260918_2'])
+  })
+})

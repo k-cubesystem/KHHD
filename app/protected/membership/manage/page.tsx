@@ -60,6 +60,9 @@ export default async function MembershipManagePage() {
 
   const status = subscription?.status ?? null
   const statusMeta = status ? (STATUS_LABEL[status] ?? STATUS_LABEL.PAUSED) : null
+  // «결제 수단»은 자동 결제가 걸린 구독에만 있다 — 관리자가 결제 없이 부여한 구독에는 바꿀 것이 없다.
+  // 🔴 빌링키 자체를 화면으로 내려보내지 않는다. 있고 없고만 본다.
+  const autopay = !!subscription?.billing_key || !!subscription?.next_billing_date
 
   return (
     <div className="mx-auto w-full max-w-[480px] px-3 py-6 pb-24">
@@ -172,6 +175,7 @@ export default async function MembershipManagePage() {
               subscriptionId={subscription.id}
               status={subscription.status}
               periodEnd={subscription.current_period_end}
+              canChangeBilling={autopay}
             />
           </>
         ) : (

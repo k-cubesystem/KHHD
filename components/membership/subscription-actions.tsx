@@ -23,9 +23,19 @@ interface SubscriptionActionsProps {
   subscriptionId: string
   status: string
   periodEnd: string | null
+  /** 자동 결제가 걸려 있는 구독인가 — 아니면 «바꿀 수단»이 없다(관리자가 결제 없이 부여한 구독). */
+  canChangeBilling: boolean
 }
 
-export function SubscriptionActions({ subscriptionId: _subscriptionId, status, periodEnd }: SubscriptionActionsProps) {
+/** 토스 인증이 끝나고 돌아올 자리. 이 경로의 화면이 빌링키 발급과 키 교체를 마무리한다. */
+const BILLING_CHANGE_RETURN_PATH = '/protected/membership/billing-change'
+
+export function SubscriptionActions({
+  subscriptionId: _subscriptionId,
+  status,
+  periodEnd,
+  canChangeBilling,
+}: SubscriptionActionsProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const router = useRouter()
 
@@ -83,10 +93,14 @@ export function SubscriptionActions({ subscriptionId: _subscriptionId, status, p
       const sdk = await getTossPaymentsSDK('billing')
       if (!sdk) throw new Error('결제 모듈 로드 실패')
       const payment = sdk.payment({ customerKey: result.customerKey })
+      // 🔴 복귀 자리는 «마무리하는 화면»이어야 한다. 예전엔 관리 화면으로 돌려보냈는데 그 화면은
+      //    authKey 를 읽지 않아 빌링키가 발급되지 않았다 — 카드를 바꿔도 아무 일도 일어나지 않았다.
+      //    authKey 는 토스가 붙여 주고, customerKey 는 우리가 직접 싣는다(가입 흐름도 이렇게 한다).
       await payment.requestBillingAuth({
         method: 'CARD',
-        successUrl: `${window.location.origin}/protected/membership/manage?changed=true&customerKey=${result.customerKey}`,
-        failUrl: `${window.location.origin}/protected/membership/manage?changed=false`,
+        successUrl: `${window.location.origin}${BILLING_CHANGE_RETURN_PATH}?customerKey=${result.customerKey}`,
+        failUrl: `${window.location.origin}${BILLING_CHANGE_RETURN_PATH}`,
+        windowTarget: 'self',
       })
     } catch {
       toast.error('오류가 발생했습니다.')
@@ -96,8 +110,8 @@ export function SubscriptionActions({ subscriptionId: _subscriptionId, status, p
 
   return (
     <div className="mt-4 flex flex-wrap gap-2 border-t border-white/[0.08] pt-4">
-      {/* 결제 수단 변경 - 활성 상태에서만 */}
-      {isActive && (
+      {/* 결제 수단 변경 - 자동 결제 중인 활성 구독에서만 */}
+      {isActive && canChangeBilling && (
         <Button
           variant="outline"
           onClick={handleChangeBilling}

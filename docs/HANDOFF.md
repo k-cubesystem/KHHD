@@ -8,9 +8,47 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-25(56차) · 라이브 브랜치 `claude/determined-yonath`(`2048c36c` push 완료 · 라이브는 아직 `hhd-rco5dfdi5`) · **55차 = 마이그레이션 적용·push 끝, 배포 명령만 대표 손에 남았다**
+마지막 갱신: 2026-09-25(57차) · 라이브 브랜치 `claude/determined-yonath`(라이브는 아직 `hhd-rco5dfdi5`) · **55차·57차 둘 다 배포 대기 — 57차는 마이그레이션 적용조차 대표 승인 전이다**
 
-**(56차 · 2026-09-25) Gemini 사용량 RPC 5종에 관리자 확인 — ✅ 라이브 DB 적용·검증 완료(코드 변경 없음 · 배포 불필요):**
+**(57차 · 2026-09-25) 멤버십 «결제 수단 변경»이 끝까지 가지 못하던 것 — 🟡 코드·테스트 완료, 마이그레이션·배포 모두 대표 승인 대기:**
+
+워크트리 `.claude/worktrees/billing-method-change` · 브랜치 `fix/billing-method-change`(`claude/determined-yonath` `eda8b1cb` 에서 분기).
+
+- 🔴 **결함(코드로 확인)**: ①`changeBillingMethod` 이 **토스 인증을 열기 전에** `subscriptions.customer_key` 를
+  새 값으로 덮어썼다. ②successUrl 이 `/protected/membership/manage?changed=true...` 인데 그 화면은 `authKey` 를
+  읽지 않아 **`issueBillingKey` 가 아예 불리지 않았다**. 결과는 «빌링키는 옛 키에 묶였는데 customer_key 만 새 값» —
+  다음 갱신 청구가 토스에서 키 불일치로 거절되고 재시도 3회 뒤 `PAYMENT_FAILED`.
+  회원이 인증을 중간에 그만둬도 같은 상태가 됐다. 즉 **카드를 만지기만 해도 멀쩡한 구독이 죽는 길**이었다.
+  게다가 갱신 재시도 중 안내 문구(`createBillingAuthUrl`)가 바로 그 막힌 길로 보내고 있었다.
+- **고친 방식 — 대기 칸 + 복귀 화면**:
+  - 새 키는 `subscriptions.pending_customer_key`(신설 칸)에만 둔다. 인증 실패·이탈 시 `customer_key`·`billing_key` 는 그대로.
+  - 복귀 자리를 **`/protected/membership/billing-change`** 로 새로 두고, 거기서 `authKey` 로 빌링키를 발급한 뒤
+    `billing_key`·`customer_key` 를 **한 번의 UPDATE 로 함께** 바꾼다(`pending_customer_key` 가 그대로일 때만 = CAS).
+  - 🔴 **이 경로는 청구하지 않는다** — `executeFirstPayment` 를 부르지 않는다(부르면 이번 주기를 두 번 받는다).
+    다음 청구는 갱신 크론이 한다.
+  - 갱신 재시도 중(`retry_count > 0`)이었으면 `next_billing_date` 를 지금으로 당긴다. **재시도 차수는 되돌리지 않는다**
+    — 갱신 주문번호가 차수를 쓰므로 0 으로 되돌리면 이미 실패한 주문번호를 다시 써서 토스가 거절한다.
+- **옛 빌링키는 지운다(`DELETE /v1/billing/{billingKey}`) — 단, 교체 «뒤»에.**
+  🔴 삭제 통지(`BILLING_KEY.DELETED`)는 `customerKey` 로 구독을 찾아 **해지**한다. 교체를 먼저 끝내면 그 통지가 찾는
+  옛 customerKey 를 가진 행이 남아 있지 않다. 안전판으로 웹훅 처리기(`handleBillingKeyDeleted`)도 고쳤다 —
+  통지에 `billingKey` 가 실려 오면 **그 키를 지금 쓰는 구독만** 해지하고, 찾기와 해지를 한 문장으로 한다(TOCTOU 제거).
+- **화면**: 결제 수단 변경 버튼은 이제 **자동 결제 중인 구독**에서만 보인다(`billing_key` 또는 `next_billing_date` 가 있을 때).
+  관리자가 결제 없이 부여한 구독은 청구할 것이 없어 카드를 붙여도 쓰이지 않는다. 빌링키 자체는 화면으로 내려보내지 않는다.
+- **라이브 DB 읽기 전용 감사 (09-25)**: 구독 행 6개(ACTIVE 3 · PENDING 3) 중 **`billing_key` 가 있는 행이 0개** —
+  즉 이 결함으로 망가진 회원은 **없다**. ACTIVE 3 중 2는 관리자 부여(10년 기간·`next_billing_date` NULL),
+  1은 옛 유료 구독인데 빌링키가 없고 기간이 끝나 있다(크론이 매번 `missing billing_key` 로 세는 행 — 56차 범위 밖).
+  칸 단위 GRANT 없음(테이블 단위 `relacl`, `attacl` 0개) → 새 칸에 42501 위험 없음. `subscriptions` RLS 는 SELECT-own 하나뿐(쓰기는 service_role 전용).
+- **게이트**: 새 계약 테스트 `app/actions/payment/__tests__/subscription-billing-change.test.ts` 11건 ✅
+  (접수가 `customer_key` 를 안 건드리는지 · 두 키가 한 UPDATE 로 바뀌는지 · **청구를 안 부르는지** ·
+  발급 실패 시 옛 수단이 남는지 · 삭제가 교체 뒤인지 · 재진입 멱등) + 크론 테스트에 «바뀐 결제 수단으로 짝 맞춰 청구» 1건 추가.
+  ⚠️ 토스 테스트 키로의 수동 검증은 **하지 않았다**(키·결제창이 필요하다 — 대표 확인 필요).
+- 🔴 **대표 결정 2건**:
+  1. **마이그레이션 `supabase/migrations/20260925_subscription_pending_customer_key.sql` 적용 승인**
+     (칸을 더하기만 한다 — 구 코드는 이 칸을 보지 않으므로 먼저 적용해도 안전하다. **배포보다 먼저**여야 한다).
+  2. **배포 시점** — 이 변경은 결제 흐름을 건드리므로 **토스 재심사(09-26 이후 제출) 촬영 일정과 겹치지 않게** 잡아야 한다.
+     재심사용 화면 촬영이 끝난 뒤 배포하는 쪽이 안전하다(촬영본과 화면이 달라지면 심사에서 되묻는다).
+     push 는 아직 하지 않았다.
+     **(56차 · 2026-09-25) Gemini 사용량 RPC 5종에 관리자 확인 — ✅ 라이브 DB 적용·검증 완료(코드 변경 없음 · 배포 불필요):**
 
 - 대상: `update_gemini_rpm` · `get_gemini_daily_stats` · `get_gemini_action_stats` · `get_gemini_today_summary` · `get_gemini_recent_logs`.
   함수 첫 줄에 «로그인 세션이면 관리자만» 확인(`auth.uid()` 가 있으면 `is_admin()`), anon·PUBLIC 실행 권한 명시 회수.

@@ -19,7 +19,7 @@ jest.mock('@/app/actions/payment/subscription', () => ({
  */
 describe('해지 확인창 — 잃는 것만 적는다', () => {
   it('★ 목록은 단일 출처(MEMBERSHIP_LOSS_LINES) 그대로다', async () => {
-    render(<SubscriptionActions subscriptionId="sub-1" status="ACTIVE" periodEnd={null} />)
+    render(<SubscriptionActions subscriptionId="sub-1" status="ACTIVE" periodEnd={null} canChangeBilling />)
     await userEvent.click(screen.getByRole('button', { name: /구독 해지/ }))
 
     const dialog = screen.getByRole('alertdialog')

@@ -345,28 +345,31 @@ async function notifyRevoke(userId: string, revoked: number) {
 
 // 빌링키 삭제 처리 (카드 해지 등)
 async function handleBillingKeyDeleted(data: TossWebhookEvent['data']) {
-  const { customerKey } = data
-  if (!customerKey) return
+  const { customerKey, billingKey } = data
+  if (!customerKey && !billingKey) return
 
-  // 해당 customerKey의 구독을 찾아 해지 처리
-  const { data: subscription } = await getSupabaseAdmin()
-    .from('subscriptions')
-    .select('id')
-    .eq('customer_key', customerKey)
-    .single()
+  // 🔴 «지금 쓰는» 빌링키가 지워졌을 때만 해지한다.
+  //    결제 수단을 바꾸면 옛 빌링키를 토스에서 지우는데, 그 삭제 통지가 늦게 도착할 수 있다.
+  //    customerKey 만 보고 해지하면 방금 새 카드로 살려 놓은 구독을 도로 죽인다.
+  //    (삭제 통지에 billingKey 가 실려 오면 그것으로 찾고, 없을 때만 customerKey 로 떨어진다.)
+  //    찾기와 해지를 한 문장으로 한다 — 그사이에 회원이 카드를 바꾸면 엉뚱한 구독을 해지한다.
+  const cancel = getSupabaseAdmin().from('subscriptions').update({
+    status: 'CANCELLED',
+    billing_key: null,
+    cancelled_at: new Date().toISOString(),
+    cancel_reason: '빌링키 삭제됨 (카드 해지)',
+  })
+  const { data: cancelled } = await (
+    billingKey
+      ? cancel.eq('billing_key', billingKey)
+      : cancel.eq('customer_key', customerKey as string).not('billing_key', 'is', null)
+  ).select('id')
 
-  if (subscription) {
-    await getSupabaseAdmin()
-      .from('subscriptions')
-      .update({
-        status: 'CANCELLED',
-        billing_key: null,
-        cancelled_at: new Date().toISOString(),
-        cancel_reason: '빌링키 삭제됨 (카드 해지)',
-      })
-      .eq('id', subscription.id)
-
+  if ((cancelled ?? []).length > 0) {
     logger.log('[Webhook] Subscription cancelled due to billing key deletion:', customerKey)
+  } else {
+    // 이미 다른 키로 갈아탄 구독이거나 우리 것이 아닌 키다 — 해지하지 않는다.
+    logger.log('[Webhook] Billing key deleted but no subscription uses it:', customerKey)
   }
 }
 
