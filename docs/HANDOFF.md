@@ -8,9 +8,24 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-25(59차) · 라이브 브랜치 `claude/determined-yonath`(57·58·59차 push 완료 · 라이브는 아직 `hhd-rco5dfdi5`) · **55·57·58·59차 = push 끝, 배포 명령만 대표 손** — 배포하는 워크트리를 원격 tip 으로 올린 뒤 55차 「진행 상태」의 명령을 실행하면 전부 함께 나간다(56차는 DB 만이라 배포 불필요)
+마지막 갱신: 2026-09-26(60차) · 라이브 브랜치 `claude/determined-yonath` · **라이브 = `hhd-b8gyvzex0`(`15d716b0`, 09-26 10:10 KST) — 55·57·58·59차 전부 라이브**
 
-**(59차 · 2026-09-25) 루트 `app/loading.tsx` 제거 — 소프트 404 + «본문 없는 첫 HTML»(애드센스 반려 근인) — ✅ push 완료 · 🟡 다음 배포에 포함:**
+**(60차 · 2026-09-26) 55·57·58·59차 한 번에 프로덕션 배포 — ✅ 라이브(`15d716b0` → 배포 `hhd-b8gyvzex0`, 10:10 KST · 직전 정상 `hhd-rco5dfdi5`):**
+
+- 대표 지시 «배포하고 확인해줘» → 이번에는 에이전트 `vercel deploy --prod` 가 통과했다. 깨끗한 detached 워크트리 `.claude/worktrees/deploy-0925`
+  (원격 tip 과 동일 · 미추적 0 · `.vercel/project.json` = `hhd`). 배포 직전 재측정: 별칭 → `hhd-rco5dfdi5`(끼어든 배포 없음) · tip 이
+  `f86e20bb` → `15d716b0`(테스트만 바꾼 커밋 하나)으로 움직여 폴더를 tip 으로 맞춘 뒤 배포(HEAD 아닌 커밋 배포 금지 규칙).
+- 원격 빌드 51초 · 별칭 `k-haehwadang.com` → `hhd-b8gyvzex0` 확인.
+- 배포 뒤 실측: 사이트맵 `<loc>` **60** · `/`·`/guide`·`/guide/sipseong`·`/saju3`·`/webtoon`·`/story`·`/terms`·`/pass-policy`·`/auth/login` 200 ·
+  **없는 가이드·없는 3초 사주 유형·`/webtoon/9999` = 404**(배포 전 라이브는 없는 가이드가 200 이었다 — 59차 수복 확인) ·
+  `/protected`·`/protected/shrine`·`/admin` 307 · `/guide/sipseong` `<h2>` 7·스피너 0 · `/share/*` noindex · og:image 정본 도메인.
+- 🟡 **아직 못 본 것**: 55차 «생각 토큰» 기록(`gemini_api_logs.thought_tokens`)은 배포 뒤 AI 호출이 0건이라 확인 전 — 첫 호출 뒤
+  `select thought_tokens from gemini_api_logs order by created_at desc limit 1` 이 NULL 이 아니면 된다. `/admin/analytics` «생각 N» 은 관리자 화면(대표 확인).
+  배포일부터 원가가 1.2~2.7배로 보인다 — 오른 게 아니라 그동안 덜 셌다(55차).
+- 되돌리기: `vercel alias set hhd-rco5dfdi5-cubesystems-projects.vercel.app k-haehwadang.com`.
+- 이 배포에 없는 것: 09-25 에 돌던 세션 4개(결제 수단 변경 · Sentry 요청 본문 · 오늘의 운세 크론 · 한글 굵게 별표)는 아직 push 전 — 다음 배포.
+
+**(59차 · 2026-09-25) 루트 `app/loading.tsx` 제거 — 소프트 404 + «본문 없는 첫 HTML»(애드센스 반려 근인) — ✅ 라이브(60차 배포 `hhd-b8gyvzex0`):**
 
 - 09-23 에 게이트까지 통과한 `fix/soft-404-status` 의 `eaf191af` 가 라이브 브랜치에 안 들어간 채 52~58차가 쌓였다 →
   머지 커밋(`162c5639`)은 버리고 **그 커밋 한 개만** 최신 위에 다시 올렸다(충돌 0). 원격 `fix/soft-404-status` 는 지우지 않았다.
@@ -27,7 +42,7 @@
 - 배포 뒤: 라이브 `/guide/sipseong` 을 curl 로 받아 `<h2>` 개수 확인 → 404 세 곳 상태 확인. **애드센스 재검토 요청은 대표가
   서치 콘솔 색인을 확인한 뒤**.
 
-**(58차 · 2026-09-25) 처방전·그룹 지도 AI 풀이 프롬프트 v2 — 쉬운 해요체·물건은 «떠올리는 신호» — ✅ push 완료 · 🟡 다음 배포에 포함(에이전트 `vercel deploy` 는 분류기에 막힘):**
+**(58차 · 2026-09-25) 처방전·그룹 지도 AI 풀이 프롬프트 v2 — 쉬운 해요체·물건은 «떠올리는 신호» — ✅ 라이브(60차 배포 `hhd-b8gyvzex0`):**
 
 대표 지시(09-25) «멈춘 작업 전부 마무리». 09-14 에 이 일을 맡은 세션(`feature/prescription-prompt-v2`)은 한도로 멈춰 변경이 0 이라 처음부터 했다.
 워크트리 `.claude/worktrees/prescription-v2b` · 브랜치 `feature/prescription-prompt-v2b`.
@@ -58,7 +73,7 @@
   정리 후보다(`buildPrescription` 의 mother vs avoidElement).
 - 게이트: tsc 0 · eslint 0(`--max-warnings=0`) · jest 5,661(247 스위트) · build ✓.
 
-**(57차 · 2026-09-25) 속풀이 «위기 신호 감지 → 상담 안내» 최소 안전장치 — ✅ push 완료(`claude/determined-yonath` fast-forward) · 🟡 다음 배포에 포함(라이브는 아직 `hhd-rco5dfdi5`):**
+**(57차 · 2026-09-25) 속풀이 «위기 신호 감지 → 상담 안내» 최소 안전장치 — ✅ 라이브(60차 배포 `hhd-b8gyvzex0`):**
 
 대표 지시(09-25) «멈춘 작업 전부 마무리». 09-20 에 만들어 보고 대기 중이던 브랜치 `feature/chat-crisis-guard`(`c8449a6b`, base `85924c89`)를
 55차 위로 리베이스해 올렸다. 대표 결정: 지시에 없던 추가 2건(concern 시 안전 지침 · 직전 8턴 crisis 승계)은 **유지** · 안전 지침 상시 삽입은
@@ -116,7 +131,7 @@
 - 앱 쪽 확인(`app/actions/admin/gemini-usage.ts` 의 `requireAdmin`)은 이미 라이브 코드에 있다.
 - 되돌리기: 필요 없을 것으로 본다. 되돌려야 하면 `ai/20260217_gemini_rate_and_usage.sql`·`admin/20260217_fix_admin_dashboard.sql` 의 정의를 다시 적용.
 
-**(55차 · 2026-09-24) Gemini 원가 집계가 «생각 토큰»을 빼고 세던 것 — 🟡 마이그레이션 적용·push 완료, 배포 명령 대기:**
+**(55차 · 2026-09-24) Gemini 원가 집계가 «생각 토큰»을 빼고 세던 것 — ✅ 라이브(60차 배포 `hhd-b8gyvzex0`) · 생각 토큰 기록은 첫 AI 호출 뒤 확인:**
 
 워크트리 `.claude/worktrees/lucid-panini-b9c171` · 브랜치 `fix/gemini-thought-token-cost`(`claude/determined-yonath` 에서 분기).
 
