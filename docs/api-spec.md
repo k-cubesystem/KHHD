@@ -127,15 +127,11 @@ Generate daily fortune for all active subscribers + send KakaoTalk notifications
 
 ### Bok Points (`app/actions/payment/`)
 
-| Action                                                  | Description                                           |
-| ------------------------------------------------------- | ----------------------------------------------------- |
-| `getBokPointsBalance()`                                 | Get user's bok points balance and tier                |
-| `claimShareReward()`                                    | Kakao share reward (server-fixed 20p, 1/day KST)      |
-| `deductBokPoints(amount, type, familyMemberId?, desc?)` | Deduct own bok points (atomic RPC guard)              |
-| `completeBokMission(missionId)`                         | Complete a bok mission (reward fixed by mission type) |
-| `getBokTransactions(limit?)`                            | Own bok point transaction log                         |
+| Action         | Description                                   |
+| -------------- | --------------------------------------------- |
+| `getBokTier()` | Read own bok tier (already-reached tier only) |
 
-> 복 포인트 **발행**(금액 인자)은 공개 액션이 아니다 — `lib/services/bok-grant.ts`(server-only)의 `addBokPoints` 를 서버 내부에서만 호출한다.
+> 복 적립·차감은 2026-09-18 이용권 전환으로 중단됐다 — 발급·차감·미션·원장 액션은 없고, 포인트 수도 내보내지 않는다.
 
 ### Admin (`app/actions/admin/`)
 
