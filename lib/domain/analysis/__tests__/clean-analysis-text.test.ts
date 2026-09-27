@@ -95,6 +95,25 @@ describe('cleanAnalysisText — 마크다운 변환', () => {
     expect(out).toBe('<ul>\n<li>항목</li>\n</ul>\n<p>다음 문장</p>')
   })
 
+  // 관상·풍수 원문의 «---» 가 문단 끝에 글자로 매달리고, 빈 글머리 «*» 가 한 줄로 보였다(2026-09-28).
+  it('구분선(---, ***, ___)은 글자로 남기지 않고 문단을 끊는다', () => {
+    expect(cleanAnalysisText('앞 문단\n\n---\n\n### 소제목')).toBe('<p>앞 문단</p>\n<h4>소제목</h4>')
+    expect(cleanAnalysisText('앞\n***\n뒤')).toBe('<p>앞</p>\n<p>뒤</p>')
+    expect(cleanAnalysisText('앞\n- - -\n뒤')).toBe('<p>앞</p>\n<p>뒤</p>')
+    expect(cleanAnalysisText('앞\n___\n뒤')).toBe('<p>앞</p>\n<p>뒤</p>')
+  })
+
+  it('내용 없는 글머리는 버리고 목록은 이어간다', () => {
+    expect(cleanAnalysisText('*   **상정**:\n    *   \n    *   이마가 넓다')).toBe(
+      '<ul>\n<li><b>상정</b>:</li>\n<li>이마가 넓다</li>\n</ul>'
+    )
+  })
+
+  it('구분선과 헷갈리는 본문은 그대로 둔다', () => {
+    expect(cleanAnalysisText('-- 두 개뿐')).toBe('<p>-- 두 개뿐</p>')
+    expect(cleanAnalysisText('--*')).toBe('<p>--*</p>')
+  })
+
   it('CRLF 입력도 빈 줄에서 문단이 끊긴다', () => {
     expect(cleanAnalysisText('문단1\r\n\r\n문단2')).toBe('<p>문단1</p>\n<p>문단2</p>')
   })

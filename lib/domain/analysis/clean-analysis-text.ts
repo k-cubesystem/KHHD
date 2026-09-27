@@ -71,11 +71,15 @@ export function cleanAnalysisText(raw: string): string {
   for (const rawLine of lines) {
     const line = rawLine.trim()
 
-    if (line === '') {
+    // 구분선(---, ***, ___)은 글자로 남기지 않고 빈 줄처럼 문단·목록만 끊는다
+    if (line === '' || /^([-*_])(?:\s*\1){2,}$/.test(line)) {
       closeList()
       closeParagraph()
       continue
     }
+
+    // 내용 없는 글머리(-, *, •)는 버린다 — 목록은 이어진다
+    if (/^[-*•]$/.test(line)) continue
 
     // 소제목: ## / ### … (모두 <h4>로 정규화 — 결과 카드 안 소제목 톤 통일)
     const heading = line.match(/^#{1,6}\s+(.*)$/)
