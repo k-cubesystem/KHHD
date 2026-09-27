@@ -116,6 +116,7 @@ export async function dispatchDailyFortuneAlimtalk(templateOverride?: string): P
   )
 
   const dateStr = new Date().toLocaleDateString('ko-KR', {
+    timeZone: 'Asia/Seoul',
     year: 'numeric',
     month: 'long',
     day: 'numeric',

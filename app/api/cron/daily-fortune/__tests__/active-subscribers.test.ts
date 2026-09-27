@@ -142,4 +142,17 @@ describe('오늘의 운세 크론 — 발송 경로', () => {
       expect(row).toMatchObject({ status: 'SENT', template_id: 'KA01TP221025072818052xMkTLBLCcmm' })
     }
   })
+
+  it('알림톡 날짜는 서울 날짜다 — 크론이 도는 UTC 22시는 한국의 다음 날 아침 7시', async () => {
+    // Vercel 함수는 UTC 로 돈다. 개발 PC 는 서울 시간대라 결과 글자로는 결함이 안 보여서 포맷 옵션을 본다.
+    const format = jest.spyOn(Date.prototype, 'toLocaleDateString')
+    try {
+      await GET(cronRequest())
+      const zones = format.mock.calls.map(([, options]) => options?.timeZone)
+      expect(zones).toContain('Asia/Seoul')
+      expect(zones).not.toContain(undefined)
+    } finally {
+      format.mockRestore()
+    }
+  })
 })

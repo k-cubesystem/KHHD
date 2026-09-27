@@ -19,6 +19,7 @@ import { logger } from '@/lib/utils/logger'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { getShrineEffects } from '@/lib/services/shrine-effects'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
+import { kstDateKey } from '@/lib/domain/analysis/wallpaper'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
 
@@ -63,7 +64,8 @@ export async function generateDailyFortuneCore(
   const { reader = 'session', dateStr, force = false, saveHistory = true } = options
 
   const supabase = await readerClient(reader)
-  const targetDate = dateStr || new Date().toISOString().split('T')[0]
+  // 서울 날짜 — UTC 로 세면 한국 자정~오전 9시에 전날 운세가 나오고, 07시 알림톡도 전날 것을 만든다.
+  const targetDate = dateStr || kstDateKey(new Date())
 
   // 1. 캐시 — (user_id, target_id, date) 하루 한 건
   const { data: existing } = await supabase
