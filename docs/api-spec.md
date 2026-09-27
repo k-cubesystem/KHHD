@@ -132,7 +132,6 @@ Generate daily fortune for all active subscribers + send KakaoTalk notifications
 | `getBokPointsBalance()`                                 | Get user's bok points balance and tier                |
 | `claimShareReward()`                                    | Kakao share reward (server-fixed 20p, 1/day KST)      |
 | `deductBokPoints(amount, type, familyMemberId?, desc?)` | Deduct own bok points (atomic RPC guard)              |
-| `getBokMissions()`                                      | Get today's bok missions                              |
 | `completeBokMission(missionId)`                         | Complete a bok mission (reward fixed by mission type) |
 | `getBokTransactions(limit?)`                            | Own bok point transaction log                         |
 
