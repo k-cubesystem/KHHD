@@ -20,7 +20,6 @@ export function StoryVisualBreak({ src, quote, caption }: StoryVisualBreakProps)
         aria-hidden="true"
         fill
         loading="lazy"
-        quality={70}
         sizes="480px"
         placeholder="blur"
         blurDataURL={BLUR_DATA_URL}

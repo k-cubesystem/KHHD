@@ -22,7 +22,6 @@ export function StoryClosing() {
           aria-hidden="true"
           fill
           loading="lazy"
-          quality={70}
           sizes="480px"
           placeholder="blur"
           blurDataURL={BLUR_DATA_URL}
