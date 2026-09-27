@@ -139,7 +139,8 @@ export function GeminiUsageDashboard({
   const [logs, setLogs] = useState(initialLogs)
   const [rpmConfig, setRpmConfig] = useState(initialRpmConfig)
   const [rpmInput, setRpmInput] = useState(String(initialRpmConfig?.max_tokens ?? 15))
-  const [modelInput, setModelInput] = useState(initialRpmConfig?.model ?? 'gemini-2.0-flash')
+  // 버킷 조회가 실패하면 이 값이 그대로 저장된다 — 낡은 이름을 박아 두면 버킷에 그게 써진다.
+  const [modelInput, setModelInput] = useState(initialRpmConfig?.model ?? GEMINI_FLASH)
   const [rpmMsg, setRpmMsg] = useState<string | null>(null)
 
   const [isRefreshing, startRefresh] = useTransition()
