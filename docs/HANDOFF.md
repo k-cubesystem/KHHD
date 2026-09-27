@@ -86,9 +86,12 @@
 - 배포 뒤 실측: 사이트맵 `<loc>` **60** · `/`·`/guide`·`/guide/sipseong`·`/saju3`·`/webtoon`·`/story`·`/terms`·`/pass-policy`·`/auth/login` 200 ·
   **없는 가이드·없는 3초 사주 유형·`/webtoon/9999` = 404**(배포 전 라이브는 없는 가이드가 200 이었다 — 59차 수복 확인) ·
   `/protected`·`/protected/shrine`·`/admin` 307 · `/guide/sipseong` `<h2>` 7·스피너 0 · `/share/*` noindex · og:image 정본 도메인.
-- 🟡 **아직 못 본 것**: 55차 «생각 토큰» 기록(`gemini_api_logs.thought_tokens`)은 배포 뒤 AI 호출이 0건이라 확인 전 — 첫 호출 뒤
-  `select thought_tokens from gemini_api_logs order by created_at desc limit 1` 이 NULL 이 아니면 된다. `/admin/analytics` «생각 N» 은 관리자 화면(대표 확인).
-  배포일부터 원가가 1.2~2.7배로 보인다 — 오른 게 아니라 그동안 덜 셌다(55차).
+- ✅ **확인 완료(2026-09-27 23:5x KST)**: 55차 «생각 토큰» 기록을 프로덕션 실호출 2건으로 확인했다(운세 화면 `action_type='fortune'`).
+  ①7,077/971/**생각 0** ②7,078/898/**생각 798** → `total_tokens` 가 셋의 합과 일치(8,774)하고 원가 $0.023337 =
+  (7,078×1.5 + (898+798)×7.5)/1M 로 **정확히** 맞는다. 옛 기준이면 $0.017352 였을 것 — **그 한 건이 34% 과소계상**이었다.
+  🔴 **생각 0 도 정상이다** — 같은 화면·같은 크기 프롬프트인데 한 번은 0, 다음은 798 이었다(Gemini 3 의 동적 사고).
+  **0 은 «새 코드가 셌는데 생각이 없었다», NULL 은 «옛 코드»** 로 읽을 것. 이미지 모델 행은 NULL 이 정상(장당 고정 과금이라 생각을 세지 않는다).
+  배포일부터 원가가 뛰어 보인다 — 오른 게 아니라 그동안 덜 셌다(55차).
 - 되돌리기: `vercel alias set hhd-rco5dfdi5-cubesystems-projects.vercel.app k-haehwadang.com`.
 - 이 배포에 없는 것: 09-25 에 돌던 세션 4개(결제 수단 변경 · Sentry 요청 본문 · 오늘의 운세 크론 · 한글 굵게 별표)는 아직 push 전 — 다음 배포.
 
@@ -241,7 +244,7 @@
 - 앱 쪽 확인(`app/actions/admin/gemini-usage.ts` 의 `requireAdmin`)은 이미 라이브 코드에 있다.
 - 되돌리기: 필요 없을 것으로 본다. 되돌려야 하면 `ai/20260217_gemini_rate_and_usage.sql`·`admin/20260217_fix_admin_dashboard.sql` 의 정의를 다시 적용.
 
-**(55차 · 2026-09-24) Gemini 원가 집계가 «생각 토큰»을 빼고 세던 것 — ✅ 라이브(60차 배포 `hhd-b8gyvzex0`) · 생각 토큰 기록은 첫 AI 호출 뒤 확인:**
+**(55차 · 2026-09-24) Gemini 원가 집계가 «생각 토큰»을 빼고 세던 것 — ✅ 라이브(60차 배포 `hhd-b8gyvzex0`) · ✅ 2026-09-27 프로덕션 실호출로 생각 798 토큰 기록 확인(위 「확인 완료」 항목):**
 
 워크트리 `.claude/worktrees/lucid-panini-b9c171` · 브랜치 `fix/gemini-thought-token-cost`(`claude/determined-yonath` 에서 분기).
 
