@@ -45,16 +45,27 @@ interface ActiveSubscriptionCore {
   renews: boolean
 }
 
-interface SubscriptionRow {
-  plan_id: string | null
+/**
+ * 멤버십 «기간» 판정에 필요한 칸만 모은 것 — 게이트(한 사람)와 크론(여러 사람)이 같은 행 모양을 읽는다.
+ * 🔴 여기에 칸을 더하면 subscriptions 를 읽는 **모든** select 에도 같은 칸을 더해야 한다.
+ */
+export interface MembershipPeriodRow {
   status: string | null
   current_period_end: string | null
   end_date: string | null
-  current_period_start: string | null
-  start_date: string | null
   next_billing_date: string | null
   retry_count: number | null
 }
+
+/** 기간 판정 칸 + 등급·주기 시작 칸. */
+interface SubscriptionRow extends MembershipPeriodRow {
+  plan_id: string | null
+  current_period_start: string | null
+  start_date: string | null
+}
+
+/** subscriptions 에서 기간 판정에 필요한 칸 — select 문자열이 갈라지지 않도록 한 곳에 둔다. */
+export const MEMBERSHIP_PERIOD_COLUMNS = 'status, current_period_end, end_date, next_billing_date, retry_count'
 
 /**
  * 갱신 유예 — 기간 끝과 갱신 크론(10분 간격) 사이의 틈을 메운다.
@@ -68,6 +79,48 @@ interface SubscriptionRow {
  *    크론이 current_period_start 를 옮긴 뒤에만 열린다.
  */
 export const RENEWAL_GRACE_MS = 30 * 60_000
+
+/**
+ * 멤버십 혜택이 살아 있는 구독 상태 — DB CHECK 값 그대로 대문자.
+ * 🔴 CANCELLED 도 함께 본다. 약관 제6조 제5항이 "해지 시 현재 결제 주기의 만료일까지 이용할 수 있다"고
+ *    약속하는데 status='ACTIVE' 만 보면 해지 버튼을 누른 즉시 혜택이 끊겨 약관 위반이 된다.
+ * 🔴 소문자 'active' 로 찾으면 **항상 0건**이다(2026-09-19 오늘의 운세 크론 대상 0명의 원인).
+ */
+export const MEMBERSHIP_LIVE_STATUSES = ['ACTIVE', 'CANCELLED'] as const
+
+/**
+ * 구독 한 행의 «지금» 상태(순수) — 혜택 대상이 아니면 null.
+ * 게이트(한 사람 조회)와 일괄 발송(크론)이 **같은 판정**을 쓰도록 여기 한 곳에만 둔다.
+ * 즉시 해지(일할 환불)는 current_period_end 를 지금으로 닫으므로 만료 검사에서 저절로 빠진다.
+ */
+export function resolveLiveMembershipPeriod(
+  row: MembershipPeriodRow,
+  now: number = Date.now()
+): { status: string; currentPeriodEnd: string | null; renews: boolean } | null {
+  if (!row.status || !(MEMBERSHIP_LIVE_STATUSES as readonly string[]).includes(row.status)) return null
+
+  const periodEnd = row.current_period_end ?? row.end_date ?? null
+  // 해지된 구독은 «남은 기간»이 있을 때만 유효하다. 기간을 모르면 무기한 통과시키지 않는다.
+  if (row.status === 'CANCELLED' && !periodEnd) return null
+
+  const renews = row.status === 'ACTIVE' && !!row.next_billing_date
+  const periodEndMs = periodEnd ? new Date(periodEnd).getTime() : null
+
+  if (periodEndMs !== null && periodEndMs < now) {
+    const graceEndMs = periodEndMs + RENEWAL_GRACE_MS
+    if (!renews || (row.retry_count ?? 0) > 0 || now >= graceEndMs) return null
+    // 유예 중 — 옛 기간의 끝만 잠깐 늘린다. 월 몫 창은 꼬리 병합(membershipWindow) 덕에 옛 창이 그대로 이어져
+    // 남아 있던 몫만 쓸 수 있다.
+    return { status: 'ACTIVE', currentPeriodEnd: new Date(graceEndMs).toISOString(), renews }
+  }
+
+  return { status: row.status, currentPeriodEnd: periodEnd, renews }
+}
+
+/** 이 행이 지금 혜택 대상인가(boolean). 크론처럼 «여러 행을 걸러내는» 쪽이 쓴다. */
+export function isLiveMembershipRow(row: MembershipPeriodRow, now: number = Date.now()): boolean {
+  return resolveLiveMembershipPeriod(row, now) !== null
+}
 
 /**
  * 활성 구독 핵심 판정 — 마스터 우선, 없으면 ACTIVE + 미만료 구독을 찾는다(tier 미조회, 경량).
@@ -103,54 +156,27 @@ async function resolveActiveSubscription(
     }
   }
 
-  // 2) 활성 구독 — 기간 미만료.
-  //    🔴 CANCELLED 도 함께 본다. 약관 제6조 제5항이 "해지 시 현재 결제 주기의 만료일까지 이용할 수 있다"고
-  //    약속하는데 status='ACTIVE' 만 보면 해지 버튼을 누른 즉시 혜택이 끊겨 약관 위반이 된다.
-  //    즉시 해지(일할 환불)는 current_period_end 를 지금으로 닫으므로 아래 만료 검사에서 저절로 빠진다.
+  // 2) 활성 구독 — ACTIVE·해지 예약 + 기간 미만료(resolveLiveMembershipPeriod).
   const { data } = await supabase
     .from('subscriptions')
-    .select(
-      'plan_id, status, current_period_end, end_date, current_period_start, start_date, next_billing_date, retry_count'
-    )
-    .in('status', ['ACTIVE', 'CANCELLED'])
+    .select(`plan_id, current_period_start, start_date, ${MEMBERSHIP_PERIOD_COLUMNS}`)
+    .in('status', [...MEMBERSHIP_LIVE_STATUSES])
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
   const row = data as SubscriptionRow | null
-  if (!row) return null
-
-  const periodEnd = row.current_period_end ?? row.end_date ?? null
-  // 해지된 구독은 «남은 기간»이 있을 때만 유효하다. 기간을 모르면 무기한 통과시키지 않는다.
-  if (row.status === 'CANCELLED' && !periodEnd) return null
-
-  const renews = row.status === 'ACTIVE' && !!row.next_billing_date
-  const nowMs = Date.now()
-  const periodEndMs = periodEnd ? new Date(periodEnd).getTime() : null
-
-  if (periodEnd && periodEndMs !== null && periodEndMs < nowMs) {
-    const graceEndMs = periodEndMs + RENEWAL_GRACE_MS
-    if (!renews || (row.retry_count ?? 0) > 0 || nowMs >= graceEndMs) return null
-    // 유예 중 — 옛 기간의 끝만 잠깐 늘린다. 월 몫 창은 꼬리 병합(membershipWindow) 덕에 옛 창이 그대로 이어져
-    // 남아 있던 몫만 쓸 수 있다.
-    return {
-      isMaster: false,
-      planId: row.plan_id ?? null,
-      status: 'ACTIVE',
-      currentPeriodEnd: new Date(graceEndMs).toISOString(),
-      currentPeriodStart: row.current_period_start ?? row.start_date ?? null,
-      renews,
-    }
-  }
+  const live = row ? resolveLiveMembershipPeriod(row) : null
+  if (!row || !live) return null
 
   return {
     isMaster: false,
     planId: row.plan_id ?? null,
-    status: row.status ?? 'ACTIVE',
-    currentPeriodEnd: periodEnd,
+    status: live.status,
+    currentPeriodEnd: live.currentPeriodEnd,
     currentPeriodStart: row.current_period_start ?? row.start_date ?? null,
-    renews,
+    renews: live.renews,
   }
 }
 

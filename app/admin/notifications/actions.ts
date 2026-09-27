@@ -5,9 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 import { logAdminAction } from '@/lib/admin/audit'
 import { requireAdmin } from '@/lib/admin/require-admin'
-import { getSiteUrl } from '@/lib/utils/site-url'
-
-const SITE_URL = getSiteUrl()
+import { dispatchDailyFortuneAlimtalk } from '@/lib/services/daily-fortune-dispatch'
 
 export interface SystemSetting {
   key: string
@@ -77,7 +75,7 @@ export async function getNotificationLogs(page = 1, limit = 20) {
 }
 
 export async function runManualAutomation() {
-  // 🔴 이 함수는 **활성 구독자 전원에게 실제로 발송한다.** 권한 없이 열려 있으면
+  // 🔴 이 함수는 **활성 구독자 중 수신 동의자 전원에게 실제로 발송한다.** 권한 없이 열려 있으면
   //    외부에서 부르는 것만으로 대량 발송이 일어난다.
   const actor = await requireAdmin()
   if (!actor.authorized) return { success: false, message: actor.error }
@@ -85,54 +83,28 @@ export async function runManualAutomation() {
   try {
     const supabase = createAdminClient()
 
-    // 1. Get Template
     const { data: tmplSetting } = await supabase
       .from('system_settings')
       .select('value')
       .eq('key', 'kakao_template_id')
       .single()
-    const templateId = tmplSetting?.value || 'DAILY_FORTUNE_V1'
 
-    // 2. Fetch Active Subscribers — status 규약은 대문자(ACTIVE). 소문자 매칭이면 항상 0명.
-    const { data: subscriptions } = await supabase.from('subscriptions').select('user_id').eq('status', 'ACTIVE')
+    // 크론과 **같은 경로**로 보낸다 — 대상 선정·동의 확인·생성·기록이 갈라지지 않도록.
+    const stats = await dispatchDailyFortuneAlimtalk(tmplSetting?.value)
 
-    if (!subscriptions || subscriptions.length === 0) {
-      return { success: false, message: '활성 구독자가 없습니다.' }
+    if (!stats.ok) return { success: false, message: stats.blocked ?? '발송할 수 없습니다.' }
+    if (stats.subscribers === 0) return { success: false, message: '활성 구독자가 없습니다.' }
+    if (stats.total === 0) {
+      return { success: false, message: `활성 구독자 ${stats.subscribers}명 중 알림톡 수신 동의자가 없습니다.` }
     }
 
-    // 3. Import Logic Dynamically
-    const { generateDailyFortune } = await import('@/app/actions/fortune/daily')
-    const { sendKakaoNotification } = await import('@/app/actions/fortune/notification')
-
-    let sentCount = 0
-    let errorCount = 0
-
-    // 4. Process Batch
-    const promises = subscriptions.map(async (sub) => {
-      try {
-        const genResult = await generateDailyFortune(sub.user_id, sub.user_id, 'USER')
-        if (genResult.success && genResult.content) {
-          await sendKakaoNotification(sub.user_id, templateId, {
-            content: genResult.content.substring(0, 50) + '...',
-            link: `${SITE_URL}/protected/analysis?tab=daily`,
-          })
-          sentCount++
-        } else {
-          errorCount++
-        }
-      } catch (e) {
-        logger.error(e)
-        errorCount++
-      }
-    })
-
-    await Promise.allSettled(promises)
-
+    revalidatePath('/admin/notifications')
     return {
       success: true,
-      message: `발송 완료: 성공 ${sentCount}건, 실패 ${errorCount}건`,
+      message: `발송 완료: 성공 ${stats.sent}건, 실패 ${stats.errors}건 (대상 ${stats.total}명 / 구독자 ${stats.subscribers}명)`,
     }
   } catch (e: unknown) {
+    logger.error('[Admin] 오늘의 운세 수동 발송 실패:', e)
     return { success: false, message: e instanceof Error ? e.message : String(e) }
   }
 }
