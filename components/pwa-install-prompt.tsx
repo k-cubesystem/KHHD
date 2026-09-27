@@ -34,15 +34,40 @@ function detectPlatform(): Platform {
   }
 }
 
-/** 비로그인 유입 첫 화면(3초 일간·이벤트 폼)에서는 띄우지 않는다 — 아직 아무것도 안 본 방문자에게 설치부터 권하면 결과 카드를 가린다. */
-const COLD_FUNNEL_PREFIXES = ['/saju3', '/event']
+/**
+ * 로그인 뒤 도착하는 홈에서만 띄운다. 공개 화면에서는 로그인·Google 버튼, /story 하단 고정 버튼,
+ * 웹툰 하단 탭 바를 덮었다 — 아직 아무것도 안 본 방문자에게 설치부터 권할 이유도 없다.
+ */
+const PROMPT_PATH = '/protected'
+
+/** 닫으면 이 기간 동안 다시 띄우지 않는다 — 전에는 새로 들어올 때마다 다시 떴다. */
+const DISMISS_KEY = 'hhd:pwa-install-dismissed-at'
+const DISMISS_MS = 14 * 24 * 60 * 60 * 1000
+
+function readDismissed(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    const at = Number(window.localStorage.getItem(DISMISS_KEY))
+    return Number.isFinite(at) && at > 0 && Date.now() - at < DISMISS_MS
+  } catch {
+    return false
+  }
+}
+
+function rememberDismissed(): void {
+  try {
+    window.localStorage.setItem(DISMISS_KEY, String(Date.now()))
+  } catch {
+    // 저장소가 막힌 브라우저 — 이번 방문 동안만 닫힌다.
+  }
+}
 
 export function PWAInstallPrompt() {
   const pathname = usePathname()
   const hydrated = useHydrated()
   const [platform] = useState<Platform>(detectPlatform)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [dismissed, setDismissed] = useState(false)
+  const [dismissed, setDismissed] = useState(readDismissed)
 
   useEffect(() => {
     if (platform.isStandalone) return
@@ -58,9 +83,17 @@ export function PWAInstallPrompt() {
   }, [platform.isStandalone])
 
   // 표시 여부는 상태가 아니라 파생값이다 — 설치 이벤트/플랫폼/닫기 셋으로 결정된다.
-  const onColdFunnel = COLD_FUNNEL_PREFIXES.some((p) => pathname?.startsWith(p))
   const isVisible =
-    hydrated && !dismissed && !onColdFunnel && !platform.isStandalone && (deferredPrompt !== null || platform.isIOS)
+    hydrated &&
+    !dismissed &&
+    pathname === PROMPT_PATH &&
+    !platform.isStandalone &&
+    (deferredPrompt !== null || platform.isIOS)
+
+  const handleDismiss = () => {
+    rememberDismissed()
+    setDismissed(true)
+  }
 
   const handleInstallClick = async () => {
     if (platform.isIOS) {
@@ -89,7 +122,10 @@ export function PWAInstallPrompt() {
   if (!isVisible) return null
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-5 duration-500">
+    <div
+      className="fixed left-4 right-4 z-50 animate-in slide-in-from-bottom-5 duration-500"
+      style={{ bottom: 'calc(60px + env(safe-area-inset-bottom, 0px) + 12px)' }}
+    >
       <div className="mx-auto max-w-md bg-surface/90 backdrop-blur-md border border-gold-500/30 p-4 rounded-xl shadow-2xl flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="bg-gold-500/20 p-2 rounded-lg">
@@ -119,7 +155,7 @@ export function PWAInstallPrompt() {
             {platform.isIOS ? '안내' : '설치'}
           </Button>
           <button
-            onClick={() => setDismissed(true)}
+            onClick={handleDismiss}
             aria-label="설치 안내 닫기"
             className="p-1 hover:bg-white/10 rounded-full transition-colors"
           >

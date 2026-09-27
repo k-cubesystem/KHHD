@@ -1,4 +1,5 @@
 import { ELEMENT_COLOR, type Saju3Result, type TypeInfo } from '@/lib/domain/saju/saju3'
+import { withSubject, withTopic } from '@/lib/utils/josa'
 
 /**
  * 3초 사주 결과 카드 — 결과 화면(/saju3)과 유형별 공유 랜딩(/saju3/[type])이 같은 모양을 쓴다.
@@ -69,8 +70,8 @@ export function Saju3Card({ result }: { result: Saju3Result }) {
       <TypeHeadline type={result.type} />
       <ElementBars bars={result.bars} />
       <p className="mt-3 text-center font-sans text-[12px] text-ink-light/60">
-        {result.most.ko}이(가) 제일 많아
-        {result.missing.length > 0 ? ` · ${result.missing.map((m) => m.ko).join('·')}은(는) 비어 있고` : ''}
+        {withSubject(result.most.ko)} 제일 많아
+        {result.missing.length > 0 ? ` · ${withTopic(result.missing.map((m) => m.ko).join('·'))} 비어 있고` : ''}
       </p>
       <ThreeLines lines={result.lines} />
       <p className="mt-5 font-sans text-[11px] leading-relaxed text-ink-light/55">
