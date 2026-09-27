@@ -1834,3 +1834,41 @@ cat .next/static/chunks/*.css | grep -c "120d07"   # 고치기 전 0 · 고친 �
 
 게이트: jest 3,603(171 suites) · tsc 0 · build ✓. 다음: 실기기 구매·다운로드 검수(CEO),
 GA 퍼널 관찰, Batch API 재생성 여지(2K $0.050)는 확정본 교체 때만.
+
+---
+
+## (64차 · 2026-09-28) 다이얼로그 닫기 X 밀림 — 남은 9곳 마저 · 처방을 `DialogBody` 로 수렴
+
+**프로덕션 라이브** (`2d31a4db`, 배포 `hhd-r4hffx7yu` → k-haehwadang.com, 공개 3경로 200).
+
+8월에 3곳(배경화면 시트·하우스 광고·명식 팝업)만 고치고 «나머지는 별건»으로 남겨 둔 것을
+마저 처리했다. 남아 있던 9곳: **만세력 상세 7 · 결제 도우미 1 · 여정 보상 1**.
+
+- 원인은 같다 — 닫기 X 는 `DialogContent` 기준 absolute 인데 그 DialogContent 가
+  `overflow-y-auto` 라, 본문을 내리면 X 가 함께 밀려 올라가 **닫을 수가 없다**.
+- 처방을 **`DialogBody`**(`components/ui/dialog.tsx`) 한 곳에 모았다. 9곳을 손으로 같은
+  모양으로 고치면 하나씩 어긋난다. 겉은 `flex flex-col overflow-hidden`, 본문은
+  `flex-1 min-h-0 overflow-y-auto`.
+- 🔴 **겉을 `overflow-hidden` 으로만 바꾸면 스크롤이 통째로 죽는다.** DialogContent 는 기본이
+  `grid` 이고 트랙이 내용 크기로 잡혀, 자식의 `min-h-0` 만으로는 안 줄어든다. 8월 1차 수정이
+  정확히 이걸 빠뜨려 화면이 굳었다(CEO 제보 «전부 창에 고정돼서 스크롤이 안 된다»).
+- 회귀선 `lib/domain/__tests__/dialog-scroll-contract.test.ts` — 소스를 스캔해 ①DialogContent
+  에 `overflow-y-auto` 금지 ②`max-h-[…]` 를 준 DialogContent 는 `flex-col` ③DialogBody 가
+  `flex-1`+`min-h-0` 을 함께 가짐, 셋을 잠근다. 새 다이얼로그도 자동으로 걸린다.
+
+**게이트**: tsc 0 · jest **5,720**(+4) · build ✓ · eslint 0.
+**실측**(추측 금지): 390×844 에서 다이얼로그 675px(=80vh) · 본문 3,011px 스크롤 · 겉 스크롤
+없음 · X·머리글 top 불변.
+🔴 **계측 함정** — 브라우저 패널이 숨겨져 있으면 `innerHeight`=0 이라 `80vh`=0 이 되어 «다
+무너진» 것처럼 보인다(이번에 한 번 속았다). 반드시 `resize_window` 로 뷰포트를 세우고 잴 것.
+
+**같은 날 함께 정리한 것**
+
+- 워크트리 16 → 11개. 깨끗하고 프로덕션에 전부 반영된 4개만 제거
+  (deploy-0927·nifty-kalam-ff9baf·nostalgic-wiles-005f2f·webtoon-slots). 🔴미커밋이 있는
+  8개와 미반영 커밋이 있는 2개(festive-leakey 21건·integrate-0927 1건)는 **손대지 않았다**.
+- 🔴 **로컬 `.env` 함정은 26차 이후 그대로다** — 구 프로젝트 호스트
+  `ukuscwvkkbedszwmetfu.supabase.co` 는 지금도 DNS 미해석(2026-09-28 실측). `scripts/` 아래
+  **9개 스크립트**가 이 env 를 직접 읽어 전부 막힌다(create-test-account·diagnose-destiny·
+  e2e-test·list-prompts·test-_ 등). 우회가 들어간 건 `upload-premium-wallpapers.mjs` 하나뿐.
+  \*\*Claude 는 `.env_` 를 읽지도 쓰지도 못한다(전역 금지) — 대표만 고칠 수 있다.\*\*
