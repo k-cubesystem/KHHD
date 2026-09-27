@@ -8,7 +8,20 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-28(62차) · 라이브 브랜치 `claude/determined-yonath` · **라이브 = `dpl_EKU91Pad…`(09-28 01:1x, 별칭 고정 확인) — 밀려 있던 배포 대기 전부 라이브**
+마지막 갱신: 2026-09-28(63차) · 라이브 브랜치 `claude/determined-yonath` · **라이브 = `hhd-qmmwqr63c`(09-28, 별칭 확인) · 직전 정상 `hhd-arm4xgmeq`**
+
+**(63차 · 2026-09-28) Gemini 모델 이름 두 군데 정정 — ✅ 라이브(`b0a97f52` · 배포 `hhd-qmmwqr63c`):**
+
+- **토큰 버킷 표시값** `gemini_token_bucket.model` 이 `gemini-3.7-flash` 로 남아 있었다 → `gemini-3.8-flash`.
+  마이그레이션 `supabase/migrations/20260928_gemini_bucket_model_label.sql`(MCP `gemini_bucket_model_label` 로 라이브 적용, 실측 확인).
+  이 칸은 **어드민 RPM 패널 표시값일 뿐**이다 — 실제 호출 모델은 `lib/config/ai-models.ts`, 사용량·원가는 호출부가 넘긴 모델로 남는다.
+- **어드민 모델 입력 기본값**(`components/admin/gemini-usage-dashboard.tsx`)이 `'gemini-2.0-flash'` 로 박혀 있었다 → `GEMINI_FLASH`.
+  🔴 버킷 조회가 실패해 `rpmConfig` 가 null 인 상태에서 관리자가 저장을 누르면 **그 낡은 이름이 버킷에 써진다** — 그게 위험한 지점이었다.
+- 게이트: tsc 0 · eslint 0(경고 0) · 커밋 훅 통과. 배포 뒤 실측: 사이트맵 `<loc>` **61** · `/`·`/auth/login`·`/guide`·`/about`·`/webtoon`·`/story`·`/saju3`·`/terms` 200 ·
+  `/protected`·`/admin`·`/admin/gemini-usage` 307.
+- 되돌리기: `vercel alias set hhd-arm4xgmeq-cubesystems-projects.vercel.app k-haehwadang.com`. 마이그레이션은 표시값만 바꿔 되돌릴 필요가 없다.
+- 같은 세션에서 **56차(Gemini 사용량 RPC 관리자 확인)가 이미 라이브임을 재확인**했다: 관리자·service_role 통과 / 일반 회원·anon 거부(42501) 실측.
+  앱 쪽 `requireAdmin` 도 이미 들어가 있어 DB·앱 2중이다. 09-19 에 만든 중복 브랜치 `fix/gemini-rpc-admin-guard` 는 삭제했다.
 
 **(62차 · 2026-09-28) 밀려 있던 배포 전부 출하 — ✅ 라이브 · 🔴 내가 «배포 보류» 쪽지를 안 읽고 먼저 배포했다:**
 
