@@ -352,7 +352,8 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
         )
       )}
 
-      {/* 전문 보기 — 항상 원문 접근 가능 */}
+      {/* 전문 보기 — v2 원문은 본문이 전부 [[TAG: …]] 안이라 태그를 걷으면 비어 뜨지 않는다(같은 내용은 위 카드가 보여 준다).
+          태그 없는 옛 원문에서만 나타난다 — 대표 결정(2026-09-28): 이대로 둔다. */}
       {p && <DetailAnalysisAccordion raw={raw} title="종합사주풀이 전문 보기" />}
     </div>
   )
