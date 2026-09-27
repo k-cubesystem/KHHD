@@ -37,4 +37,13 @@ describe('typography 플러그인 없이 prose 에 목록 모양을 맡기지 �
     expect(src).toContain('[&_ol]:list-decimal')
     expect(src).toContain('[&_ul]:list-disc')
   })
+
+  // AI 가 가끔 쓰는 ## 이 기본 h2(20px 아이보리)로 나와 ### 소제목(금색 14px)보다 커 보였다(2026-09-28).
+  it('사업 궁합 AI 풀이의 ## 과 ### 은 같은 소제목 모양이다', () => {
+    const src = read('app/protected/analysis/celebrity-compatibility/business-compatibility-client.tsx')
+    for (const utility of ['text-gold-500', 'text-sm', 'font-bold', 'mt-4', 'mb-2']) {
+      expect(src).toContain(`[&_h2]:${utility}`)
+      expect(src).toContain(`[&_h3]:${utility}`)
+    }
+  })
 })
