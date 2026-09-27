@@ -149,30 +149,6 @@ Generate daily fortune for all active subscribers + send KakaoTalk notifications
 | `sendGlobalNotification(title, message)`     | Broadcast notification             |
 | `issueCouponToAll(code, amount, expiryDays)` | Bulk coupon distribution           |
 
-### 5. Bok Missions Cron
-
-```
-GET /api/cron/bok-missions
-```
-
-Generate daily bok missions for all active users.
-
-**Authentication**: `Authorization: Bearer <CRON_SECRET>`
-**Schedule**: `0 15 * * *` (KST 00:00)
-
----
-
-### 6. Bok Report Cron
-
-```
-GET /api/cron/bok-report
-```
-
-Generate weekly bok points summary report.
-
-**Authentication**: `Authorization: Bearer <CRON_SECRET>`
-**Schedule**: `0 0 * * 1` (Monday KST 09:00)
-
 ---
 
 ## Environment Variables

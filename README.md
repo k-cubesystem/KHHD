@@ -173,12 +173,10 @@ vercel --prod
 
 ### Cron Jobs (vercel.json)
 
-| Job                       | Schedule      | Description           |
-| ------------------------- | ------------- | --------------------- |
-| `/api/cron/billing`       | 매일 09:00    | 정기결제 자동 갱신    |
-| `/api/cron/daily-fortune` | 매일 22:00    | 운세 생성 + 알림톡    |
-| `/api/cron/bok-missions`  | 매일 00:00    | 복 미션 일일 생성     |
-| `/api/cron/bok-report`    | 매주 월 09:00 | 복 포인트 주간 리포트 |
+| Job                       | Schedule   | Description        |
+| ------------------------- | ---------- | ------------------ |
+| `/api/cron/billing`       | 매일 09:00 | 정기결제 자동 갱신 |
+| `/api/cron/daily-fortune` | 매일 22:00 | 운세 생성 + 알림톡 |
 
 ## License
 
