@@ -48,16 +48,17 @@
   라이브 CSS 에 `analysis-prose p`·`[&_h2]:text-gold-500`·`[&_ol]:list-decimal`.
 - 되돌리기: `vercel alias set hhd-engz3rzvn-cubesystems-projects.vercel.app k-haehwadang.com` (DB 변경 없음). 배포 확인 표지: `/api/cron/bok-missions` 401 → 404.
 
-**(2026-09-27) 복 폐지 뒤 남은 크론 2개 제거 — push 완료 · 배포 대기:**
+**(2026-09-27) 복 폐지 뒤 남은 크론 2개 제거 — ✅ 라이브(62차 배포 `hhd-arm4xgmeq`, 09-28 01:13):**
 
 - `vercel.json` 에서 `/api/cron/bok-missions`(매일 `0 15 * * *`)·`/api/cron/bok-report`(매주 월 `0 0 * * 1`)를 빼고 두 라우트 폴더를 삭제.
   bok-missions 는 밤마다 최대 500명분 `bok_missions` 행을 넣었지만 읽는 코드가 없었고(날짜도 UTC 기준), bok-report 는 로그만 찍고 푸시는 TODO 였다.
-  두 라우트만 다루는 테스트는 없었다. README·`docs/api-spec.md` 의 크론 항목도 함께 뺐다.
+  두 라우트만 다루는 테스트는 없었다. README·`docs/api-spec.md` 의 크론 항목도 함께 뺐고, api-spec 복 포인트 표는
+  남은 공개 액션 `getBokTier()` 하나만 남겼다(`2a54e2ac`·`00a93916`).
   jest 총 건수가 5,704 → 5,702 로 줄어든 것은 파일마다 케이스를 만드는 `design-palette-lock` 에서 두 파일 몫이 빠진 것이다(회귀 아님).
 - `app/api/cron/health/route.ts` 는 크론 목록을 대조하지 않아(RPC·테이블·환경변수만) 손대지 않았다.
 - DB 테이블(`bok_missions`·`bok_points`·`bok_transactions`)은 그대로 둔다.
-- Vercel 크론 등록은 배포된 `vercel.json` 을 따르므로 **다음 프로덕션 배포 전까지 라이브(`hhd-iqspmo5sm`)에서는 계속 돈다.** 배포 확인 표지:
-  `/api/cron/bok-missions` 가 401 → 404.
+- 09-28 실측: `/api/cron/bok-missions`·`/api/cron/bok-report` **404**(대조군 `/api/cron/health` 401).
+  00:25 `integrate-0927` 배포(`hhd-893zfp758`)는 이 커밋이 없는 갈래라 그때까지는 두 크론이 살아 있었다.
 
 **(61차 · 2026-09-27) 오픈 전 안정화 — 멈춰 있던 세션 작업 4건 통합 + 공개 화면 실측에서 찾은 결함 3건:**
 
