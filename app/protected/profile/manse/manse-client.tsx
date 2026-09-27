@@ -31,7 +31,7 @@ import {
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { TargetSelect } from '@/components/destiny/target-select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ScrollText,
@@ -2047,7 +2047,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
       {/* 사주 종합 해석 Dialog */}
       <Dialog open={sajuInterpretOpen} onOpenChange={setSajuInterpretOpen}>
-        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="flex max-h-[80vh] max-w-lg flex-col overflow-hidden border-white/10 bg-[#0f0f0f]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />
@@ -2055,498 +2055,518 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
             </DialogTitle>
           </DialogHeader>
 
-          {saju && (
-            <div className="space-y-4 text-sm">
-              {/* 일간 기질 */}
-              {engineData.mulsang && (
-                <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
-                  <p className="text-gold-500 font-bold mb-1.5 text-xs">
-                    일간의 기질 — {saju.dayMaster} ({TIANGAN_INFO[saju.dayMaster]?.korean})
-                  </p>
-                  <p className="text-gold-300/90 text-xs mb-1.5 font-medium">{engineData.mulsang.symbol}</p>
-                  <p className="text-muted-foreground text-xs leading-relaxed">{engineData.mulsang.psychology}</p>
-                  {engineData.mulsang.modernJobs?.length > 0 && (
-                    <p className="text-muted-foreground/60 text-[10px] mt-2">
-                      적성 직업: {engineData.mulsang.modernJobs.slice(0, 4).join(' · ')}
+          <DialogBody className="-mr-2 pr-2">
+            {saju && (
+              <div className="space-y-4 text-sm">
+                {/* 일간 기질 */}
+                {engineData.mulsang && (
+                  <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                    <p className="text-gold-500 font-bold mb-1.5 text-xs">
+                      일간의 기질 — {saju.dayMaster} ({TIANGAN_INFO[saju.dayMaster]?.korean})
                     </p>
-                  )}
-                </div>
-              )}
-
-              {/* 신강/신약 */}
-              {engineData.sipseong && (
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <p className="text-white/80 font-bold mb-1.5 text-xs">
-                    {engineData.sipseong.strengthAssessment} ({engineData.sipseong.bodyStrengthScore}점) — 지배 십성:{' '}
-                    {engineData.sipseong.dominantSipseong}
-                  </p>
-                  <p className="text-muted-foreground text-xs leading-relaxed">{engineData.sipseong.summary}</p>
-                </div>
-              )}
-
-              {/* 십이운성 에너지 */}
-              {engineData.sibjiunseong && (
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <p className="text-white/80 font-bold mb-2 text-xs">
-                    십이운성 에너지 — {engineData.sibjiunseong.overallEnergy} (평균{' '}
-                    {engineData.sibjiunseong.averageLevel.toFixed(1)}/12)
-                  </p>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {engineData.sibjiunseong.items.map((item, i) => (
-                      <span key={i} className="px-1.5 py-0.5 rounded text-[10px] bg-gold-500/10 text-gold-500">
-                        {item.pillarName}: {item.sibjiunseong}({item.level})
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-muted-foreground text-xs leading-relaxed">
-                    {engineData.sibjiunseong.waveDescription}
-                  </p>
-                </div>
-              )}
-
-              {/* 관계 역학 */}
-              {engineData.relations && (
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <p className="text-white/80 font-bold mb-1.5 text-xs">
-                    합·충·형 관계 — {engineData.relations.dominantRelation}
-                  </p>
-                  <div className="space-y-0.5 mb-2 text-[10px] text-muted-foreground">
-                    {engineData.relations.hap.length > 0 && <p>합(合): {engineData.relations.hap.join(', ')}</p>}
-                    {engineData.relations.chung.length > 0 && <p>충(沖): {engineData.relations.chung.join(', ')}</p>}
-                    {engineData.relations.hyeong.length > 0 && <p>형(刑): {engineData.relations.hyeong.join(', ')}</p>}
-                    {engineData.relations.gongmang.length > 0 && (
-                      <p>공망(空亡): {engineData.relations.gongmang.join(', ')}</p>
+                    <p className="text-gold-300/90 text-xs mb-1.5 font-medium">{engineData.mulsang.symbol}</p>
+                    <p className="text-muted-foreground text-xs leading-relaxed">{engineData.mulsang.psychology}</p>
+                    {engineData.mulsang.modernJobs?.length > 0 && (
+                      <p className="text-muted-foreground/60 text-[10px] mt-2">
+                        적성 직업: {engineData.mulsang.modernJobs.slice(0, 4).join(' · ')}
+                      </p>
                     )}
                   </div>
-                  <p className="text-muted-foreground text-xs leading-relaxed">{engineData.relations.summary}</p>
-                </div>
-              )}
+                )}
 
-              {/* 신살 스킬트리 */}
-              {engineData.sinsal.length > 0 && (
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <p className="text-white/80 font-bold mb-3 text-xs">신살 스킬트리</p>
-                  <div className="space-y-3">
-                    {engineData.sinsal.map((s, i) => (
-                      <div key={i}>
-                        <p className="text-gold-500 text-xs font-semibold">
-                          {s.name} {s.hanja} — {s.category}
-                        </p>
-                        <p className="text-muted-foreground text-[11px] leading-relaxed mt-0.5">{s.poeticDesc}</p>
-                        {s.modernSkillTree && (
-                          <p className="text-white/40 text-[10px] mt-0.5">현대 스킬: {s.modernSkillTree}</p>
-                        )}
-                      </div>
-                    ))}
+                {/* 신강/신약 */}
+                {engineData.sipseong && (
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-white/80 font-bold mb-1.5 text-xs">
+                      {engineData.sipseong.strengthAssessment} ({engineData.sipseong.bodyStrengthScore}점) — 지배 십성:{' '}
+                      {engineData.sipseong.dominantSipseong}
+                    </p>
+                    <p className="text-muted-foreground text-xs leading-relaxed">{engineData.sipseong.summary}</p>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+
+                {/* 십이운성 에너지 */}
+                {engineData.sibjiunseong && (
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-white/80 font-bold mb-2 text-xs">
+                      십이운성 에너지 — {engineData.sibjiunseong.overallEnergy} (평균{' '}
+                      {engineData.sibjiunseong.averageLevel.toFixed(1)}/12)
+                    </p>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {engineData.sibjiunseong.items.map((item, i) => (
+                        <span key={i} className="px-1.5 py-0.5 rounded text-[10px] bg-gold-500/10 text-gold-500">
+                          {item.pillarName}: {item.sibjiunseong}({item.level})
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      {engineData.sibjiunseong.waveDescription}
+                    </p>
+                  </div>
+                )}
+
+                {/* 관계 역학 */}
+                {engineData.relations && (
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-white/80 font-bold mb-1.5 text-xs">
+                      합·충·형 관계 — {engineData.relations.dominantRelation}
+                    </p>
+                    <div className="space-y-0.5 mb-2 text-[10px] text-muted-foreground">
+                      {engineData.relations.hap.length > 0 && <p>합(合): {engineData.relations.hap.join(', ')}</p>}
+                      {engineData.relations.chung.length > 0 && <p>충(沖): {engineData.relations.chung.join(', ')}</p>}
+                      {engineData.relations.hyeong.length > 0 && (
+                        <p>형(刑): {engineData.relations.hyeong.join(', ')}</p>
+                      )}
+                      {engineData.relations.gongmang.length > 0 && (
+                        <p>공망(空亡): {engineData.relations.gongmang.join(', ')}</p>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground text-xs leading-relaxed">{engineData.relations.summary}</p>
+                  </div>
+                )}
+
+                {/* 신살 스킬트리 */}
+                {engineData.sinsal.length > 0 && (
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-white/80 font-bold mb-3 text-xs">신살 스킬트리</p>
+                    <div className="space-y-3">
+                      {engineData.sinsal.map((s, i) => (
+                        <div key={i}>
+                          <p className="text-gold-500 text-xs font-semibold">
+                            {s.name} {s.hanja} — {s.category}
+                          </p>
+                          <p className="text-muted-foreground text-[11px] leading-relaxed mt-0.5">{s.poeticDesc}</p>
+                          {s.modernSkillTree && (
+                            <p className="text-white/40 text-[10px] mt-0.5">현대 스킬: {s.modernSkillTree}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogBody>
         </DialogContent>
       </Dialog>
 
       {/* 오행 분포 풀이 Dialog */}
       <Dialog open={wuxingAnalysisOpen} onOpenChange={setWuxingAnalysisOpen}>
-        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="flex max-h-[80vh] max-w-lg flex-col overflow-hidden border-white/10 bg-[#0f0f0f]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />
               오행 분포 풀이
             </DialogTitle>
           </DialogHeader>
-          {saju && (
-            <div className="space-y-4 text-sm">
-              <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
-                <p className="text-gold-500 font-bold mb-2 text-xs">내 사주의 오행 구성</p>
-                <div className="flex gap-3 flex-wrap">
-                  {Object.entries(saju.elementsDistribution).map(([el, cnt]: [string, number]) => (
-                    <div key={el} className="flex items-center gap-1.5">
-                      <span className="text-base font-black" style={{ color: WU_XING_COLORS[el] }}>
-                        {el}
-                      </span>
-                      <span className="text-white/70 text-xs">
-                        {WUXING_KOREAN[el]} {cnt}개
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {[
-                {
-                  el: '木',
-                  ko: '목',
-                  meaning: '성장·발전·인자함',
-                  trait:
-                    '나무처럼 위를 향해 뻗어나가는 기운입니다. 창의력과 기획력이 있고, 사람을 이끄는 능력이 있습니다. 봄의 에너지로 새로운 시작을 잘 합니다.',
-                  lack: '목이 부족하면 결단력이 약해지고 우유부단해질 수 있습니다. 동쪽을 바라보거나 녹색을 활용하면 좋습니다.',
-                },
-                {
-                  el: '火',
-                  ko: '화',
-                  meaning: '열정·활동·예의',
-                  trait:
-                    '불처럼 밝고 강렬한 에너지입니다. 표현력과 카리스마가 있고, 사람들 앞에 나서는 것을 좋아합니다. 여름의 에너지로 활발하고 변화를 즐깁니다.',
-                  lack: '화가 부족하면 자신감이 떨어지고 표현이 서툴 수 있습니다. 붉은색을 활용하고 남쪽 방향이 도움이 됩니다.',
-                },
-                {
-                  el: '土',
-                  ko: '토',
-                  meaning: '안정·신뢰·중심',
-                  trait:
-                    '대지처럼 묵직하고 안정된 에너지입니다. 신뢰감을 주고 조율 능력이 뛰어납니다. 환절기의 에너지로 중간에서 균형을 잡습니다.',
-                  lack: '토가 부족하면 뿌리 없이 흔들릴 수 있습니다. 황토색·노란색 계열이나 산을 찾는 것이 도움이 됩니다.',
-                },
-                {
-                  el: '金',
-                  ko: '금',
-                  meaning: '결단·정의·수확',
-                  trait:
-                    '쇠처럼 강하고 날카로운 에너지입니다. 원칙을 중시하고 결단력이 있습니다. 가을의 에너지로 수확하고 정리하는 능력이 있습니다.',
-                  lack: '금이 부족하면 우유부단하고 마무리가 약할 수 있습니다. 흰색·금색 계열과 서쪽 방향이 도움이 됩니다.',
-                },
-                {
-                  el: '水',
-                  ko: '수',
-                  meaning: '지혜·유연·포용',
-                  trait:
-                    '물처럼 흐르고 채우는 에너지입니다. 지혜롭고 눈치가 빠르며 적응력이 강합니다. 겨울의 에너지로 깊이 생각하고 계획을 세웁니다.',
-                  lack: '수가 부족하면 융통성이 없고 고집스러워질 수 있습니다. 검은색·파란색 계열과 북쪽 방향이 도움이 됩니다.',
-                },
-              ].map(({ el, ko, meaning, trait, lack }) => {
-                const cnt = (saju.elementsDistribution as Record<string, number>)[el] ?? 0
-                const total = Object.values(saju.elementsDistribution).reduce((a: number, b: number) => a + b, 0)
-                const isStrong = cnt >= 3
-                const isWeak = cnt === 0
-                return (
-                  <div
-                    key={el}
-                    className={`p-4 rounded-xl border ${isStrong ? 'bg-gold-500/5 border-gold-500/30' : isWeak ? 'bg-white/[0.03] border-white/5 opacity-60' : 'bg-white/5 border-white/10'}`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xl font-black" style={{ color: WU_XING_COLORS[el] }}>
-                        {el}
-                      </span>
-                      <span className="text-white/80 text-xs font-bold">
-                        {ko} — {meaning}
-                      </span>
-                      <span
-                        className={`ml-auto text-[10px] px-2 py-0.5 rounded-full ${isStrong ? 'bg-gold-500/20 text-gold-500' : isWeak ? 'bg-white/10 text-white/40' : 'bg-white/10 text-white/60'}`}
-                      >
-                        {cnt}/{total} {isStrong ? '강함' : isWeak ? '없음' : '보통'}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground text-xs leading-relaxed">{isWeak ? lack : trait}</p>
-                    {isWeak && (
-                      <p className="text-gold-500/70 text-[10px] mt-1.5">💡 {ko}(을)를 보충하면 운이 좋아집니다</p>
-                    )}
-                    {isStrong && (
-                      <p className="text-gold-500/70 text-[10px] mt-1.5">✨ 이 기운이 당신의 핵심 강점입니다</p>
-                    )}
+          <DialogBody className="-mr-2 pr-2">
+            {saju && (
+              <div className="space-y-4 text-sm">
+                <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                  <p className="text-gold-500 font-bold mb-2 text-xs">내 사주의 오행 구성</p>
+                  <div className="flex gap-3 flex-wrap">
+                    {Object.entries(saju.elementsDistribution).map(([el, cnt]: [string, number]) => (
+                      <div key={el} className="flex items-center gap-1.5">
+                        <span className="text-base font-black" style={{ color: WU_XING_COLORS[el] }}>
+                          {el}
+                        </span>
+                        <span className="text-white/70 text-xs">
+                          {WUXING_KOREAN[el]} {cnt}개
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                )
-              })}
-            </div>
-          )}
+                </div>
+                {[
+                  {
+                    el: '木',
+                    ko: '목',
+                    meaning: '성장·발전·인자함',
+                    trait:
+                      '나무처럼 위를 향해 뻗어나가는 기운입니다. 창의력과 기획력이 있고, 사람을 이끄는 능력이 있습니다. 봄의 에너지로 새로운 시작을 잘 합니다.',
+                    lack: '목이 부족하면 결단력이 약해지고 우유부단해질 수 있습니다. 동쪽을 바라보거나 녹색을 활용하면 좋습니다.',
+                  },
+                  {
+                    el: '火',
+                    ko: '화',
+                    meaning: '열정·활동·예의',
+                    trait:
+                      '불처럼 밝고 강렬한 에너지입니다. 표현력과 카리스마가 있고, 사람들 앞에 나서는 것을 좋아합니다. 여름의 에너지로 활발하고 변화를 즐깁니다.',
+                    lack: '화가 부족하면 자신감이 떨어지고 표현이 서툴 수 있습니다. 붉은색을 활용하고 남쪽 방향이 도움이 됩니다.',
+                  },
+                  {
+                    el: '土',
+                    ko: '토',
+                    meaning: '안정·신뢰·중심',
+                    trait:
+                      '대지처럼 묵직하고 안정된 에너지입니다. 신뢰감을 주고 조율 능력이 뛰어납니다. 환절기의 에너지로 중간에서 균형을 잡습니다.',
+                    lack: '토가 부족하면 뿌리 없이 흔들릴 수 있습니다. 황토색·노란색 계열이나 산을 찾는 것이 도움이 됩니다.',
+                  },
+                  {
+                    el: '金',
+                    ko: '금',
+                    meaning: '결단·정의·수확',
+                    trait:
+                      '쇠처럼 강하고 날카로운 에너지입니다. 원칙을 중시하고 결단력이 있습니다. 가을의 에너지로 수확하고 정리하는 능력이 있습니다.',
+                    lack: '금이 부족하면 우유부단하고 마무리가 약할 수 있습니다. 흰색·금색 계열과 서쪽 방향이 도움이 됩니다.',
+                  },
+                  {
+                    el: '水',
+                    ko: '수',
+                    meaning: '지혜·유연·포용',
+                    trait:
+                      '물처럼 흐르고 채우는 에너지입니다. 지혜롭고 눈치가 빠르며 적응력이 강합니다. 겨울의 에너지로 깊이 생각하고 계획을 세웁니다.',
+                    lack: '수가 부족하면 융통성이 없고 고집스러워질 수 있습니다. 검은색·파란색 계열과 북쪽 방향이 도움이 됩니다.',
+                  },
+                ].map(({ el, ko, meaning, trait, lack }) => {
+                  const cnt = (saju.elementsDistribution as Record<string, number>)[el] ?? 0
+                  const total = Object.values(saju.elementsDistribution).reduce((a: number, b: number) => a + b, 0)
+                  const isStrong = cnt >= 3
+                  const isWeak = cnt === 0
+                  return (
+                    <div
+                      key={el}
+                      className={`p-4 rounded-xl border ${isStrong ? 'bg-gold-500/5 border-gold-500/30' : isWeak ? 'bg-white/[0.03] border-white/5 opacity-60' : 'bg-white/5 border-white/10'}`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl font-black" style={{ color: WU_XING_COLORS[el] }}>
+                          {el}
+                        </span>
+                        <span className="text-white/80 text-xs font-bold">
+                          {ko} — {meaning}
+                        </span>
+                        <span
+                          className={`ml-auto text-[10px] px-2 py-0.5 rounded-full ${isStrong ? 'bg-gold-500/20 text-gold-500' : isWeak ? 'bg-white/10 text-white/40' : 'bg-white/10 text-white/60'}`}
+                        >
+                          {cnt}/{total} {isStrong ? '강함' : isWeak ? '없음' : '보통'}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground text-xs leading-relaxed">{isWeak ? lack : trait}</p>
+                      {isWeak && (
+                        <p className="text-gold-500/70 text-[10px] mt-1.5">💡 {ko}(을)를 보충하면 운이 좋아집니다</p>
+                      )}
+                      {isStrong && (
+                        <p className="text-gold-500/70 text-[10px] mt-1.5">✨ 이 기운이 당신의 핵심 강점입니다</p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </DialogBody>
         </DialogContent>
       </Dialog>
 
       {/* 육친 관계도 풀이 Dialog */}
       <Dialog open={yukchinAnalysisOpen} onOpenChange={setYukchinAnalysisOpen}>
-        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="flex max-h-[80vh] max-w-lg flex-col overflow-hidden border-white/10 bg-[#0f0f0f]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />
               육친 관계도 풀이
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 text-sm">
-            <div className="p-3 rounded-xl bg-gold-500/5 border border-gold-500/20">
-              <p className="text-gold-500 text-xs font-bold mb-1">육친이란?</p>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                사주 8글자에서 일간(나)을 기준으로 나머지 7글자가 나와 어떤 관계인지를 나타냅니다. 부모·형제·배우자·자녀
-                등 인생의 인연과 그 강약을 볼 수 있습니다.
-              </p>
-            </div>
-            {yukchinAnalysis &&
-              Object.entries(yukchinAnalysis).map(([key, data]) => {
-                const strengthLabel =
-                  data.strength === 'strong'
-                    ? '강함 — 이 인연이 인생에서 크게 작용합니다'
-                    : data.strength === 'moderate'
-                      ? '보통 — 적당히 영향을 줍니다'
-                      : '약함 — 이 인연의 영향이 적습니다'
-                const strengthColor =
-                  data.strength === 'strong'
-                    ? 'text-gold-500'
-                    : data.strength === 'moderate'
-                      ? 'text-info-text'
-                      : 'text-white/40'
-                return (
-                  <div key={key} className="p-4 rounded-xl bg-white/5 border border-white/10">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-bold text-sm">{data.name}</span>
-                        <span className="text-muted-foreground text-xs">{data.hanja}</span>
+          <DialogBody className="-mr-2 pr-2">
+            <div className="space-y-3 text-sm">
+              <div className="p-3 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                <p className="text-gold-500 text-xs font-bold mb-1">육친이란?</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  사주 8글자에서 일간(나)을 기준으로 나머지 7글자가 나와 어떤 관계인지를 나타냅니다.
+                  부모·형제·배우자·자녀 등 인생의 인연과 그 강약을 볼 수 있습니다.
+                </p>
+              </div>
+              {yukchinAnalysis &&
+                Object.entries(yukchinAnalysis).map(([key, data]) => {
+                  const strengthLabel =
+                    data.strength === 'strong'
+                      ? '강함 — 이 인연이 인생에서 크게 작용합니다'
+                      : data.strength === 'moderate'
+                        ? '보통 — 적당히 영향을 줍니다'
+                        : '약함 — 이 인연의 영향이 적습니다'
+                  const strengthColor =
+                    data.strength === 'strong'
+                      ? 'text-gold-500'
+                      : data.strength === 'moderate'
+                        ? 'text-info-text'
+                        : 'text-white/40'
+                  return (
+                    <div key={key} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-bold text-sm">{data.name}</span>
+                          <span className="text-muted-foreground text-xs">{data.hanja}</span>
+                        </div>
+                        <span className="text-gold-500 font-black text-lg">{data.count}개</span>
                       </div>
-                      <span className="text-gold-500 font-black text-lg">{data.count}개</span>
+                      <p className={`text-[10px] mb-2 ${strengthColor}`}>{strengthLabel}</p>
+                      <p className="text-muted-foreground text-xs leading-relaxed">{data.interpretation}</p>
+                      {data.pillars?.length > 0 && (
+                        <p className="text-white/30 text-[10px] mt-2">위치: {data.pillars.join(', ')}</p>
+                      )}
                     </div>
-                    <p className={`text-[10px] mb-2 ${strengthColor}`}>{strengthLabel}</p>
-                    <p className="text-muted-foreground text-xs leading-relaxed">{data.interpretation}</p>
-                    {data.pillars?.length > 0 && (
-                      <p className="text-white/30 text-[10px] mt-2">위치: {data.pillars.join(', ')}</p>
-                    )}
-                  </div>
-                )
-              })}
-            {(!yukchinAnalysis || Object.keys(yukchinAnalysis).length === 0) && (
-              <p className="text-muted-foreground text-xs text-center py-4">육친 데이터를 불러올 수 없습니다.</p>
-            )}
-          </div>
+                  )
+                })}
+              {(!yukchinAnalysis || Object.keys(yukchinAnalysis).length === 0) && (
+                <p className="text-muted-foreground text-xs text-center py-4">육친 데이터를 불러올 수 없습니다.</p>
+              )}
+            </div>
+          </DialogBody>
         </DialogContent>
       </Dialog>
 
       {/* 고급 만세력 풀이 Dialog */}
       {/* 대운·세운 풀이 Dialog */}
       <Dialog open={daeunExplainOpen} onOpenChange={setDaeunExplainOpen}>
-        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="flex max-h-[80vh] max-w-lg flex-col overflow-hidden border-white/10 bg-[#0f0f0f]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />내 인생 흐름 풀이
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 text-sm">
-            <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
-              <p className="text-gold-500 font-bold mb-2 text-xs">대운이란?</p>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                대운(大運)은 10년마다 바뀌는 인생의 큰 계절입니다. 봄이 오면 씨를 뿌리고, 여름엔 키우고, 가을엔 거두고,
-                겨울엔 쉬듯이 — 사람의 인생에도 10년 단위로 큰 흐름이 있습니다. 지금 어떤 계절인지 알면, 언제 도전하고
-                언제 기다려야 하는지 알 수 있어요.
-              </p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-              <p className="text-white/80 font-bold mb-1.5 text-xs">세운이란?</p>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                세운(歲運)은 올해(1년)의 분위기입니다. 대운이 큰 바다의 조류라면, 세운은 오늘의 파도입니다. 같은 대운
-                안에서도 해마다 조금씩 다른 흐름이 있습니다. 올해 간지(干支)가 내 사주와 맞으면 술술 풀리고, 충돌하면
-                조금 더 신경 써야 합니다.
-              </p>
-            </div>
-            {daeunList.length > 0 &&
-              (() => {
-                const currentYear = new Date().getFullYear()
-                const cur =
-                  daeunList.find((d) => currentYear >= d.startYear && currentYear <= d.endYear) || daeunList[0]
-                return (
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                    <p className="text-white/80 font-bold mb-2 text-xs">현재 대운 — 지금 당신의 인생 계절</p>
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-2xl font-black text-gold-500">
-                        {cur.gan}
-                        {cur.zhi}
-                      </span>
-                      <div>
-                        <p className="text-white/70 text-xs">{cur.ganjiKorean}</p>
-                        <p className="text-muted-foreground text-[10px]">
-                          {cur.startYear}년 ~ {cur.endYear}년 ({cur.age})
-                        </p>
+          <DialogBody className="-mr-2 pr-2">
+            <div className="space-y-4 text-sm">
+              <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                <p className="text-gold-500 font-bold mb-2 text-xs">대운이란?</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  대운(大運)은 10년마다 바뀌는 인생의 큰 계절입니다. 봄이 오면 씨를 뿌리고, 여름엔 키우고, 가을엔
+                  거두고, 겨울엔 쉬듯이 — 사람의 인생에도 10년 단위로 큰 흐름이 있습니다. 지금 어떤 계절인지 알면, 언제
+                  도전하고 언제 기다려야 하는지 알 수 있어요.
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                <p className="text-white/80 font-bold mb-1.5 text-xs">세운이란?</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  세운(歲運)은 올해(1년)의 분위기입니다. 대운이 큰 바다의 조류라면, 세운은 오늘의 파도입니다. 같은 대운
+                  안에서도 해마다 조금씩 다른 흐름이 있습니다. 올해 간지(干支)가 내 사주와 맞으면 술술 풀리고, 충돌하면
+                  조금 더 신경 써야 합니다.
+                </p>
+              </div>
+              {daeunList.length > 0 &&
+                (() => {
+                  const currentYear = new Date().getFullYear()
+                  const cur =
+                    daeunList.find((d) => currentYear >= d.startYear && currentYear <= d.endYear) || daeunList[0]
+                  return (
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                      <p className="text-white/80 font-bold mb-2 text-xs">현재 대운 — 지금 당신의 인생 계절</p>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-2xl font-black text-gold-500">
+                          {cur.gan}
+                          {cur.zhi}
+                        </span>
+                        <div>
+                          <p className="text-white/70 text-xs">{cur.ganjiKorean}</p>
+                          <p className="text-muted-foreground text-[10px]">
+                            {cur.startYear}년 ~ {cur.endYear}년 ({cur.age})
+                          </p>
+                        </div>
                       </div>
+                      <p className="text-muted-foreground text-xs leading-relaxed">{cur.description}</p>
                     </div>
-                    <p className="text-muted-foreground text-xs leading-relaxed">{cur.description}</p>
-                  </div>
-                )
-              })()}
-            <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
-              <p className="text-gold-500 text-xs font-bold mb-2">💡 이렇게 활용하세요</p>
-              <ul className="space-y-1.5 text-xs text-muted-foreground">
-                <li>• 좋은 대운: 크게 도전하고 투자하기 좋은 시기</li>
-                <li>• 어려운 대운: 안전하게 지키고 실력 쌓는 시기</li>
-                <li>• 좋은 세운: 새로운 시작, 계획 실행에 유리</li>
-                <li>• 어려운 세운: 건강과 관계에 신경 쓰고 신중하게</li>
-              </ul>
+                  )
+                })()}
+              <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                <p className="text-gold-500 text-xs font-bold mb-2">💡 이렇게 활용하세요</p>
+                <ul className="space-y-1.5 text-xs text-muted-foreground">
+                  <li>• 좋은 대운: 크게 도전하고 투자하기 좋은 시기</li>
+                  <li>• 어려운 대운: 안전하게 지키고 실력 쌓는 시기</li>
+                  <li>• 좋은 세운: 새로운 시작, 계획 실행에 유리</li>
+                  <li>• 어려운 세운: 건강과 관계에 신경 쓰고 신중하게</li>
+                </ul>
+              </div>
             </div>
-          </div>
+          </DialogBody>
         </DialogContent>
       </Dialog>
 
       {/* 용신 풀이 Dialog */}
       <Dialog open={yongsinExplainOpen} onOpenChange={setYongsinExplainOpen}>
-        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="flex max-h-[80vh] max-w-lg flex-col overflow-hidden border-white/10 bg-[#0f0f0f]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />내 행운 키워드 풀이
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 text-sm">
-            <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
-              <p className="text-gold-500 font-bold mb-2 text-xs">용신이란?</p>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                용신(用神)은 내 사주에서 부족하거나 꼭 필요한 기운입니다. 마치 몸에 부족한 영양소처럼 — 이걸 채워주면
-                건강해지듯, 용신을 가까이하면 운이 좋아집니다. 색깔·방향·음식·직업 등 일상에서 쉽게 보충할 수 있어요.
-              </p>
+          <DialogBody className="-mr-2 pr-2">
+            <div className="space-y-4 text-sm">
+              <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                <p className="text-gold-500 font-bold mb-2 text-xs">용신이란?</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  용신(用神)은 내 사주에서 부족하거나 꼭 필요한 기운입니다. 마치 몸에 부족한 영양소처럼 — 이걸 채워주면
+                  건강해지듯, 용신을 가까이하면 운이 좋아집니다. 색깔·방향·음식·직업 등 일상에서 쉽게 보충할 수 있어요.
+                </p>
+              </div>
+              {yongsinAnalysis && (
+                <>
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-white/80 font-bold mb-2 text-xs">
+                      내 용신: {yongsinAnalysis.yongsin} ({WUXING_KOREAN[yongsinAnalysis.yongsin]})
+                    </p>
+                    <p className="text-muted-foreground text-xs leading-relaxed mb-3">
+                      {WUXING_KOREAN[yongsinAnalysis.yongsin] === '목' &&
+                        '나무의 기운입니다. 성장·발전·창의력의 에너지를 가까이하세요.'}
+                      {WUXING_KOREAN[yongsinAnalysis.yongsin] === '화' &&
+                        '불의 기운입니다. 열정·활기·표현력의 에너지를 가까이하세요.'}
+                      {WUXING_KOREAN[yongsinAnalysis.yongsin] === '토' &&
+                        '흙의 기운입니다. 안정·신뢰·중심의 에너지를 가까이하세요.'}
+                      {WUXING_KOREAN[yongsinAnalysis.yongsin] === '금' &&
+                        '쇠의 기운입니다. 결단·정의·수확의 에너지를 가까이하세요.'}
+                      {WUXING_KOREAN[yongsinAnalysis.yongsin] === '수' &&
+                        '물의 기운입니다. 지혜·유연·포용의 에너지를 가까이하세요.'}
+                    </p>
+                    {ELEMENT_BOOST[yongsinAnalysis.yongsin] && (
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-white/5 p-2 rounded-lg">
+                          <p className="text-muted-foreground/60 mb-0.5">오늘 입을 색</p>
+                          <p className="text-white/80 font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].color}</p>
+                        </div>
+                        <div className="bg-white/5 p-2 rounded-lg">
+                          <p className="text-muted-foreground/60 mb-0.5">앉을 방향</p>
+                          <p className="text-white/80 font-medium">
+                            {ELEMENT_BOOST[yongsinAnalysis.yongsin].direction}
+                          </p>
+                        </div>
+                        <div className="bg-white/5 p-2 rounded-lg">
+                          <p className="text-muted-foreground/60 mb-0.5">활동 좋은 시간</p>
+                          <p className="text-white/80 font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].time}</p>
+                        </div>
+                        <div className="bg-white/5 p-2 rounded-lg">
+                          <p className="text-muted-foreground/60 mb-0.5">힘 나는 계절</p>
+                          <p className="text-white/80 font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].season}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                    <p className="text-gold-500 text-xs font-bold mb-2">💡 오늘 당장 할 수 있는 것</p>
+                    <ul className="space-y-1 text-xs text-muted-foreground">
+                      {ELEMENT_BOOST[yongsinAnalysis.yongsin]?.activities?.slice(0, 3).map((a: string, i: number) => (
+                        <li key={i}>✓ {a}</li>
+                      ))}
+                      {ELEMENT_BOOST[yongsinAnalysis.yongsin]?.foods?.slice(0, 2).map((f: string, i: number) => (
+                        <li key={`f${i}`}>🍽 {f} 먹기</li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              )}
             </div>
-            {yongsinAnalysis && (
-              <>
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <p className="text-white/80 font-bold mb-2 text-xs">
-                    내 용신: {yongsinAnalysis.yongsin} ({WUXING_KOREAN[yongsinAnalysis.yongsin]})
-                  </p>
-                  <p className="text-muted-foreground text-xs leading-relaxed mb-3">
-                    {WUXING_KOREAN[yongsinAnalysis.yongsin] === '목' &&
-                      '나무의 기운입니다. 성장·발전·창의력의 에너지를 가까이하세요.'}
-                    {WUXING_KOREAN[yongsinAnalysis.yongsin] === '화' &&
-                      '불의 기운입니다. 열정·활기·표현력의 에너지를 가까이하세요.'}
-                    {WUXING_KOREAN[yongsinAnalysis.yongsin] === '토' &&
-                      '흙의 기운입니다. 안정·신뢰·중심의 에너지를 가까이하세요.'}
-                    {WUXING_KOREAN[yongsinAnalysis.yongsin] === '금' &&
-                      '쇠의 기운입니다. 결단·정의·수확의 에너지를 가까이하세요.'}
-                    {WUXING_KOREAN[yongsinAnalysis.yongsin] === '수' &&
-                      '물의 기운입니다. 지혜·유연·포용의 에너지를 가까이하세요.'}
-                  </p>
-                  {ELEMENT_BOOST[yongsinAnalysis.yongsin] && (
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-white/5 p-2 rounded-lg">
-                        <p className="text-muted-foreground/60 mb-0.5">오늘 입을 색</p>
-                        <p className="text-white/80 font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].color}</p>
-                      </div>
-                      <div className="bg-white/5 p-2 rounded-lg">
-                        <p className="text-muted-foreground/60 mb-0.5">앉을 방향</p>
-                        <p className="text-white/80 font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].direction}</p>
-                      </div>
-                      <div className="bg-white/5 p-2 rounded-lg">
-                        <p className="text-muted-foreground/60 mb-0.5">활동 좋은 시간</p>
-                        <p className="text-white/80 font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].time}</p>
-                      </div>
-                      <div className="bg-white/5 p-2 rounded-lg">
-                        <p className="text-muted-foreground/60 mb-0.5">힘 나는 계절</p>
-                        <p className="text-white/80 font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].season}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
-                  <p className="text-gold-500 text-xs font-bold mb-2">💡 오늘 당장 할 수 있는 것</p>
-                  <ul className="space-y-1 text-xs text-muted-foreground">
-                    {ELEMENT_BOOST[yongsinAnalysis.yongsin]?.activities?.slice(0, 3).map((a: string, i: number) => (
-                      <li key={i}>✓ {a}</li>
-                    ))}
-                    {ELEMENT_BOOST[yongsinAnalysis.yongsin]?.foods?.slice(0, 2).map((f: string, i: number) => (
-                      <li key={`f${i}`}>🍽 {f} 먹기</li>
-                    ))}
-                  </ul>
-                </div>
-              </>
-            )}
-          </div>
+          </DialogBody>
         </DialogContent>
       </Dialog>
 
       {/* 격국 풀이 Dialog */}
       <Dialog open={gekgukExplainOpen} onOpenChange={setGekgukExplainOpen}>
-        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="flex max-h-[80vh] max-w-lg flex-col overflow-hidden border-white/10 bg-[#0f0f0f]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />내 사주 그릇 풀이
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 text-sm">
-            <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
-              <p className="text-gold-500 font-bold mb-2 text-xs">격국이란?</p>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                격국(格局)은 내 사주의 타입 또는 그릇입니다. MBTI처럼 &ldquo;이 사람은 어떤 유형이다&rdquo;를 알려주는
-                것인데, 사주 방식으로 판단합니다. 격국에 따라 잘 맞는 직업·환경·삶의 방식이 다릅니다.
-              </p>
-            </div>
-            {gekgukAnalysis && (
-              <>
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <p className="text-white/80 font-bold mb-2 text-xs">내 격국: {gekgukAnalysis.gekguk}</p>
-                  <p className="text-muted-foreground text-xs leading-relaxed mb-3">{gekgukAnalysis.description}</p>
-                  <div className="space-y-1.5">
-                    {gekgukAnalysis.characteristics?.map((char: string, i: number) => (
-                      <div key={i} className="flex items-start gap-2 text-xs">
-                        <span className="text-gold-500 mt-0.5 shrink-0">✦</span>
-                        <span className="text-muted-foreground">{char}</span>
-                      </div>
-                    ))}
+          <DialogBody className="-mr-2 pr-2">
+            <div className="space-y-4 text-sm">
+              <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                <p className="text-gold-500 font-bold mb-2 text-xs">격국이란?</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  격국(格局)은 내 사주의 타입 또는 그릇입니다. MBTI처럼 &ldquo;이 사람은 어떤 유형이다&rdquo;를 알려주는
+                  것인데, 사주 방식으로 판단합니다. 격국에 따라 잘 맞는 직업·환경·삶의 방식이 다릅니다.
+                </p>
+              </div>
+              {gekgukAnalysis && (
+                <>
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-white/80 font-bold mb-2 text-xs">내 격국: {gekgukAnalysis.gekguk}</p>
+                    <p className="text-muted-foreground text-xs leading-relaxed mb-3">{gekgukAnalysis.description}</p>
+                    <div className="space-y-1.5">
+                      {gekgukAnalysis.characteristics?.map((char: string, i: number) => (
+                        <div key={i} className="flex items-start gap-2 text-xs">
+                          <span className="text-gold-500 mt-0.5 shrink-0">✦</span>
+                          <span className="text-muted-foreground">{char}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
-                  <p className="text-gold-500 text-xs font-bold mb-2">💡 이 격국의 인생 조언</p>
-                  <p className="text-muted-foreground text-xs leading-relaxed">
-                    {`${gekgukAnalysis.gekguk}의 특성을 살려 자신에게 맞는 환경에서 능력을 발휘하세요. 격국의 특성에 맞는 환경에 있을 때 가장 빛납니다.`}
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
+                  <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                    <p className="text-gold-500 text-xs font-bold mb-2">💡 이 격국의 인생 조언</p>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      {`${gekgukAnalysis.gekguk}의 특성을 살려 자신에게 맞는 환경에서 능력을 발휘하세요. 격국의 특성에 맞는 환경에 있을 때 가장 빛납니다.`}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          </DialogBody>
         </DialogContent>
       </Dialog>
 
       {/* 개운법 풀이 Dialog */}
       <Dialog open={gaeunbubExplainOpen} onOpenChange={setGaeunbubExplainOpen}>
-        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="flex max-h-[80vh] max-w-lg flex-col overflow-hidden border-white/10 bg-[#0f0f0f]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />
               오늘부터 실천하는 개운법
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 text-sm">
-            <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
-              <p className="text-gold-500 font-bold mb-2 text-xs">개운법이란?</p>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                개운법(開運法)은 말 그대로 &ldquo;운을 여는 방법&rdquo;입니다. 사주에서 부족한 기운을 일상에서 채워 운의
-                흐름을 좋게 만드는 실천법입니다. 거창한 게 아니에요 — 오늘 입는 옷 색깔, 앉는 방향, 먹는 음식도 모두
-                개운법이 됩니다.
-              </p>
-            </div>
-            {gaeunbubRec && (
-              <>
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <p className="text-white/80 font-bold mb-3 text-xs">지금 당장 실천할 수 있는 것들</p>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <span className="text-lg shrink-0">👗</span>
-                      <div>
-                        <p className="text-white/70 text-xs font-medium">오늘 입을 색</p>
-                        <p className="text-muted-foreground text-xs">{gaeunbubRec.colors.join(', ')} 계열을 입으세요</p>
+          <DialogBody className="-mr-2 pr-2">
+            <div className="space-y-4 text-sm">
+              <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                <p className="text-gold-500 font-bold mb-2 text-xs">개운법이란?</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  개운법(開運法)은 말 그대로 &ldquo;운을 여는 방법&rdquo;입니다. 사주에서 부족한 기운을 일상에서 채워
+                  운의 흐름을 좋게 만드는 실천법입니다. 거창한 게 아니에요 — 오늘 입는 옷 색깔, 앉는 방향, 먹는 음식도
+                  모두 개운법이 됩니다.
+                </p>
+              </div>
+              {gaeunbubRec && (
+                <>
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-white/80 font-bold mb-3 text-xs">지금 당장 실천할 수 있는 것들</p>
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <span className="text-lg shrink-0">👗</span>
+                        <div>
+                          <p className="text-white/70 text-xs font-medium">오늘 입을 색</p>
+                          <p className="text-muted-foreground text-xs">
+                            {gaeunbubRec.colors.join(', ')} 계열을 입으세요
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <span className="text-lg shrink-0">🧭</span>
-                      <div>
-                        <p className="text-white/70 text-xs font-medium">앉을 방향</p>
-                        <p className="text-muted-foreground text-xs">
-                          {gaeunbubRec.directions.join(', ')} 방향을 바라보고 일하면 집중력이 올라갑니다
-                        </p>
+                      <div className="flex items-start gap-3">
+                        <span className="text-lg shrink-0">🧭</span>
+                        <div>
+                          <p className="text-white/70 text-xs font-medium">앉을 방향</p>
+                          <p className="text-muted-foreground text-xs">
+                            {gaeunbubRec.directions.join(', ')} 방향을 바라보고 일하면 집중력이 올라갑니다
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <span className="text-lg shrink-0">🔢</span>
-                      <div>
-                        <p className="text-white/70 text-xs font-medium">행운의 숫자</p>
-                        <p className="text-muted-foreground text-xs">
-                          {gaeunbubRec.numbers.join(', ')} — 중요한 날짜나 번호를 고를 때 참고하세요
-                        </p>
+                      <div className="flex items-start gap-3">
+                        <span className="text-lg shrink-0">🔢</span>
+                        <div>
+                          <p className="text-white/70 text-xs font-medium">행운의 숫자</p>
+                          <p className="text-muted-foreground text-xs">
+                            {gaeunbubRec.numbers.join(', ')} — 중요한 날짜나 번호를 고를 때 참고하세요
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
-                  <p className="text-gold-500 text-xs font-bold mb-2">✦ 이번 주 실천 미션</p>
-                  <ul className="space-y-1.5 text-xs text-muted-foreground">
-                    {gaeunbubRec.activities.slice(0, 4).map((act: string, i: number) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="text-gold-500 shrink-0">□</span>
-                        <span>{act}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </>
-            )}
-          </div>
+                  <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                    <p className="text-gold-500 text-xs font-bold mb-2">✦ 이번 주 실천 미션</p>
+                    <ul className="space-y-1.5 text-xs text-muted-foreground">
+                      {gaeunbubRec.activities.slice(0, 4).map((act: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-gold-500 shrink-0">□</span>
+                          <span>{act}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              )}
+            </div>
+          </DialogBody>
         </DialogContent>
       </Dialog>
 

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Crown, HelpCircle, Check, Ticket } from 'lucide-react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { GA } from '@/lib/analytics/ga4'
 import { logger } from '@/lib/utils/logger'
 import { MEMBER_WEEKLY_QUESTIONS } from '@/lib/domain/chat/entitlements'
@@ -101,7 +101,7 @@ export function PaymentGuide({ model, autoOpenEligible }: PaymentGuideProps) {
       </button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-h-[86vh] max-w-md overflow-y-auto border-gold-500/30 p-5">
+        <DialogContent className="flex max-h-[86vh] max-w-md flex-col overflow-hidden border-gold-500/30 p-5">
           <DialogHeader className="space-y-1.5">
             <DialogTitle className="text-center font-serif text-xl text-gold-300">결제 도우미</DialogTitle>
             <DialogDescription className="text-center font-sans text-[13px] leading-relaxed text-ink-light/60">
@@ -111,7 +111,9 @@ export function PaymentGuide({ model, autoOpenEligible }: PaymentGuideProps) {
             </DialogDescription>
           </DialogHeader>
 
-          {isMember ? <MemberBody model={model} onCta={handleCta} /> : <GuestBody model={model} onCta={handleCta} />}
+          <DialogBody className="-mr-2 pr-2">
+            {isMember ? <MemberBody model={model} onCta={handleCta} /> : <GuestBody model={model} onCta={handleCta} />}
+          </DialogBody>
         </DialogContent>
       </Dialog>
     </>

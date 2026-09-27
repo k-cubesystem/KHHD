@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Sparkles, Landmark, Check, Loader2 } from 'lucide-react'
 import { IconBokjumeoni } from '@/components/icons/traditional-icons'
 import {
@@ -85,7 +85,7 @@ export function JourneyRewardSheet({ open, onOpenChange, onClaimed }: JourneyRew
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[420px] bg-[#16140F] border-gold-500/30 max-h-[85vh] overflow-y-auto">
+      <DialogContent className="flex max-h-[85vh] max-w-[420px] flex-col overflow-hidden border-gold-500/30 bg-[#16140F]">
         <DialogHeader>
           <DialogTitle className="font-serif text-gold-500 flex items-center gap-2">
             <Sparkles className="w-4 h-4" />
@@ -93,56 +93,58 @@ export function JourneyRewardSheet({ open, onOpenChange, onClaimed }: JourneyRew
           </DialogTitle>
         </DialogHeader>
 
-        {loading ? (
-          <div className="py-10 flex justify-center">
-            <Loader2 className="w-5 h-5 text-gold-500/60 animate-spin" />
-          </div>
-        ) : claimedName ? (
-          <RewardClaimedView name={claimedName} />
-        ) : (
-          <div className="space-y-5">
-            <p className="text-[12px] text-ink-light/60 font-light leading-relaxed break-keep">
-              다섯 복주머니를 모두 채우신 것을 축하드립니다. 아래 신위 한 분 또는 테마신당 한 곳을{' '}
-              <span className="text-gold-500">무료로 모실 수 있습니다</span>. (1회 한정, 선택 후 변경 불가)
-            </p>
+        <DialogBody className="-mr-2 pr-2">
+          {loading ? (
+            <div className="py-10 flex justify-center">
+              <Loader2 className="w-5 h-5 text-gold-500/60 animate-spin" />
+            </div>
+          ) : claimedName ? (
+            <RewardClaimedView name={claimedName} />
+          ) : (
+            <div className="space-y-5">
+              <p className="text-[12px] text-ink-light/60 font-light leading-relaxed break-keep">
+                다섯 복주머니를 모두 채우신 것을 축하드립니다. 아래 신위 한 분 또는 테마신당 한 곳을{' '}
+                <span className="text-gold-500">무료로 모실 수 있습니다</span>. (1회 한정, 선택 후 변경 불가)
+              </p>
 
-            <ChoiceGroup
-              title="신위 모시기 (2품 명신)"
-              icon={<Sparkles className="w-3.5 h-3.5" />}
-              choices={deities}
-              selected={selected}
-              onSelect={setSelected}
-            />
-            <ChoiceGroup
-              title="테마신당 소장"
-              icon={<Landmark className="w-3.5 h-3.5" />}
-              choices={themes}
-              selected={selected}
-              onSelect={setSelected}
-            />
+              <ChoiceGroup
+                title="신위 모시기 (2품 명신)"
+                icon={<Sparkles className="w-3.5 h-3.5" />}
+                choices={deities}
+                selected={selected}
+                onSelect={setSelected}
+              />
+              <ChoiceGroup
+                title="테마신당 소장"
+                icon={<Landmark className="w-3.5 h-3.5" />}
+                choices={themes}
+                selected={selected}
+                onSelect={setSelected}
+              />
 
-            {errorMsg && <p className="text-[12px] text-error-text/90">{errorMsg}</p>}
+              {errorMsg && <p className="text-[12px] text-error-text/90">{errorMsg}</p>}
 
-            <button
-              onClick={claim}
-              disabled={!selected || pending}
-              className="w-full h-12 rounded-sm font-serif font-bold text-[14px] tracking-[0.1em] text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              style={{
-                background: '#9E2B2B',
-                border: '1px solid rgba(158,43,43,0.5)',
-                boxShadow: '3px 3px 0 0 rgba(158,43,43,0.3)',
-              }}
-            >
-              {pending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : selected ? (
-                `${selected.name} 모시기`
-              ) : (
-                '보상을 선택하세요'
-              )}
-            </button>
-          </div>
-        )}
+              <button
+                onClick={claim}
+                disabled={!selected || pending}
+                className="w-full h-12 rounded-sm font-serif font-bold text-[14px] tracking-[0.1em] text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{
+                  background: '#9E2B2B',
+                  border: '1px solid rgba(158,43,43,0.5)',
+                  boxShadow: '3px 3px 0 0 rgba(158,43,43,0.3)',
+                }}
+              >
+                {pending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : selected ? (
+                  `${selected.name} 모시기`
+                ) : (
+                  '보상을 선택하세요'
+                )}
+              </button>
+            </div>
+          )}
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )
