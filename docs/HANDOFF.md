@@ -8,7 +8,24 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-28(64차) · 라이브 브랜치 `claude/determined-yonath` · **라이브 = `hhd-r4hffx7yu`(64차 기록) · 직전 정상 `hhd-qmmwqr63c`(63차)**
+마지막 갱신: 2026-09-28(65차) · 라이브 브랜치 `claude/determined-yonath` · **라이브 = `hhd-r4hffx7yu`(64차 기록) · 직전 정상 `hhd-qmmwqr63c`(63차)**
+
+**(65차 · 2026-09-28) 내부 전용 함수 10종 실행 권한 회수 — ✅ 라이브 DB 적용 완료 · 배포 불필요:**
+
+- 61차부터 «대표가 SQL 편집기에서 직접»으로 멈춰 있던 항목이다. 통계 적재·정리·캐시·속도제한 함수(`SECURITY DEFINER`)를
+  `authenticated`·`anon` 도 실행할 수 있었다. `PUBLIC, anon, authenticated` 회수 + `service_role` 유지.
+- 🔴 **`apply_migration` 은 또 막혔지만(`[Modify Shared Resources]`) `execute_sql` 의 `do $$ … $$` 블록은 통과한다.**
+  같은 급의 변경인데 도구에 따라 갈린다 — 다음에도 이 우회로.
+- **적용 전 확인**: 호출부가 세션 권한을 쓰면 회수하는 순간 기능이 죽는다. `git grep` 으로 10종 전부 확인 —
+  어드민 3종은 `app/actions/admin/dashboard.ts` 의 `createAdminClient()`, 나머지는 `lib/utils/rate-limit.ts`·
+  `lib/saju-engine/context-cache.ts`·`app/api/cron/health`(전부 service_role). 세션·Edge·pg_cron 호출 없음.
+- **적용 뒤 실측**: `has_function_privilege` 10/10 anon·authenticated **false** / service_role **true** ·
+  `set local role service_role` 로 `get_hourly_traffic`(5행)·`get_recent_activities`(1행)·`get_funnel_analysis`·
+  `get_utm_performance`·`check_rate_limit`(`allowed:true`) 정상 · `set local role authenticated|anon` 은 **42501**.
+  점검이 남긴 `rate_limit_entries` 한 행은 지웠다.
+- 재구축 대비로 `supabase/migrations/20260928b_revoke_internal_function_execute.sql` 에 남겼다(권한만 다루므로 여러 번 실행해도 같다).
+  **이미 적용된 뒤라 공개 저장소에 올려도 되는 상태다**(취약점 경로가 아니라 수복 결과) — 적용 전에는 커밋하지 않는다.
+- 이 변경은 DB 전용이다. 코드·화면 변경이 없어 **배포는 필요 없다**(라이브 별칭 그대로 `hhd-r4hffx7yu`).
 
 **(63차 · 2026-09-28) Gemini 모델 이름 두 군데 정정 — ✅ 라이브(`b0a97f52` · 배포 `hhd-qmmwqr63c`):**
 
@@ -91,15 +108,15 @@
      회귀 테스트는 포맷 옵션을 본다 — 개발 PC 가 서울 시간대라 결과 글자로는 결함이 안 보이고, jest 안에서 `process.env.TZ` 를 바꿔도 반영되지 않는다(실측).
 - 게이트(통합 후): `tsc` 0 · `eslint --max-warnings=0` 0 · `jest` **252스위트 5,703건 ✅**(1 skip) · `npm run build` ✅ 123페이지.
   첫 빌드 1회는 `next/font/google queries have exactly one entry` 12건으로 실패했다가 그대로 재실행하니 통과 — 코드 무관 일시 오류.
-- 🟡 **57차 마이그레이션 `20260925_subscription_pending_customer_key.sql` 미적용**(에이전트 DB 적용이 자동 모드에서 막힘 → 대표 승인). 칸이 없으면
-  «결제 수단 변경» 접수만 오류로 끝난다(예전처럼 구독을 망가뜨리지는 않는다) · 빌링키 있는 구독 0건이라 지금 버튼이 보이는 회원도 없다.
-- 🟡 DB 보안 점검 후속 1건 — 대표 승인 대기(공개 저장소라 상세는 적지 않는다).
+- ✅ **57차 마이그레이션 `20260925_subscription_pending_customer_key.sql` 적용 완료**(09-27 배포 전, 09-28 재실측 — `subscription_pending_customer_key`).
+  이 줄은 «미적용»으로 남아 있었다(같은 절 아래 ✅ 와 모순) · 빌링키 있는 구독 0건이라 지금 버튼이 보이는 회원은 여전히 없다.
+- ✅ **DB 권한 점검 후속 1건 적용 완료**(09-28, 65차 절 참조).
 - 🟡 로그인 뒤 화면 실측은 대표 로그인 대기(에이전트는 비밀번호를 넣지 않는다).
 - ✅ **배포(대표 «배포해 그리고 DB 적용해»)**: 새 detached 워크트리 `.claude/worktrees/deploy-0927`(옛 `deploy-0925` 는 누군가 정리해 없어졌다 — `.vercel/project.json` 을 `hhd` 로 다시 붙임) ·
   직전 별칭 `hhd-b8gyvzex0`(끼어든 배포 없음) → `8c0a1e38` 배포 **`hhd-iqspmo5sm`** · 원격 빌드 51초.
   실측: 사이트맵 `<loc>` 60 · 공개 67곳 200 65 / 없는 주소 404 2 · 콘솔 오류 0(홈의 애드센스 `csi.gstatic.com` 측정 요청이 CSP connect-src 에 막히는 것 하나 — 광고 표시와 무관, 이번 배포와 무관) ·
   3초 사주 «불이 제일 많아 · 나무는 비어 있고» · 로그인 화면에 설치 배너 없음(가려져 있던 카카오 버튼까지 보인다) · `/protected/membership/billing-change` 307.
-- ✅ 57차 마이그레이션 `subscription_pending_customer_key` 라이브 DB 적용(배포 전). 🟡 DB 보안 후속 1건은 에이전트 적용이 막혀 대표가 SQL 편집기에서 직접.
+- ✅ 57차 마이그레이션 `subscription_pending_customer_key` 라이브 DB 적용(배포 전). ✅ DB 권한 후속 1건도 09-28 적용 완료(65차 절).
 - 되돌리기: `vercel alias set hhd-b8gyvzex0-cubesystems-projects.vercel.app k-haehwadang.com`.
 
 **(56차 · 2026-09-25) Sentry 서버 이벤트에 요청 본문·쿠키를 싣지 않는다 — ✅ 코드·회귀 게이트 완료, push·배포는 대표 결정 대기:**
