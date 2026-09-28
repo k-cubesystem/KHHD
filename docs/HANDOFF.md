@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-28(63차) · 라이브 브랜치 `claude/determined-yonath` · **라이브 = `hhd-qmmwqr63c`(09-28, 별칭 확인) · 직전 정상 `hhd-arm4xgmeq`**
+마지막 갱신: 2026-09-28(64차) · 라이브 브랜치 `claude/determined-yonath` · **라이브 = `hhd-r4hffx7yu`(64차 기록) · 직전 정상 `hhd-qmmwqr63c`(63차)**
 
 **(63차 · 2026-09-28) Gemini 모델 이름 두 군데 정정 — ✅ 라이브(`b0a97f52` · 배포 `hhd-qmmwqr63c`):**
 
@@ -22,6 +22,7 @@
 - 되돌리기: `vercel alias set hhd-arm4xgmeq-cubesystems-projects.vercel.app k-haehwadang.com`. 마이그레이션은 표시값만 바꿔 되돌릴 필요가 없다.
 - 같은 세션에서 **56차(Gemini 사용량 RPC 관리자 확인)가 이미 라이브임을 재확인**했다: 관리자·service_role 통과 / 일반 회원·anon 거부(42501) 실측.
   앱 쪽 `requireAdmin` 도 이미 들어가 있어 DB·앱 2중이다. 09-19 에 만든 중복 브랜치 `fix/gemini-rpc-admin-guard` 는 삭제했다.
+- ✅ **대표 실확인(09-28)**: 어드민 Gemini 사용량 화면의 RPM 패널에 `gemini-3.8-flash` 로 표시된다. **63차는 남은 확인 없이 닫혔다.**
 
 **(62차 · 2026-09-28) 밀려 있던 배포 전부 출하 — ✅ 라이브 · 🔴 내가 «배포 보류» 쪽지를 안 읽고 먼저 배포했다:**
 
