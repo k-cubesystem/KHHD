@@ -45,6 +45,9 @@ yarn-error.log*
 # Codex CLI 로컬 설정 — .claude 훅을 이 기기용으로 옮긴 것(홈 폴더 체크포인트를 가리켜 기기마다 다르다)
 .codex/
 
+# 에이전트 도구가 워크트리마다 만드는 로컬 스킬 사본 — 같은 성격이라 .codex/ 와 함께 제외한다
+.agents/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
