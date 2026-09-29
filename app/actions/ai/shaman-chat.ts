@@ -27,6 +27,7 @@ import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { SHAMAN_QUESTIONS_PER_PASS, formatPassUnits, type PassErrorType } from '@/lib/domain/entitlement/pass'
 import { bondProgress, BOND_LEVEL_NAMES, type BondLevel } from '@/lib/domain/shrine/deities'
 import { PAST_SESSIONS_PAGE_SIZE } from '@/lib/domain/chat/constants'
+import { ENGINE_GENDER_WHEN_UNKNOWN, genderLabel, normalizeGender, type Gender } from '@/lib/domain/saju/gender'
 import {
   MASTER_QUESTION_ALLOWANCE,
   MEMBER_WEEKLY_QUESTIONS,
@@ -571,7 +572,7 @@ export async function sendShamanChatMessage(
 
     // 3. 사용자 및 가족 컨텍스트 조회
     let targetName = '내담자'
-    let targetGender = '미상'
+    let targetGender: Gender | null = null
     let targetBirth = '미상'
     let targetBirthTime = '00:00'
     let targetIsSolar = true
@@ -585,7 +586,7 @@ export async function sendShamanChatMessage(
 
       if (familyMember) {
         targetName = familyMember.name || '내담자 가족'
-        targetGender = familyMember.gender === 'M' ? '남성' : familyMember.gender === 'F' ? '여성' : '미상'
+        targetGender = normalizeGender(familyMember.gender)
         targetBirth = familyMember.birth_date || '미상'
         targetBirthTime = familyMember.birth_time || '00:00'
         targetIsSolar = familyMember.calendar_type !== 'lunar'
@@ -598,7 +599,7 @@ export async function sendShamanChatMessage(
         .single()
       if (profile) {
         targetName = profile.full_name || '내담자'
-        targetGender = profile.gender || '미상'
+        targetGender = normalizeGender(profile.gender)
         targetBirth = profile.birth_date || '미상'
         targetBirthTime = profile.birth_time || '00:00'
         targetIsSolar = profile.calendar_type !== 'lunar'
@@ -653,7 +654,8 @@ export async function sendShamanChatMessage(
           name: targetName,
           birthDate: targetBirth,
           birthTime: targetBirthTime,
-          gender: targetGender === '남성' ? 'male' : 'female',
+          gender: targetGender ?? ENGINE_GENDER_WHEN_UNKNOWN,
+          genderUnknown: targetGender === null,
           isSolar: targetIsSolar,
         },
         'SHAMAN_CHAT',
@@ -665,7 +667,7 @@ export async function sendShamanChatMessage(
     } else {
       // 사주 정보 없음 → 폴백
       const userContext = [
-        `이름: ${targetName}, 성별: ${targetGender}`,
+        `이름: ${targetName}, 성별: ${genderLabel(targetGender)}`,
         historyParts.length > 0 ? historyParts.join('\n') : '',
         recalledMemory,
         summaryBlock,

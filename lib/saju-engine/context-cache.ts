@@ -13,6 +13,7 @@ import { createHash } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 import { buildSajuContext, type PersonInfo } from './context-builder'
+import { genderLabel } from '@/lib/domain/saju/gender'
 
 /** 사주 엔진 로직이 바뀌면 이 버전을 올려 전체 캐시를 자연 무효화한다. */
 // v2 (2026-07-13): 야자시 이중시프트 제거 + 대운 getYun 단일화(랜덤 점수 제거) + 巳/午 음양 교정
@@ -42,9 +43,10 @@ function makeCacheKey(person: PersonInfo): string {
     person.lifePhilosophy || '',
     ENGINE_VERSION,
   ]
-  // 윤달·시간미상일 때만 마커 추가 — 기존 키(대다수)는 그대로 유지(캐시 대량 무효화 방지).
+  // 윤달·시간미상·성별미상일 때만 마커 추가 — 기존 키(대다수)는 그대로 유지(캐시 대량 무효화 방지).
   if (person.isLeapMonth) normalized.push('leap')
   if (person.birthTimeUnknown) normalized.push('notime')
+  if (person.genderUnknown) normalized.push('nogender')
   return createHash('sha256').update(normalized.join('|')).digest('hex')
 }
 
@@ -85,7 +87,7 @@ export async function buildSajuContextTextCached(person: PersonInfo): Promise<st
     logger.error('[SajuContextCache] buildSajuContext failed, returning minimal context:', e)
     return [
       '## [내담자 기본 정보 — 명식 계산 실패]',
-      `- 이름: ${person.name} | 성별: ${person.gender === 'male' ? '남' : '여'}`,
+      `- 이름: ${person.name} | 성별: ${genderLabel(person.genderUnknown ? null : person.gender)}`,
       `- 생년월일시: ${person.birthDate} ${person.birthTime || '00:00'} (${person.isSolar === false ? '음력' : '양력'})`,
       '- 주의: 입력된 생년월일이 유효하지 않아 사주 명식을 계산하지 못했습니다.',
       '  명식 데이터 없이 일반적인 조언만 제공하고, 생년월일 확인을 정중히 권유하세요.',

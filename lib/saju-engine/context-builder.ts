@@ -5,6 +5,7 @@
  */
 
 import { getSajuData, calculateDaeun, type SajuData } from '@/lib/domain/saju/saju'
+import { genderLabel } from '@/lib/domain/saju/gender'
 import { analyzeGekguk, analyzeYongsin, type YongsinAnalysis } from '@/lib/domain/saju/saju-analysis'
 import { analyzeTripleYongsin, buildTripleYongsinText, type TripleYongsinResult } from './yongsin'
 import { analyzeRelations } from './relations'
@@ -40,6 +41,7 @@ export interface PersonInfo {
   birthDate: string // 'YYYY-MM-DD'
   birthTime: string // 'HH:mm' or '00:00' for unknown
   gender: 'male' | 'female'
+  genderUnknown?: boolean // 성별 미상 여부. true면 gender 는 계산용 기본값 — 글에는 '미상'으로 적고 대운 방향 보류 고지를 주입.
   isSolar?: boolean
   isLeapMonth?: boolean // 음력 윤달 여부(isSolar=false일 때만 유효). 기본 false.
   birthTimeUnknown?: boolean // 출생 시간 미상 여부. true면 시주 해석 보류 고지를 프롬프트에 주입.
@@ -222,6 +224,12 @@ export function buildSajuContext(person: PersonInfo): SajuContext {
       '\n\n[출생 시간 미상] 출생 시간이 확인되지 않았습니다(정오 12:00 기준 계산). 시주(時柱)에 의존하는 해석은 보류적으로 다루고, 연·월·일주 중심으로 분석하세요.'
   }
 
+  // 성별 미상: 대운 순행·역행이 성별로 갈린다(계산은 계산용 기본값으로 이미 수행됨)
+  if (person.genderUnknown) {
+    promptContext +=
+      '\n\n[성별 미상] 성별이 확인되지 않았습니다(대운은 계산용 기본값 기준). 대운의 방향·시기를 단정하지 말고, 원국 중심으로 분석하세요.'
+  }
+
   return {
     personInfo: person,
     sajuData,
@@ -370,7 +378,7 @@ function buildPromptContextText(data: {
 ## [내담자 명식 데이터 - 해화지기 분석 기반]
 
 ### 기본 정보
-- 이름: ${person.name} | 성별: ${person.gender === 'male' ? '남' : '여'}
+- 이름: ${person.name} | 성별: ${genderLabel(person.genderUnknown ? null : person.gender)}
 - 생년월일시: ${person.birthDate} ${person.birthTime} (${person.isSolar !== false ? '양력' : '음력'})
 - 직업: ${person.job || '미입력'} | 관심사: ${person.focusAreas || '미입력'}
 - 결혼상태: ${person.maritalStatus || '미입력'} | 인생철학: ${person.lifePhilosophy || '미입력'}

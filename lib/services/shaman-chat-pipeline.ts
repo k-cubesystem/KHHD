@@ -47,6 +47,7 @@ import { getActiveMembership } from '@/lib/auth/subscription'
 import { hasUnlimitedAccess } from '@/lib/auth/privileges'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { formatPassUnits } from '@/lib/domain/entitlement/pass'
+import { ENGINE_GENDER_WHEN_UNKNOWN, genderLabel, normalizeGender, type Gender } from '@/lib/domain/saju/gender'
 
 // --- 상수 (액션·라우트 공용) ---
 
@@ -487,7 +488,7 @@ export async function prepareShamanChat(
 
   // 3. 대상(본인/가족) 컨텍스트
   let targetName = '내담자'
-  let targetGender = '미상'
+  let targetGender: Gender | null = null
   let targetBirth = '미상'
   let targetBirthTime = '00:00'
   let targetIsSolar = true
@@ -500,7 +501,7 @@ export async function prepareShamanChat(
       .single()
     if (familyMember) {
       targetName = familyMember.name || '내담자 가족'
-      targetGender = familyMember.gender === 'M' ? '남성' : familyMember.gender === 'F' ? '여성' : '미상'
+      targetGender = normalizeGender(familyMember.gender)
       targetBirth = familyMember.birth_date || '미상'
       targetBirthTime = familyMember.birth_time || '00:00'
       targetIsSolar = familyMember.calendar_type !== 'lunar'
@@ -513,7 +514,7 @@ export async function prepareShamanChat(
       .single()
     if (profile) {
       targetName = profile.full_name || '내담자'
-      targetGender = profile.gender || '미상'
+      targetGender = normalizeGender(profile.gender)
       targetBirth = profile.birth_date || '미상'
       targetBirthTime = profile.birth_time || '00:00'
       targetIsSolar = profile.calendar_type !== 'lunar'
@@ -564,7 +565,8 @@ export async function prepareShamanChat(
         name: targetName,
         birthDate: targetBirth,
         birthTime: targetBirthTime,
-        gender: targetGender === '남성' ? 'male' : 'female',
+        gender: targetGender ?? ENGINE_GENDER_WHEN_UNKNOWN,
+        genderUnknown: targetGender === null,
         isSolar: targetIsSolar,
       },
       'SHAMAN_CHAT',
@@ -575,7 +577,7 @@ export async function prepareShamanChat(
     systemInstruction = prompt
   } else {
     const userContext = [
-      `이름: ${targetName}, 성별: ${targetGender}`,
+      `이름: ${targetName}, 성별: ${genderLabel(targetGender)}`,
       historyParts.length > 0 ? historyParts.join('\n') : '',
       recalledMemory,
       summaryBlock,
