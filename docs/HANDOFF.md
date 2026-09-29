@@ -10,6 +10,21 @@
 
 마지막 갱신: 2026-09-28(65차) · 라이브 브랜치 `claude/determined-yonath` · **라이브 = `hhd-r4hffx7yu`(64차 기록) · 직전 정상 `hhd-qmmwqr63c`(63차)**
 
+**(2026-09-29) 속풀이 성별 정규화 — ✅ push(`58add58e`) · 🟡 배포 대기(대표 승인):**
+
+- **증상**: 속풀이 채팅이 모든 회원을 **여성으로 계산**했다. DB `gender` 는 `'male'`/`'female'`(09-29 실측: 가족 male 9·female 5,
+  프로필 male 7·NULL 3 — `'M'`·`'F'`·`'남성'` 0건)인데, 두 경로(`app/actions/ai/shaman-chat.ts`·`lib/services/shaman-chat-pipeline.ts`)가
+  `'M'`/`'남성'` 과 비교해 엔진엔 늘 `female` 이 갔다. 남성은 대운 순행·역행이 뒤집혔고, 지시문에는 `male`·`미상` 이 그대로 찍혔다.
+- **수복**: `lib/domain/saju/gender.ts` 단일 출처 — `normalizeGender`(옛 `'M'`/`'F'`/`'남성'`/`'여성'` 도 받음)·`genderLabel`.
+  🔴 **DB 성별을 읽는 곳은 이 함수로.** 다른 `=== 'M'` 비교는 `lib/domain/saju/saju.ts` 의 `calculateDaeun`(타입이 `'M' | 'F'` 인 인자 — DB 직접 아님)뿐.
+- **미상 결정**: 엔진은 **기존 기본값 female**(`ENGINE_GENDER_WHEN_UNKNOWN`)로 계산하고, 글에는 `미상` + `[성별 미상]` 대운 보류 고지
+  (`PersonInfo.genderUnknown` · 캐시 키에 `nogender` 마커 — 기존 키는 그대로). ⚠️ 다른 기능(운세·궁합·재물 등)은 미상을 `male` 로 넘긴다 — 통일은 대표 결정 사항.
+- 엔진 «기본 정보» 줄의 성별 표기가 **전 기능에서** `남/여` → `남성/여성`(뜻 같음). 사주 컨텍스트 캐시는 날짜 단위라 당일 캐시분은 옛 표기로 남는다.
+- 게이트: tsc 0 · eslint 0(경고 0) · jest 256 스위트 5,748 · build exit 0. 회귀 테스트 `app/actions/__tests__/shaman-chat-gender.test.ts`
+  (두 경로 × 남성 본인·남성 가족·옛 `'M'`·여성·미상·폴백) — **옛 코드에 돌리면 12/12 실패**를 확인했다.
+- 남은 것: 배포(대표 승인) → 남성 계정으로 속풀이 1회. DB 변경 없음.
+- 범위 밖 메모: Edge `supabase/functions/ai-analysis` 는 요청 본문 `birthInfo.gender` 를 `성별:` 에 그대로 찍는다(비교·계산은 없음, 호출부가 무엇을 넘기는지는 미확인).
+
 **(65차 · 2026-09-28) 내부 전용 함수 10종 실행 권한 회수 — ✅ 라이브 DB 적용 완료 · 배포 불필요:**
 
 - 61차부터 «대표가 SQL 편집기에서 직접»으로 멈춰 있던 항목이다. 통계 적재·정리·캐시·속도제한 함수(`SECURITY DEFINER`)를
