@@ -8,9 +8,26 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-29(66차) · 라이브 브랜치 `claude/determined-yonath` · **라이브 = `hhd-r4hffx7yu`(64차 기록) · 직전 정상 `hhd-qmmwqr63c`(63차)**
+마지막 갱신: 2026-09-29(67차) · 라이브 브랜치 `claude/determined-yonath` · **라이브 = `hhd-c2sxfpli4`(`edbe9eb6`, 09-29 15:20 KST) — 속풀이 성별·투자/건강 요구 제거·«최근 1~2년» 전부 라이브** · 직전 정상 `hhd-r4hffx7yu`(64차)
 
-**(66차 · 2026-09-29) 사주 풀이 지시문의 «최근 1~2년»을 오늘 날짜로 — 🟡 push 완료 · 배포 대기(이 차수는 배포하지 않았다):**
+**(67차 · 2026-09-29) 풀이 지시문의 투자 권유·건강 진단 요구 제거 + 세 건 한 번에 배포 — ✅ 라이브(`edbe9eb6` → `hhd-c2sxfpli4`, 15:20 KST · 직전 정상 `hhd-r4hffx7yu`):**
+
+- 대표 지시 «투자·건강 요구는 빼고, 버그 두 개 고쳐서 배포해»(09-29). 사주 엔진·풀이법 내보내기 작업 중 풀이법 조사에서 드러났다 —
+  다른 기능은 투자 권유·의료 조언을 금지하는데 유료 사주 풀이(천지인)는 주식 스타일·코인 성향·투자 시기·**취약 장기 3개**를, 재물 심층은 «최적 투자 월/주차»를 요구하고 있었다.
+- **지시문**(`53cf1d90`, 66차 이관 뒤 `lib/domain/analysis/cheonjiin-prompt.ts`): `investment` 칸 전체 삭제 · `wealth` 는 «돈이 들어오고 새는 방식·지출/저축 습관, 투자 상품·종목·매수/매도 시점 금지» ·
+  `health` 는 `mentalHealth`·`exerciseAdvice`·`dietAdvice`(생활 습관)만 · «기본 원칙»에 금지 한 줄. 재물 심층(`app/actions/ai/wealth.ts`)은 `investmentTiming` 칸·원칙 삭제 + 금지 한 줄.
+  엔진 지침(`lib/saju-engine/context-builder.ts`): WEALTH_DEEP 투자 월 지시 → 금지, 월간 «넷째 주는 건강에 주의» 예시 → «쉬어 가세요», 천지인 과거 추론 범주에서 «건강» 제거.
+  종합사주의 «건강·바탕»은 이미 «의학 단정 금지» 아래 «지치는 패턴·회복 습관»이라 그대로 둠.
+- **화면**: 예전 저장본에 남은 투자·건강 진단 칸도 싣지 않는다 — `lib/domain/analysis/restricted-fields.ts`(`withoutRestrictedHealth`: overall·weakOrgans·warningPeriod 제거, 문자열 옛 칸은 통째로 숨김)를
+  사주 풀이 화면(`saju-reading-sections.tsx`)과 천지인·기록 화면(`CheonSection`)이 같이 쓴다. 제목 «돈은 이렇게 들어오고 나가요»·«몸과 마음은 이렇게 돌보세요».
+- **회귀 게이트** `lib/domain/analysis/__tests__/restricted-fields.test.ts` — 지시문 파일(천지인 새 모듈 포함)에 투자·건강 칸이 다시 들어오면 실패.
+- 순서: 성별(`58add58e`) → 투자·건강(`53cf1d90`) → 연도(`edbe9eb6`, 같은 파일 충돌을 손으로 옮겨 붙임) 순으로 fast-forward. 합친 끝 게이트: tsc 0 · eslint 0 · jest 258 스위트 5,760 · build ✅.
+- 배포 전: HANDOFF 보류 쪽지 없음 · 라이브 `hhd-r4hffx7yu`(64차)의 커밋은 tip 의 조상 · 진행 중 배포 없음. 원격 빌드 1분.
+- 배포 뒤 실측: 사이트맵 `<loc>` **61** · 공개 10곳 200 · 없는 가이드 404 · `/protected`·`/protected/analysis/cheonjiin`·`/admin` 307 · 3초 사주 «불이 제일 많아» 콘솔 오류 0.
+  🟡 로그인 화면은 에이전트가 못 본다 — **대표 확인**: 남성 계정 속풀이 1회(명식이 남성으로 나오는지), 사주 풀이 1회(주식·코인·취약 장기 칸이 없고 «작년»이 2025년인지).
+- 되돌리기: `vercel alias set hhd-r4hffx7yu-cubesystems-projects.vercel.app k-haehwadang.com`.
+
+**(66차 · 2026-09-29) 사주 풀이 지시문의 «최근 1~2년»을 오늘 날짜로 — ✅ 라이브(67차 배포 `hhd-c2sxfpli4`):**
 
 - 사주 풀이(이용권) 지시문에 `최근 1~2년 (2024~2025년) … 세운(갑진년/을사년)` 과 JSON 예시 `"period": "2024~2025년"` 이 박혀 있었다.
   2026년에도 그대로 나가 «작년»이 한 해 밀렸고, 지시문이 참조하라던 세운 데이터는 엔진 명식 컨텍스트 어디에도 없었다.
@@ -30,7 +47,7 @@
   `compatibility-engine.ts` 현재 대운 · `app/actions/fortune/fortune.ts` · `app/actions/saju3.ts` `THIS_YEAR`(모듈 로드 때 고정).
 - 게이트: tsc 0 · eslint 0(경고 0) · jest 255스위트 5,724 통과(1 skip) · build ✅.
 
-**(2026-09-29) 속풀이 성별 정규화 — ✅ push(`58add58e`) · 🟡 배포 대기(대표 승인):**
+**(2026-09-29) 속풀이 성별 정규화 — ✅ 라이브(`58add58e` · 67차 배포 `hhd-c2sxfpli4`):**
 
 - **증상**: 속풀이 채팅이 모든 회원을 **여성으로 계산**했다. DB `gender` 는 `'male'`/`'female'`(09-29 실측: 가족 male 9·female 5,
   프로필 male 7·NULL 3 — `'M'`·`'F'`·`'남성'` 0건)인데, 두 경로(`app/actions/ai/shaman-chat.ts`·`lib/services/shaman-chat-pipeline.ts`)가
