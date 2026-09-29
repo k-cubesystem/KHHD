@@ -24,6 +24,7 @@ import * as React from 'react'
  */
 
 import { WU_XING_COLORS, WU_XING_TEXT_COLORS } from '@/lib/domain/saju/saju'
+import { withoutRestrictedHealth } from '@/lib/domain/analysis/restricted-fields'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type SajuReadingData = Record<string, any>
@@ -122,6 +123,7 @@ export function SajuFreeSections({ data }: { data: SajuReadingData }) {
 
 /** 결제한 사람의 자리 — 구조·월별·직업·재물·인연·건강·타임라인·개운. */
 export function SajuDeepSections({ data }: { data: SajuReadingData }) {
+  const health = withoutRestrictedHealth(data.cheon?.health)
   return (
     <>
       {/* 격국·용신 + 오행 밸런스 */}
@@ -285,54 +287,16 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
         </ResultSection>
       )}
 
-      {/* 재물운 + 투자 성향 통합 */}
-      <ResultSection title="돈은 이렇게 벌고 굴리면 돼요" show={!!(data.cheon?.wealth || data.cheon?.investment)}>
-        {data.cheon?.wealth && typeof data.cheon.wealth === 'string' && (
+      {/* 재물운 — 투자 권유 칸은 싣지 않는다(lib/domain/analysis/restricted-fields) */}
+      <ResultSection
+        title="돈은 이렇게 들어오고 나가요"
+        show={typeof data.cheon?.wealth === 'string' && !!data.cheon.wealth}
+      >
+        {typeof data.cheon?.wealth === 'string' && (
           <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.wealth}</p>
-        )}
-        {data.cheon?.investment?.style && (
-          <div className="p-3 rounded-lg bg-gold-500/10 border border-gold-500/15 mt-2">
-            <p className="text-sm text-gold-300 font-medium">{data.cheon.investment.style as string}</p>
-          </div>
-        )}
-        {data.cheon?.investment?.stockStyle && (
-          <div className="space-y-1">
-            <p className="text-xs text-ink-light/55">주식</p>
-            <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.investment.stockStyle as string}</p>
-          </div>
-        )}
-        {data.cheon?.investment?.cryptoStyle && (
-          <div className="space-y-1">
-            <p className="text-xs text-ink-light/55">코인</p>
-            <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.investment.cryptoStyle as string}</p>
-          </div>
-        )}
-        {data.cheon?.investment?.riskLevel && (
-          <div className="space-y-1">
-            <p className="text-xs text-ink-light/55">위험 감수 성향</p>
-            <p className="text-sm text-ink-light/80">{data.cheon.investment.riskLevel as string}</p>
-          </div>
-        )}
-        {data.cheon?.investment?.bestTiming && (
-          <div className="space-y-1">
-            <p className="text-xs text-ink-light/55">투자 타이밍</p>
-            <p className="text-sm text-ink-light/80">{data.cheon.investment.bestTiming as string}</p>
-          </div>
-        )}
-        {data.cheon?.investment?.warning && (
-          <div className="p-3 rounded-lg bg-error-light border border-error-border mt-2">
-            <p className="text-xs text-error-text/70 mb-1">주의</p>
-            <p className="text-sm text-ink-light/80">{data.cheon.investment.warning as string}</p>
-          </div>
-        )}
-        {data.cheon?.investment?.recommendation && (
-          <p className="text-sm text-gold-300 font-medium mt-3 pt-3 border-t border-gold-500/10">
-            {data.cheon.investment.recommendation as string}
-          </p>
         )}
       </ResultSection>
 
-      {/* 연애운 + 인간관계 통합 */}
       <ResultSection title="연애와 인간관계는 이래요" show={!!(data.cheon?.love || data.cheon?.people)}>
         {data.cheon?.love && typeof data.cheon.love === 'string' && (
           <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.love}</p>
@@ -380,51 +344,29 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
         )}
       </ResultSection>
 
-      {/* 건강 */}
-      {data.cheon?.health && typeof data.cheon.health === 'object' && (
-        <ResultSection title="건강은 이렇게 관리하세요" show>
-          {data.cheon.health.overall && (
-            <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.health.overall as string}</p>
-          )}
-          {(data.cheon.health.weakOrgans as string[])?.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-xs text-ink-light/55">주의가 필요한 부위</p>
-              {(data.cheon.health.weakOrgans as string[]).map((organ: string, i: number) => (
-                <p key={i} className="text-sm text-ink-light/70 flex gap-2">
-                  <span className="text-error/60 shrink-0">!</span> {organ}
-                </p>
-              ))}
-            </div>
-          )}
-          {data.cheon.health.mentalHealth && (
+      {/* 몸과 마음 — 진단 성격의 칸(전체 상태·취약 장기·주의 시기)은 싣지 않는다 */}
+      {health && (
+        <ResultSection title="몸과 마음은 이렇게 돌보세요" show>
+          {typeof health.mentalHealth === 'string' && health.mentalHealth && (
             <div className="space-y-1">
-              <p className="text-xs text-ink-light/55">멘탈 관리</p>
-              <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.health.mentalHealth as string}</p>
+              <p className="text-xs text-ink-light/55">마음 돌보기</p>
+              <p className="text-sm text-ink-light/80 leading-relaxed">{health.mentalHealth}</p>
             </div>
           )}
           <div className="grid grid-cols-2 gap-3 pt-2">
-            {data.cheon.health.exerciseAdvice && (
+            {typeof health.exerciseAdvice === 'string' && health.exerciseAdvice && (
               <div className="p-3 rounded-lg bg-black/20 border border-white/5">
-                <p className="text-[10px] text-gold-500/60 mb-1">추천 운동</p>
-                <p className="text-[12px] text-ink-light/70 leading-relaxed">
-                  {data.cheon.health.exerciseAdvice as string}
-                </p>
+                <p className="text-[10px] text-gold-500/60 mb-1">몸 움직임</p>
+                <p className="text-[12px] text-ink-light/70 leading-relaxed">{health.exerciseAdvice}</p>
               </div>
             )}
-            {data.cheon.health.dietAdvice && (
+            {typeof health.dietAdvice === 'string' && health.dietAdvice && (
               <div className="p-3 rounded-lg bg-black/20 border border-white/5">
-                <p className="text-[10px] text-gold-500/60 mb-1">음식 추천</p>
-                <p className="text-[12px] text-ink-light/70 leading-relaxed">
-                  {data.cheon.health.dietAdvice as string}
-                </p>
+                <p className="text-[10px] text-gold-500/60 mb-1">기운을 채우는 음식</p>
+                <p className="text-[12px] text-ink-light/70 leading-relaxed">{health.dietAdvice}</p>
               </div>
             )}
           </div>
-          {data.cheon.health.warningPeriod && (
-            <p className="text-sm text-error-text/80 mt-2 pt-2 border-t border-error-border">
-              {data.cheon.health.warningPeriod as string}
-            </p>
-          )}
         </ResultSection>
       )}
 

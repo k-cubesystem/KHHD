@@ -59,11 +59,11 @@ describe('🔴 객체가 와도 화면이 죽지 않는다', () => {
     expect(screen.getByText('잘 맞는 일')).not.toBeNull()
   })
 
-  it('health 가 객체여도 렌더된다', () => {
+  it('health 가 객체여도 렌더되고, 취약 장기 칸은 싣지 않는다 (2026-09-29 대표 결정)', () => {
     render(<CheonSection data={{ title: '천', content: '본문', health: HEALTH_OBJECT }} />)
 
     expect(screen.getByText(/위장이 먼저 지칩니다/)).not.toBeNull()
-    expect(screen.getByText(/식사 시간을 지키세요/)).not.toBeNull()
+    expect(screen.queryByText(/식사 시간을 지키세요/)).toBeNull()
   })
 
   it('옛 저장본처럼 문자열이 와도 그대로 그린다 (하위호환)', () => {

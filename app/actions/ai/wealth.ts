@@ -19,14 +19,6 @@ interface WealthAnalysisParams {
   memberId: string
 }
 
-export interface WealthInvestmentTiming {
-  bestMonth: string
-  bestWeek: string
-  reason: string
-  avoidMonth: string
-  avoidReason: string
-}
-
 export interface WealthAnalysisData {
   currentSituation: string
   strengths: string[]
@@ -35,7 +27,6 @@ export interface WealthAnalysisData {
   midTerm: string
   longTerm: string
   actionItems: string[]
-  investmentTiming: WealthInvestmentTiming
 }
 
 interface WealthAnalysisResult {
@@ -116,11 +107,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
 - 긍정 70% + 주의 30% 비율로 강점과 리스크를 균형있게 다루십시오.
 - "이번 달 셋째 주에 ~하세요"처럼 구체적 시기 + 행동 조언을 포함하십시오.
 - 숫자 점수는 사용하지 마십시오.
-
-## 투자 시기 분석 원칙
-- 대운/세운에서 정재(안정 수입)·편재(투자 수익)가 용신과 합을 이루는 달을 bestMonth로 추천하십시오.
-- 재성이 기신(불리한 기운)을 만나는 달을 avoidMonth로 경고하십시오.
-- reason과 avoidReason에 반드시 사주 용어(괄호 설명 포함)로 근거를 명시하십시오.
+- 투자 권유는 쓰지 마십시오: 주식·코인·부동산 같은 투자 상품, 종목, 매수·매도 시점, 수익률을 말하지 않습니다. 조언은 수입을 늘리고 새는 돈을 막는 생활 습관(지출·저축·일)으로 합니다.
 
 [출력 형식 (JSON Mandatory)]
 {
@@ -130,14 +117,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
   "shortTerm": "단기 1-3개월 재물 조언 — '이번 달 셋째 주에 ~하세요' 형태로 구체적 시기+행동",
   "midTerm": "중기 6개월-1년 재물 조언 — '올해 9월~10월 사이에 ~하세요' 형태로 구체적 전략",
   "longTerm": "장기 1년 이상 재물 전략 (대운 흐름 기반 방향성 제시)",
-  "actionItems": ["지금 바로 할 수 있는 행동 1 (구체적 — 방향, 색상, 숫자 등 포함)", "행동 2", "행동 3"],
-  "investmentTiming": {
-    "bestMonth": "투자하기 가장 좋은 달 (예: '9월')",
-    "bestWeek": "해당 월 내 최적 주차 (예: '셋째 주')",
-    "reason": "추천 이유 — 사주 근거 (예: '정재(안정 수입)가 용신과 합을 이루는 시기')",
-    "avoidMonth": "투자를 피해야 할 달 (예: '12월')",
-    "avoidReason": "회피 이유 — 사주 근거 (예: '편재(투자 수익)가 기신(불리한 기운)을 만나 손실 우려')"
-  }
+  "actionItems": ["지금 바로 할 수 있는 행동 1 (구체적 — 방향, 색상, 숫자 등 포함)", "행동 2", "행동 3"]
 }`,
       'premium'
     )

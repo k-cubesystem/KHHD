@@ -50,13 +50,19 @@ const SAVED_SAJU = {
       summary: '조직형 리더보다는 1인 크리에이터에 가까워요',
       best_jobs: ['기획자 — 판을 크게 읽어서'],
     },
+    wealth: '월급보다 부업 쪽으로 돈이 들어옵니다.',
+    // 투자 권유 칸 — 예전 저장본에만 있다. 화면에 싣지 않는다(2026-09-29)
     investment: { style: '장기 우량주 투자형', riskLevel: '중' },
     love: '천천히 데워지는 연애를 합니다.',
     people: {
       good_match: { description: '차분히 들어주는 사람', examples: ['수(水) 기운이 강한 사람'] },
       noble_person: '연장자 중에 있습니다.',
     },
-    health: { overall: '위장이 먼저 지칩니다.', weakOrgans: ['위장 — 식사 시간을 지키세요'] },
+    health: {
+      overall: '위장이 먼저 지칩니다.',
+      weakOrgans: ['위장 — 식사 시간을 지키세요'],
+      mentalHealth: '혼자 걷는 시간이 풀어 줍니다.',
+    },
     lifeTimeline: { currentDecade: '지금은 쌓는 구간입니다.' },
   },
   ji: { title: '지금 흐르는 운의 방향이에요', content: '터가 사람을 돕는 자리입니다.' },
@@ -107,9 +113,9 @@ describe('🔴 기록 상세는 저장된 것을 전부 그린다', () => {
       '올해 월별 운세예요',
       '특별한 기운이 있어요',
       '나한테 맞는 직업이에요',
-      '돈은 이렇게 벌고 굴리면 돼요',
+      '돈은 이렇게 들어오고 나가요',
       '연애와 인간관계는 이래요',
-      '건강은 이렇게 관리하세요',
+      '몸과 마음은 이렇게 돌보세요',
       '인생 타임라인이에요',
       '이렇게 하면 운이 좋아져요',
       '여러 분석이 같은 결론을 가리키고 있어요',
@@ -127,6 +133,16 @@ describe('🔴 기록 상세는 저장된 것을 전부 그린다', () => {
     expect(container.textContent).toContain('우뚝 선 소나무 같은 결입니다')
     expect(container.textContent).toContain('터가 사람을 돕는 자리입니다')
     expect(container.textContent).toContain('사람으로 풀립니다')
+  })
+
+  it('🔴 예전 저장본의 투자 권유·건강 진단 칸은 싣지 않는다 (2026-09-29 대표 결정)', () => {
+    const { container } = render(<AnalysisResultView record={makeRecord()} />)
+
+    expect(container.textContent).toContain('월급보다 부업 쪽으로 돈이 들어옵니다')
+    expect(container.textContent).toContain('혼자 걷는 시간이 풀어 줍니다')
+    expect(container.textContent).not.toContain('장기 우량주 투자형')
+    expect(container.textContent).not.toContain('식사 시간을 지키세요')
+    expect(container.textContent).not.toContain('위장이 먼저 지칩니다')
   })
 
   it('🔴 career 가 객체여도 죽지 않는다 (React #31 재발 방지)', () => {

@@ -3,6 +3,7 @@
 import { toRichField } from '@/lib/domain/analysis/rich-field'
 import { motion } from 'framer-motion'
 import { Crown, Briefcase, Coins, Heart, Activity, Clock, Zap, Shield } from 'lucide-react'
+import { withoutRestrictedHealth } from '@/lib/domain/analysis/restricted-fields'
 
 interface LifeTimelineData {
   pastDecade?: string
@@ -183,7 +184,12 @@ export function CheonSection({ data }: CheonSectionProps) {
               <RichDetail icon={Briefcase} label="직업·사업" color="text-gold-300" value={data.career} />
               <RichDetail icon={Coins} label="재물운" color="text-gold-300" value={data.wealth} />
               <RichDetail icon={Heart} label="연애·결혼" color="text-gold-300" value={data.love} />
-              <RichDetail icon={Activity} label="건강" color="text-gold-300" value={data.health} />
+              <RichDetail
+                icon={Activity}
+                label="건강"
+                color="text-gold-300"
+                value={withoutRestrictedHealth(data.health)}
+              />
             </div>
           </div>
         </div>
