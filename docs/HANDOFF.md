@@ -8,7 +8,27 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-28(65차) · 라이브 브랜치 `claude/determined-yonath` · **라이브 = `hhd-r4hffx7yu`(64차 기록) · 직전 정상 `hhd-qmmwqr63c`(63차)**
+마지막 갱신: 2026-09-29(66차) · 라이브 브랜치 `claude/determined-yonath` · **라이브 = `hhd-r4hffx7yu`(64차 기록) · 직전 정상 `hhd-qmmwqr63c`(63차)**
+
+**(66차 · 2026-09-29) 사주 풀이 지시문의 «최근 1~2년»을 오늘 날짜로 — 🟡 push 완료 · 배포 대기(이 차수는 배포하지 않았다):**
+
+- 사주 풀이(이용권) 지시문에 `최근 1~2년 (2024~2025년) … 세운(갑진년/을사년)` 과 JSON 예시 `"period": "2024~2025년"` 이 박혀 있었다.
+  2026년에도 그대로 나가 «작년»이 한 해 밀렸고, 지시문이 참조하라던 세운 데이터는 엔진 명식 컨텍스트 어디에도 없었다.
+- 조립부를 `lib/domain/analysis/cheonjiin-prompt.ts` 로 꺼냈다(`samhap-prompt.ts` 와 같은 이유 — `'use server'` 는 async 만 export).
+  올해는 `kstDateKey`(서울 날짜)로 세고, 앞선 두 해와 올해의 세운은 만세력 `calculateSaewoon` 에서 뽑아 STEP 1 문장·JSON 예시·
+  「분석 대상 정보」의 세운 한 줄(`2024년 갑진(甲辰) · 2025년 을사(乙巳) · 2026년 병오(丙午) ← 올해`)에 싣는다. 옮긴 본문은 연도 자리 외 바이트 동일.
+- `app/actions/ai/trend.ts` pastHint 예시의 `'2025년 봄'`(2곳)도 서울 날짜 기준 작년으로.
+- 🔴 같은 날 다른 세션의 `53cf1d90`(투자·건강 칸 제거)이 옛 자리(`cheonjiin.ts`)의 지시문을 고쳤다 → 세 군데를 새 모듈로 옮겨 실었고
+  (옮긴 본문이 라이브 지시문과 연도 자리 외 동일함을 diff 로 확인), 그 회귀 게이트 `restricted-fields.test.ts` 가 **새 모듈도 읽게** 했다 —
+  옛 경로만 보면 지시문이 어디에 있든 항상 통과하는 빈 게이트가 된다(옮기기 전 새 경로 추가 시 빨간불 확인).
+- 회귀 게이트 `lib/domain/analysis/__tests__/cheonjiin-prompt.test.ts` — 2026-09-29 KST → 2024~2025·갑진/을사, UTC 12-31 15:30(서울 새해) → 2025~2026·을사/병오·정미.
+  연도를 `toISOString` 으로 세게 바꾸면 새해 경계 테스트가 빨간불인 것을 확인했다.
+- **남겨 둔 것 — 고정 연도 상품**(해가 바뀌면 상품 자체를 갈아야 한다): `year2026.ts` · `lib/prompts/storytelling.ts` YEAR_2026 ·
+  `/protected/analysis/new-year` · `/protected/events/2026-byeong-o` · `/protected/events/seasonal` «2026년 24절기» · `themes.ts` «2026 병오년» 라벨 ·
+  엣지 `supabase/functions/ai-analysis` 의 2026 병오년 문구. 시스템 프롬프트의 과거 예시 «2019년쯤 이직»도 그대로(«지금»이 아닌 역추산 예시).
+- **남겨 둔 것 — 동적이지만 서버 UTC 로 세는 곳**(서울 1월 1일 00~09시에 한 해 밀림): `lib/saju-engine/warnings.ts` 삼재 ·
+  `compatibility-engine.ts` 현재 대운 · `app/actions/fortune/fortune.ts` · `app/actions/saju3.ts` `THIS_YEAR`(모듈 로드 때 고정).
+- 게이트: tsc 0 · eslint 0(경고 0) · jest 255스위트 5,724 통과(1 skip) · build ✅.
 
 **(2026-09-29) 속풀이 성별 정규화 — ✅ push(`58add58e`) · 🟡 배포 대기(대표 승인):**
 

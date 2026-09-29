@@ -27,6 +27,7 @@ describe('🔴 풀이 지시문이 투자 권유·건강 진단 칸을 다시 �
   const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
 
   it.each([
+    ['lib/domain/analysis/cheonjiin-prompt.ts', /"investment"|stockStyle|cryptoStyle|weakOrgans|warningPeriod|취약 장기/],
     ['app/actions/ai/cheonjiin.ts', /"investment"|stockStyle|cryptoStyle|weakOrgans|warningPeriod|취약 장기/],
     ['app/actions/ai/wealth.ts', /investmentTiming|bestMonth|bestWeek|avoidMonth|투자하기 가장 좋은/],
     ['lib/saju-engine/context-builder.ts', /investmentTiming|최적 투자 월/],

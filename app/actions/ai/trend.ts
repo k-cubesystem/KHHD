@@ -10,6 +10,7 @@ import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
+import { kstDateKey } from '@/lib/domain/analysis/wallpaper'
 
 export type TrendType = 'love' | 'career' | 'exam' | 'estate'
 
@@ -118,6 +119,8 @@ export async function analyzeTrendAction(
 
     const trendLabel = TREND_LABELS[trendType]
     const areaItems = TREND_AREAS[trendType]
+    // 예시 연도가 박혀 있으면 모델이 그대로 옮겨 적는다 — 작년은 서울 날짜로 센다(서버는 UTC).
+    const lastYear = Number(kstDateKey(new Date()).slice(0, 4)) - 1
 
     // 해화지기 마스터 엔진으로 프롬프트 조립
     const trendTypeMap = {
@@ -147,7 +150,7 @@ export async function analyzeTrendAction(
     ${areaItems.map((a) => `{ "title": "${a}", "outlook": "좋음|보통|주의", "content": "해당 영역 분석 — 구체적 행동 조언과 주의사항 포함 (2~3문장)" }`).join(',\n    ')}
   ],
   "pastHint": {
-    "period": "과거 시기 (예: '작년 하반기', '2025년 봄')",
+    "period": "과거 시기 (예: '작년 하반기', '${lastYear}년 봄')",
     "description": "과거에 일어났을 법한 사건 추론 (예: '재물 관련 큰 지출이나 손실이 있었을 것입니다')",
     "basis": "사주 근거 (예: '세운 편재가 충을 만난 시기')"
   },
@@ -165,7 +168,7 @@ export async function analyzeTrendAction(
 ## pastHint 작성법
 - 대운 흐름과 과거 세운을 역추산하여 내담자가 경험했을 법한 사건을 추론하세요
 - 예: 직장운이면 "작년 하반기 관성(직장 관련 기운)이 충을 만나 이직이나 부서이동이 있었을 것입니다"
-- 예: 재물운이면 "2025년 봄 편재(예상치 못한 지출)가 기신을 만나 큰 지출이 있었을 것입니다"
+- 예: 재물운이면 "${lastYear}년 봄 편재(예상치 못한 지출)가 기신을 만나 큰 지출이 있었을 것입니다"
 - basis에는 반드시 사주 용어(괄호 설명 포함)로 근거를 명시하세요
 
 [작성 원칙]
