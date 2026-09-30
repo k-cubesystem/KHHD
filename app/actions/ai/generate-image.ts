@@ -7,6 +7,7 @@ import { logUsage } from '@/lib/services/gemini-rate-limiter'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { MODEL_IMAGE } from '@/lib/config/ai-models'
+import { kstYmd } from '@/lib/domain/saju/kst-ymd'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
 
@@ -81,7 +82,7 @@ function buildImagePrompt(type: FortuneImageType, context: FortuneImageContext):
   if (type === 'card') {
     const score = context.fortuneScore ?? 75
     const intensity = score > 80 ? 'radiant golden glow' : score > 60 ? 'soft warm light' : 'gentle silver shimmer'
-    return `${basePrompt} Fortune card with ${intensity}. Celestial imagery: stars, moon phases, traditional Korean symbols. ${context.year ?? new Date().getFullYear()} year energy. Beautiful gradient background in pastel gold tones. Premium card design. No watermarks. High quality illustration.`
+    return `${basePrompt} Fortune card with ${intensity}. Celestial imagery: stars, moon phases, traditional Korean symbols. ${context.year ?? kstYmd(new Date()).year} year energy. Beautiful gradient background in pastel gold tones. Premium card design. No watermarks. High quality illustration.`
   }
 
   // illustration

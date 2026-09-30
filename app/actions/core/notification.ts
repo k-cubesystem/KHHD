@@ -140,6 +140,7 @@ export async function sendTestAlimtalk(): Promise<AlimtalkSendResult> {
   const { data: profile } = await adminClient.from('profiles').select('full_name').eq('id', user.id).maybeSingle()
 
   const today = new Date().toLocaleDateString('ko-KR', {
+    timeZone: 'Asia/Seoul',
     year: 'numeric',
     month: 'long',
     day: 'numeric',

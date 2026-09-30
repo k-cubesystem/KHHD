@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
+import { kstYmd } from '@/lib/domain/saju/kst-ymd'
 
 // Types
 export interface MonthlyFortune {
@@ -49,9 +50,7 @@ export async function getMonthlyFamilyFortune(): Promise<MonthlyFortune> {
     }
   }
 
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth() + 1
+  const { year, month } = kstYmd(new Date())
 
   try {
     // Get all family members count
@@ -110,7 +109,7 @@ export async function getYearlyFortuneTrend(year?: number): Promise<YearlyFortun
 
   if (!user) return []
 
-  const targetYear = year || new Date().getFullYear()
+  const targetYear = year || kstYmd(new Date()).year
 
   try {
     const { data, error } = await supabase.rpc('calculate_yearly_fortune', {
@@ -179,9 +178,7 @@ export async function getFamilyFortuneBreakdown(): Promise<FamilyMemberFortune[]
 
   if (!user) return []
 
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth() + 1
+  const { year, month } = kstYmd(new Date())
 
   try {
     // Try RPC function first
@@ -294,9 +291,7 @@ export async function recordFortuneEntry(
     return { success: false, error: 'Unauthorized' }
   }
 
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth() + 1
+  const { year, month } = kstYmd(new Date())
 
   try {
     // Upsert: Only one entry per category per member per month
@@ -411,9 +406,7 @@ export async function getMemberMonthlyFortune(memberId: string): Promise<Monthly
     }
   }
 
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth() + 1
+  const { year, month } = kstYmd(new Date())
 
   try {
     const { data, error } = await supabase.rpc('calculate_monthly_fortune', {

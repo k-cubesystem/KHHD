@@ -10,6 +10,8 @@
  * 🔴 계산은 결정론(만세력)이다 — AI 호출 없음, 비용 0, 같은 입력 = 같은 답.
  */
 
+import { kstYmd } from '@/lib/domain/saju/kst-ymd'
+
 export type WuXing = '木' | '火' | '土' | '金' | '水'
 
 export const WU_XING_ORDER: readonly WuXing[] = ['木', '火', '土', '金', '水']
@@ -115,11 +117,11 @@ export function balanceComment(counts: Record<WuXing, number>, total: 6 | 8): st
   return `${head} ${miss} 자리는 비어 있는데, 전통은 빈 자리를 흠이 아니라 채우며 사는 자리로 읽습니다.${scope}`
 }
 
-/** 생년월일 입력 검증 — 액션·화면이 같은 기준을 쓴다. */
-export function validBirthDate(date: string): boolean {
+/** 생년월일 입력 검증 — 액션·화면이 같은 기준을 쓴다. 미래 연도 판정은 서울 달력이다. */
+export function validBirthDate(date: string, now: Date = new Date()): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false
   const [y, m, d] = date.split('-').map(Number)
-  if (y < 1900 || y > new Date().getFullYear()) return false
+  if (y < 1900 || y > kstYmd(now).year) return false
   if (m < 1 || m > 12 || d < 1 || d > 31) return false
   return true
 }

@@ -103,9 +103,7 @@ export function wallpaperPath(id: string): string {
 
 /** `monthly-YYYYMM` — 주어진 시각이 속한 달의 이달의 복 id. */
 export function monthlyWallpaperId(now: Date): string {
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  return `monthly-${year}${month}`
+  return monthlyWallpaperIdForYm(kstYearMonth(now))
 }
 
 /**

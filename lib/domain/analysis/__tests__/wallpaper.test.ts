@@ -147,6 +147,13 @@ describe('이달의 복 — 판(版) 갱신 감지', () => {
     expect(isMonthlyWallpaperCurrent(new Date('2026-08-01T00:00:00Z'))).toBe(true)
     expect(isMonthlyWallpaperCurrent(new Date('2026-09-01T00:00:00Z'))).toBe(false)
   })
+
+  it('🔴 서울 월초 00~09시(UTC 월말)에는 이미 다음 달 판이다 — 크론(kstYearMonth)과 같은 달을 본다', () => {
+    expect(monthlyWallpaperId(new Date('2026-09-30T15:30:00Z'))).toBe('monthly-202610')
+    expect(monthlyWallpaperId(new Date('2026-09-30T14:30:00Z'))).toBe('monthly-202609')
+    expect(monthlyWallpaperId(new Date('2026-12-31T15:30:00Z'))).toBe('monthly-202701')
+    expect(isMonthlyWallpaperCurrent(new Date('2026-08-31T15:30:00Z'))).toBe(false)
+  })
 })
 
 describe('내 오행 — 추천 배지와 미리보기 순서', () => {

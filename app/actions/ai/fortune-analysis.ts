@@ -11,6 +11,7 @@ import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
+import { fortunePeriodLabels } from '@/lib/domain/fortune/period-labels'
 
 export type FortuneType = 'today' | 'weekly' | 'monthly'
 
@@ -81,17 +82,8 @@ export async function analyzeFortuneAction(
     }
 
     // 3. 현재 날짜 정보
-    const now = new Date()
-    const todayStr = now.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long',
-    })
-    const weekStartStr = getWeekRange(now)
-    const monthStr = now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })
-
-    const periodLabel = fortuneType === 'today' ? todayStr : fortuneType === 'weekly' ? weekStartStr : monthStr
+    const labels = fortunePeriodLabels(new Date())
+    const periodLabel = fortuneType === 'today' ? labels.today : fortuneType === 'weekly' ? labels.week : labels.month
 
     // 5. 해화지기 마스터 엔진으로 프롬프트 조립
     const typeMap = { today: 'DAILY_FORTUNE', weekly: 'WEEKLY_FORTUNE', monthly: 'MONTHLY_FORTUNE' } as const
@@ -177,16 +169,6 @@ export async function analyzeFortuneAction(
 }
 
 // ─── 내부 함수 ──────────────────────────────────────────
-
-function getWeekRange(date: Date): string {
-  const day = date.getDay()
-  const monday = new Date(date)
-  monday.setDate(date.getDate() - (day === 0 ? 6 : day - 1))
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  const fmt = (d: Date) => d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
-  return `${fmt(monday)} ~ ${fmt(sunday)}`
-}
 
 async function analyzeFortuneWithAI(prompt: string, fortuneType: FortuneType, period: string): Promise<FortuneResult> {
   const result = await generateAIContent({

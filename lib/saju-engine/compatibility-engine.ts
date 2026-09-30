@@ -3,6 +3,7 @@
  * 8개 카테고리 가중치 융합 알고리즘
  */
 
+import { kstYmd } from '@/lib/domain/saju/kst-ymd'
 import type { SajuContext } from './context-builder'
 import { CHEONGAN_HAP, CHEONGAN_CHUNG, JIJI_YUKHAP, JIJI_SAMHAP, JIJI_CHUNG, JIJI_HYEONG } from './relations'
 import { calculateSipseong, SIPSEONG_MODERN } from './sipseong'
@@ -438,9 +439,9 @@ function clamp(v: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, v))
 }
 
-function getCurrentDaeun(ctx: SajuContext): { element: string; ganji: string } | null {
+export function getCurrentDaeun(ctx: SajuContext, now: Date = new Date()): { element: string; ganji: string } | null {
   const birthYear = parseInt(ctx.personInfo.birthDate.split('-')[0])
-  const currentYear = new Date().getFullYear()
+  const currentYear = kstYmd(now).year
   const age = currentYear - birthYear
   const daeun = ctx.analysis.daeun.find((d) => d.age <= age && d.age + 10 > age)
   return daeun ? { element: daeun.element, ganji: daeun.ganji } : null

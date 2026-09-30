@@ -8,9 +8,10 @@
  *    `갑진년/을사년` 이 박혀 있어 2026년 풀이가 2025년을 «작년»으로 짚지 못했고, 지시문이 참조하라던 세운
  *    데이터는 명식 컨텍스트 어디에도 없었다. 서버는 UTC 라 `toISOString` 으로 세면 1월 1일 00~09시에 한 해 밀린다.
  */
-import { kstDateKey } from '@/lib/domain/analysis/wallpaper'
 import { deriveRarityDirective } from '@/lib/domain/analysis/rarity-variation'
 import { calculateSaewoon } from '@/lib/domain/saju/manse-advanced'
+import { kstYmd } from '@/lib/domain/saju/kst-ymd'
+import { ipchunInstant, seunYearAt } from '@/lib/domain/saju/seun-year'
 
 export interface CheonjiinPromptFlags {
   hasFaceImage: boolean
@@ -30,9 +31,25 @@ function seunOf(year: number): SeunYear {
   return { year, name: pillar.korean, hanja: `${pillar.ganHan}${pillar.jiHan}` }
 }
 
-function recentSeun(now: Date): { twoYearsAgo: SeunYear; lastYear: SeunYear; thisYear: SeunYear } {
-  const thisYear = Number(kstDateKey(now).slice(0, 4))
-  return { twoYearsAgo: seunOf(thisYear - 2), lastYear: seunOf(thisYear - 1), thisYear: seunOf(thisYear) }
+/**
+ * 달력 연도 셋의 세운 — 지금 적용 중인 해에 표시를 단다.
+ * 1월 1일~입춘 전에는 달력 연도의 세운이 아직 시작 전이라 «올해»라 부르면 안 된다(현재 상황 풀이가 한 해 앞선다).
+ */
+function seunLine(now: Date): string {
+  const calendarYear = kstYmd(now).year
+  const inForce = seunYearAt(now)
+  return [calendarYear - 2, calendarYear - 1, calendarYear]
+    .map((year) => {
+      const seun = seunOf(year)
+      const label = `${year}년 ${seun.name}(${seun.hanja})`
+      if (year === inForce) return `${label} ← 지금 적용 중`
+      if (year > inForce) {
+        const { month, day } = kstYmd(ipchunInstant(year))
+        return `${label} — 입춘(${month}월 ${day}일)부터`
+      }
+      return label
+    })
+    .join(' · ')
 }
 
 /**
@@ -54,10 +71,11 @@ export function buildCheonjiinPrompt(
   // 명식마다 다른 희소성 틀 — 예시를 하나만 박아두면 모델이 그 한 문장으로 수렴한다
   const rarity = deriveRarityDirective(vars.raritySeed || `${vars.birthDate}|${vars.birthTime}`)
 
-  const seun = recentSeun(now)
-  const recentRange = `${seun.twoYearsAgo.year}~${seun.lastYear.year}년`
-  const recentSeunNames = `${seun.twoYearsAgo.name}년/${seun.lastYear.name}년`
-  const seunEntry = (s: SeunYear) => `${s.year}년 ${s.name}(${s.hanja})`
+  const calendarYear = kstYmd(now).year
+  const twoYearsAgo = seunOf(calendarYear - 2)
+  const lastYear = seunOf(calendarYear - 1)
+  const recentRange = `${twoYearsAgo.year}~${lastYear.year}년`
+  const recentSeunNames = `${twoYearsAgo.name}년/${lastYear.name}년`
 
   // DB 시스템 프롬프트가 있으면 사용, 없으면 기본 역할 정의 사용
   const systemRole =
@@ -75,7 +93,7 @@ export function buildCheonjiinPrompt(
 - 태어난 시간: ${vars.birthTime}
 - 현재 나이: ${vars.age}세
 - 사주 명식·오행·대운: 위 시스템 역할의 [내담자 명식 데이터] 참조 (단일 출처)
-- 세운(歲運): ${seunEntry(seun.twoYearsAgo)} · ${seunEntry(seun.lastYear)} · ${seunEntry(seun.thisYear)} ← 올해
+- 세운(歲運): ${seunLine(now)}
 
 ## 풍수 데이터
 - 집 주소: ${vars.homeAddress}

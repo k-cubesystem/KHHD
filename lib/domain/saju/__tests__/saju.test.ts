@@ -125,24 +125,19 @@ describe('Saju Domain Logic', () => {
   })
 
   describe('calculateAge', () => {
+    const now = new Date('2026-09-29T10:00:00+09:00')
+
     it('should calculate correct age before birthday', () => {
-      const birthDate = '1990-12-31'
-      const age = calculateAge(birthDate)
-
-      const today = new Date()
-      const expectedAge = today.getFullYear() - 1990 - (today.getMonth() < 11 ? 1 : 0)
-
-      expect(age).toBe(expectedAge)
+      expect(calculateAge('1990-12-31', now)).toBe(35)
     })
 
     it('should calculate correct age after birthday', () => {
-      const birthDate = '1990-01-01'
-      const age = calculateAge(birthDate)
+      expect(calculateAge('1990-01-01', now)).toBe(36)
+    })
 
-      const today = new Date()
-      const expectedAge = today.getFullYear() - 1990
-
-      expect(age).toBe(expectedAge)
+    it('🔴 생일 당일 서울 00:30(UTC 전날 15:30)에 이미 한 살 더 먹는다 — 서버 달력으로 세지 않는다', () => {
+      expect(calculateAge('1990-03-05', new Date('2026-03-04T15:30:00Z'))).toBe(36)
+      expect(calculateAge('1990-03-05', new Date('2026-03-04T14:30:00Z'))).toBe(35)
     })
   })
 

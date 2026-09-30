@@ -239,6 +239,21 @@ describe('Fortune Actions', () => {
       expect(result.success).toBe(false)
       expect(result.error).toBe('Database error')
     })
+
+    it('🔴 서울 월초 00:30(UTC 월말 15:30)에는 이미 다음 달 칸에 기록한다 — 서버 달력으로 세지 않는다', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-31T15:30:00Z'))
+      try {
+        mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'test-user-id' } } })
+        const upsert = jest.fn().mockResolvedValue({ error: null })
+        mockSupabase.from.mockReturnValue({ upsert })
+
+        await recordFortuneEntry('member-1', 'saju', 'analysis-1', 100)
+
+        expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ year: 2026, month: 11 }), expect.anything())
+      } finally {
+        jest.useRealTimers()
+      }
+    })
   })
 
   describe('getMemberMonthlyFortune', () => {

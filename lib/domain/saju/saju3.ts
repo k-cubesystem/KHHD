@@ -11,6 +11,8 @@
  * 🔴 클라이언트에서도 import 한다 — server-only 모듈을 끌어오지 말 것.
  */
 
+import { kstYmd } from './kst-ymd'
+
 export type Element = '木' | '火' | '土' | '金' | '水'
 
 /** 화면에 나가는 우리말 이름. 한자는 절대 노출하지 않는다. */
@@ -349,13 +351,34 @@ export function buildChildReading(input: ChildInput): ChildResult {
   }
 }
 
-/** 만 나이. 아이 판정에서 «지금이 그 구간인가»를 가르는 값이라 서버·테스트가 같은 함수를 쓴다. */
+/**
+ * 만 나이. 아이 판정에서 «지금이 그 구간인가»를 가르는 값이라 서버·테스트가 같은 함수를 쓴다.
+ * «오늘»은 서울 달력이다 — 서버(UTC)의 달력으로 세면 생일 당일 00~09시(서울)에 한 살 적다.
+ */
 export function ageOn(birthDate: string, today: Date): number {
   const [y, m, d] = birthDate.split('-').map(Number)
-  let age = today.getFullYear() - y
-  const beforeBirthday = today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)
+  const now = kstYmd(today)
+  let age = now.year - y
+  const beforeBirthday = now.month < m || (now.month === m && now.day < d)
   if (beforeBirthday) age -= 1
   return Math.max(0, age)
+}
+
+/**
+ * 실제 달력에 있는 1900년 이후의 생년월일인가. 미래는 서울 달력의 올해까지만 받는다.
+ * 🔴 로컬 Date + toISOString 비교는 서버 타임존에서 하루가 밀린다 — UTC 성분으로만 검사한다.
+ * 🔴 «올해»를 모듈 로드 때 한 번 재서 굳히지 않는다 — 서버가 새해를 넘겨 살아 있으면 그대로 낡는다.
+ */
+export function isRealBirthDate(birthDate: string, now: Date): boolean {
+  const [y, m, d] = birthDate.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  return (
+    y >= 1900 &&
+    y <= kstYmd(now).year &&
+    dt.getUTCFullYear() === y &&
+    dt.getUTCMonth() === m - 1 &&
+    dt.getUTCDate() === d
+  )
 }
 
 // ─────────────────────────────────────────────────────────────

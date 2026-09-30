@@ -1,4 +1,5 @@
 import { Solar, Lunar } from 'lunar-javascript'
+import { kstYmd } from './kst-ymd'
 
 // ======== 에러 타입 ========
 
@@ -376,13 +377,12 @@ export function analyzeElementBalance(distribution: Record<string, number>): {
 
 /**
  * 나이 계산 (만 나이)
+ * «오늘»은 서울 달력이다 — 서버(UTC)의 달력으로 세면 생일 당일 00~09시(서울)에 한 살 적게 나가고,
+ * 그 값이 풀이 지시문의 «현재 나이»로 들어간다.
  */
-export function calculateAge(birthDate: string): number {
+export function calculateAge(birthDate: string, now: Date = new Date()): number {
   const [birthYear, birthMonth, birthDay] = birthDate.split('-').map(Number)
-  const today = new Date()
-  const todayYear = today.getFullYear()
-  const todayMonth = today.getMonth() + 1
-  const todayDay = today.getDate()
+  const { year: todayYear, month: todayMonth, day: todayDay } = kstYmd(now)
 
   let age = todayYear - birthYear
 

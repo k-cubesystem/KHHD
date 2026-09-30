@@ -6,6 +6,7 @@
 
 import type { SajuData } from '@/lib/domain/saju/saju'
 import type { YongsinAnalysis } from '@/lib/domain/saju/saju-analysis'
+import { seunYearAt } from '@/lib/domain/saju/seun-year'
 import type { SipseongMap } from './sipseong'
 import { BAEKHODA_ILJU, WONJIN_PAIRS } from './sinsal-extended'
 
@@ -419,11 +420,11 @@ function pillarMeaning(pillar: string): string {
 }
 
 /**
- * 삼재(三災) 판별 — 생년 지지 × 현재 연도 지지
+ * 삼재(三災) 판별 — 생년 지지 × 지금 적용 중인 세운의 지지
+ * 세운은 입춘에 바뀐다 — 1월 1일~입춘 전에는 아직 전해의 세운이다(`seunYearAt`).
  */
-function calculateSamjae(yearZhi: string): SamjaeResult {
-  const now = new Date()
-  const currentYear = now.getFullYear()
+export function calculateSamjae(yearZhi: string, now: Date = new Date()): SamjaeResult {
+  const currentYear = seunYearAt(now)
 
   // 현재 연도의 지지 산출 (甲子년 1984 기준)
   const BASE_YEAR = 1984

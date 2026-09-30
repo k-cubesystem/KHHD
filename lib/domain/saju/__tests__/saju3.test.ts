@@ -9,6 +9,7 @@ import {
   typeBySlug,
   shareText,
   ageOn,
+  isRealBirthDate,
   TYPE_SLUGS,
   ELEMENT_KO,
   ELEMENTS,
@@ -283,6 +284,27 @@ describe('아이 버전', () => {
   it('만 나이는 생일 전이면 한 살 적다', () => {
     expect(ageOn('2012-03-05', new Date('2026-03-04T00:00:00'))).toBe(13)
     expect(ageOn('2012-03-05', new Date('2026-03-05T00:00:00'))).toBe(14)
+  })
+
+  it('🔴 생일 당일 서울 00:30(UTC 전날 15:30)에 이미 한 살 더 먹는다 — 서버 달력으로 세지 않는다', () => {
+    expect(ageOn('2012-03-05', new Date('2026-03-04T15:30:00Z'))).toBe(14)
+    expect(ageOn('2012-03-05', new Date('2026-03-04T14:30:00Z'))).toBe(13)
+  })
+})
+
+describe('isRealBirthDate — 서울 달력의 올해까지', () => {
+  it('실제 달력에 있는 1900년 이후 날짜만 받는다', () => {
+    const now = new Date('2026-09-29T10:00:00+09:00')
+    expect(isRealBirthDate('1993-04-15', now)).toBe(true)
+    expect(isRealBirthDate('1900-01-01', now)).toBe(true)
+    expect(isRealBirthDate('1899-12-31', now)).toBe(false)
+    expect(isRealBirthDate('2026-02-30', now)).toBe(false)
+    expect(isRealBirthDate('2027-01-01', now)).toBe(false)
+  })
+
+  it('🔴 «올해»는 호출 시각으로 센다 — 같은 입력이 새해 전후로 뒤집힌다(모듈 로드 때 굳히지 않는다)', () => {
+    expect(isRealBirthDate('2027-01-01', new Date('2026-12-31T14:30:00Z'))).toBe(false)
+    expect(isRealBirthDate('2027-01-01', new Date('2026-12-31T15:30:00Z'))).toBe(true)
   })
 })
 

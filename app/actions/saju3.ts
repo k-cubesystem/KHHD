@@ -7,6 +7,7 @@ import {
   buildSaju3,
   buildChildReading,
   ageOn,
+  isRealBirthDate,
   UNKNOWN_TIME_FALLBACK,
   type Element,
   type Saju3Result,
@@ -23,20 +24,11 @@ import { logger } from '@/lib/utils/logger'
  * 🔴 'use server' export 는 공개 엔드포인트다 — 만세력·대운 계산이 CPU 를 쓰므로 IP 스로틀을 건다.
  */
 
-const THIS_YEAR = new Date().getFullYear()
-
 const BirthSchema = z.object({
   birthDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, '생년월일 형식이 올바르지 않아요')
-    .refine((s) => {
-      // 🔴 로컬 Date + toISOString 비교는 서버 타임존(KST)에서 하루가 밀려 모든 입력을 거절한다 — UTC 성분으로만 검사
-      const [y, m, d] = s.split('-').map(Number)
-      const dt = new Date(Date.UTC(y, m - 1, d))
-      return (
-        y >= 1900 && y <= THIS_YEAR && dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d
-      )
-    }, '1900년 이후의 실제 날짜를 넣어 주세요'),
+    .refine((s) => isRealBirthDate(s, new Date()), '1900년 이후의 실제 날짜를 넣어 주세요'),
   birthTime: z
     .string()
     .regex(/^\d{2}:\d{2}$/)

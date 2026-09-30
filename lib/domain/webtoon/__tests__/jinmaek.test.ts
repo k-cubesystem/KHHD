@@ -72,4 +72,9 @@ describe('간이 진맥 — 생년월일 검증', () => {
   it.each(['1899-12-31', '2050-01-01', '1993-13-01', '1993-00-10', '93-04-15', ''])('무효: %s', (d) =>
     expect(validBirthDate(d)).toBe(false)
   )
+
+  it('🔴 미래 연도 판정은 서울 달력이다 — 서울 새해 00:30(UTC 12-31 15:30)에는 올해 1월 1일생이 유효', () => {
+    expect(validBirthDate('2027-01-01', new Date('2026-12-31T15:30:00Z'))).toBe(true)
+    expect(validBirthDate('2027-01-01', new Date('2026-12-31T14:30:00Z'))).toBe(false)
+  })
 })

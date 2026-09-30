@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { kstHour } from '@/lib/utils'
 
 export async function getDashboardContext() {
   if (isEdgeEnabled('fortune')) {
@@ -46,7 +47,7 @@ export async function getDashboardContext() {
     welcomeMessage = '학업운이 따르는 날입니다. 작은 노력으로 큰 성취를 얻을 수 있습니다.'
   } else {
     // General fallback based on time of day?
-    const hour = new Date().getHours()
+    const hour = kstHour()
     if (hour < 12) welcomeMessage = '활기찬 아침의 기운이 당신과 함께합니다.'
     else if (hour < 18) welcomeMessage = '오후의 햇살처럼 따뜻한 인복이 찾아옵니다.'
     else welcomeMessage = '하루를 차분히 정리하며 내일을 준비할 귀한 시간입니다.'
